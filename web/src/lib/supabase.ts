@@ -252,6 +252,40 @@ export async function fetchMyHostedSessions(): Promise<MyHostedSession[] | null>
   return data as MyHostedSession[];
 }
 
+/** 매칭 기록 — 성사돼서 이미 끝난 모임만. 호스트로 연 것도, 참가자로
+ *  간 것도 함께 온다 (호스트도 확정 signups 행을 갖기 때문). */
+export interface MatchMate {
+  id: string;
+  nickname: string;
+  gender: "m" | "f";
+  level: number;
+  photo: string | null;
+  is_host: boolean;
+}
+
+export interface MatchRecord {
+  id: string;
+  gym: string;
+  starts_at: string;
+  ends_at: string;
+  capacity: number;
+  intensity: "chill" | "hard";
+  i_am_host: boolean;
+  members: number;
+  people: MatchMate[];
+}
+
+export async function fetchMatchHistory(): Promise<MatchRecord[] | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc("my_match_history");
+  if (error) {
+    console.error("my_match_history", error);
+    return null;
+  }
+  return data as MatchRecord[];
+}
+
 /** 호스트가 모임을 삭제(취소 표시)한다. 신청비는 서버가 전원 반환.
  *  notify = 알림 보낼 참가자 id 목록 (클라이언트가 push 를 부탁한다) */
 export async function deleteSession(id: string) {

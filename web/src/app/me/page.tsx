@@ -235,6 +235,16 @@ export default function Me() {
                 <span className="text-muted">›</span>
               </Link>
             )}
+            {/* 끝난 모임은 홈에서도 채팅에서도 사라진다 — 여기가 유일한 통로 */}
+            {!locked && (
+              <Link
+                href="/me/history"
+                className="flex items-center justify-between border-b border-line px-4 py-3.5 text-left text-[14px] font-semibold last:border-b-0"
+              >
+                매칭 기록
+                <span className="text-muted">›</span>
+              </Link>
+            )}
             <Link
               href="/safety"
               className="flex items-center justify-between border-b border-line px-4 py-3.5 text-left text-[14px] font-semibold last:border-b-0"
