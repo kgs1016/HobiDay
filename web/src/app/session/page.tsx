@@ -430,22 +430,9 @@ export default function SessionDetail() {
         </section>
       )}
 
-      {/* 영상 인증 */}
-      <section className="mt-5 rounded-2xl border border-line bg-surface p-4">
-        <h2 className="text-[14px] font-bold">🎥 등반 인증</h2>
-        <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
-          모임에서 등반한 영상을 자유롭게 올리면 크레딧이 쌓여요. 서로 찍어주면
-          되고, <b className="text-ink">완등 못 해도 괜찮아요.</b> 영상은 나만 볼 수
-          있고 내 보관함에 남아요.
-        </p>
-      </section>
-
-      {/* 안내 */}
-      <section className="mt-4 flex flex-col gap-2 text-[12.5px] leading-relaxed text-muted">
-        <p>💰 일일권+신발 대여 3만원 내외 · 현장 각자 결제</p>
-        <p>👟 준비물: 운동복, 양말, 물 (신발은 대여 가능)</p>
-        <p>✂️ 손톱은 짧게, 반지는 빼고 와주세요</p>
-      </section>
+      {/* 등반 인증 안내는 모임 진행 화면(/room)에 있다 — 상세에서는 뺐다.
+         준비물·비용 안내 세 줄도 같이 지웠다. 신청 전에 보는 화면이라
+         "이 모임에 갈지" 를 정하는 정보만 남긴다. */}
 
       {s.myStatus === "confirmed" && (
         <div className="mt-5 flex flex-col gap-2">
