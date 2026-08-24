@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { level } from "@/lib/levels";
 import ReportSheet from "@/components/ReportSheet";
 import { notifyPush } from "@/lib/nativePush";
@@ -323,6 +324,7 @@ function ChatFrame({
   title,
   sub,
   action,
+  onTitle,
   onSend,
   children,
 }: {
@@ -331,6 +333,8 @@ function ChatFrame({
   sub: string;
   /** 헤더 오른쪽 — 1:1 방은 신고 버튼이 붙는다 */
   action?: React.ReactNode;
+  /** 제목을 누를 때 — 1:1 은 상대 프로필, 모임방은 진행 화면 */
+  onTitle?: () => void;
   onSend: (body: string) => Promise<void>;
   children: React.ReactNode;
 }) {
@@ -369,10 +373,28 @@ function ChatFrame({
           ←
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-[17px] font-extrabold tracking-tight">
-            {title}
-          </h1>
-          <p className="truncate text-[11.5px] text-muted">{sub}</p>
+          {onTitle ? (
+            /* 누를 수 있다는 걸 알려야 해서 ›  를 붙인다 */
+            <button
+              onClick={onTitle}
+              className="flex max-w-full items-center gap-1 text-left"
+            >
+              <div className="min-w-0">
+                <h1 className="truncate text-[17px] font-extrabold tracking-tight">
+                  {title}
+                </h1>
+                <p className="truncate text-[11.5px] text-muted">{sub}</p>
+              </div>
+              <span className="shrink-0 text-[15px] text-muted">›</span>
+            </button>
+          ) : (
+            <>
+              <h1 className="truncate text-[17px] font-extrabold tracking-tight">
+                {title}
+              </h1>
+              <p className="truncate text-[11.5px] text-muted">{sub}</p>
+            </>
+          )}
         </div>
         {action}
       </header>
@@ -460,9 +482,72 @@ function Bubble({
   );
 }
 
+/* 1:1 방에서 제목을 누르면 뜨는 상대 프로필.
+   목록(my_chats)이 이미 내려주는 값만 쓴다 — 프로필 전체를 다시
+   불러오면 방을 열 때마다 요청이 하나 더 붙는데, 여기서 궁금한 건
+   "얼굴이랑 대충 누구였지" 정도다. */
+function PartnerSheet({ chat, onClose }: { chat: Chat; onClose: () => void }) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!chat.photo) return;
+    (async () => setUrl((await signedPhotoUrls([chat.photo!]))[chat.photo!] ?? null))();
+  }, [chat.photo]);
+
+  const lv = level(chat.level);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end bg-black/60"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[85vh] w-full overflow-y-auto rounded-t-3xl border-t border-line bg-surface p-5"
+        style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={url}
+            alt={chat.nickname}
+            className="aspect-[4/5] w-full rounded-2xl object-cover"
+          />
+        ) : (
+          <div className="flex aspect-[4/5] w-full items-center justify-center rounded-2xl bg-surface2 text-5xl">
+            🧗
+          </div>
+        )}
+
+        <p className="mt-4 text-[19px] font-extrabold">
+          {chat.nickname}
+          <span className="ml-2 text-[14px] font-semibold text-muted">
+            {chat.age}
+          </span>
+        </p>
+        <p className="mt-1 text-[13.5px] text-muted">
+          L{chat.level} {lv.name} ({lv.colors})
+          {chat.home_gym && ` · ${chat.home_gym}`}
+        </p>
+        <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
+          {origin(chat)}
+        </p>
+
+        <button
+          onClick={onClose}
+          className="mt-5 w-full rounded-xl border border-line py-3.5 text-[14px] font-bold"
+        >
+          닫기
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
   const [msgs, setMsgs] = useState<ChatMessage[] | null>(null);
   const [reporting, setReporting] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
@@ -513,6 +598,7 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
         onBack={onBack}
         title={chat.nickname}
         sub={`${origin(chat)} · L${chat.level} ${level(chat.level).name}`}
+        onTitle={() => setShowProfile(true)}
         action={
           <div className="flex shrink-0 items-center">
             <button
@@ -550,6 +636,10 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
           </div>
         )}
       </ChatFrame>
+
+      {showProfile && (
+        <PartnerSheet chat={chat} onClose={() => setShowProfile(false)} />
+      )}
 
       {reporting && (
         <ReportSheet
@@ -613,6 +703,8 @@ function SessionThread({
     load();
   };
 
+  const router = useRouter();
+
   const openPicker = async () => {
     setPicking(true);
     if (members === null) {
@@ -627,6 +719,7 @@ function SessionThread({
       onBack={onBack}
       title={room.gym}
       sub={`${sessionSub(room)} · ${room.members}명`}
+      onTitle={() => router.push(`/room?id=${room.session_id}`)}
       action={
         <button
           onClick={openPicker}
