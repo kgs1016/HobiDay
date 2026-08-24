@@ -322,20 +322,15 @@ export default function Home() {
         <p className="text-[17px] font-extrabold tracking-[2px] text-accent">
           HOBIDAY
         </p>
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <Link
-            href="/session/new"
-            className="rounded-xl bg-accent py-3 text-center text-[14px] font-bold text-white"
-          >
-            + 모임 만들기
-          </Link>
-          <Link
-            href="/profile/new"
-            className="rounded-xl border border-line bg-surface py-3 text-center text-[14px] font-bold text-muted"
-          >
-            {me ? "내 프로필 관리" : "+ 내 프로필 올리기"}
-          </Link>
-        </div>
+        {/* 프로필 관리는 내 정보 탭에서 들어가면 되니 홈에서는 뺐다.
+            애초에 프로필이 없으면 RequireProfile 이 막아서 이 화면에
+            들어오지도 못한다 — 여기에 "올리기" 버튼이 있을 이유가 없었다. */}
+        <Link
+          href="/session/new"
+          className="mt-4 block rounded-xl bg-accent py-3 text-center text-[14px] font-bold text-white"
+        >
+          + 모임 만들기
+        </Link>
       </header>
 
       {/* 탭 */}
