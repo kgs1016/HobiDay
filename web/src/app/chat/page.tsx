@@ -501,8 +501,9 @@ function PartnerSheet({ chat, onClose }: { chat: Chat; onClose: () => void }) {
       className="fixed inset-0 z-50 flex items-end bg-black/60"
       onClick={onClose}
     >
+      {/* 크기·비율은 사람 찾기의 프로필 시트(app/page.tsx)와 맞춘다 */}
       <div
-        className="max-h-[85vh] w-full overflow-y-auto rounded-t-3xl border-t border-line bg-surface p-5"
+        className="mx-auto max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-line bg-surface p-5"
         style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -511,21 +512,21 @@ function PartnerSheet({ chat, onClose }: { chat: Chat; onClose: () => void }) {
           <img
             src={url}
             alt={chat.nickname}
-            className="aspect-[4/5] w-full rounded-2xl object-cover"
+            className="aspect-square w-full rounded-2xl object-cover"
           />
         ) : (
-          <div className="flex aspect-[4/5] w-full items-center justify-center rounded-2xl bg-surface2 text-5xl">
+          <div className="flex aspect-square w-full items-center justify-center rounded-2xl bg-surface2 text-6xl">
             🧗
           </div>
         )}
 
         <p className="mt-4 text-[19px] font-extrabold">
           {chat.nickname}
-          <span className="ml-2 text-[14px] font-semibold text-muted">
+          <span className="ml-2 text-[13px] font-medium text-muted">
             {chat.age}
           </span>
         </p>
-        <p className="mt-1 text-[13.5px] text-muted">
+        <p className="mt-1 text-[13px] text-muted">
           L{chat.level} {lv.name} ({lv.colors})
           {chat.home_gym && ` · ${chat.home_gym}`}
         </p>
