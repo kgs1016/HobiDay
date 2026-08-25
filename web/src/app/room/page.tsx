@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQueryId } from "@/lib/queryId";
+import { useQueryId, useQueryParam } from "@/lib/queryId";
 import { careerLabel, level } from "@/lib/levels";
 import { DEMO_ID, buildDemoRoom } from "@/lib/roomDemo";
 import {
@@ -41,6 +41,7 @@ const ERRORS: Record<string, string> = {
 
 export default function Room() {
   const qid = useQueryId();
+  const from = useQueryParam("from");
   const id = qid ?? "";
   const router = useRouter();
   // /room?id=demo — 혼자서 화면을 확인하기 위한 경로. DB를 타지 않는다.
@@ -74,6 +75,14 @@ export default function Room() {
   useEffect(() => {
     load();
   }, [load]);
+
+  /* 채팅방에서 들어왔으면 그 방으로 돌려보낸다.
+     방을 여는 건 /chat 의 상태일 뿐 화면 전환이 아니라, 뒤로가기만으로는
+     보던 방이 닫히고 목록으로 떨어진다. */
+  const back = () => {
+    if (from === "chat" && qid) router.push(`/chat?room=${qid}#session`);
+    else router.back();
+  };
 
   if (err)
     return (
@@ -139,7 +148,7 @@ export default function Room() {
   return (
     <main className="px-4 pb-10">
       <header className="flex items-center gap-3 pt-5 pb-4">
-        <button onClick={() => router.back()} className="text-lg text-muted">
+        <button onClick={back} className="text-lg text-muted">
           ←
         </button>
         <div className="min-w-0">

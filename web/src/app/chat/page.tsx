@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryParam } from "@/lib/queryId";
 import { level } from "@/lib/levels";
 import ReportSheet from "@/components/ReportSheet";
 import { notifyPush } from "@/lib/nativePush";
@@ -83,6 +84,23 @@ export default function ChatPage() {
       if (user) load();
     })();
   }, [load]);
+
+  /* 진행 화면에서 ← 로 돌아오면 보던 방이 그대로 열려 있어야 한다.
+     방을 여는 건 화면 전환이 아니라 이 페이지의 상태라, 브라우저
+     뒤로가기만으로는 목록으로 떨어진다. 그래서 주소로 받아 다시 연다. */
+  const roomParam = useQueryParam("room");
+  useEffect(() => {
+    if (!roomParam || !rooms) return;
+    const r = rooms.find((x) => x.session_id === roomParam);
+    if (r) {
+      setTab("session");
+      openSession(r);
+    }
+    // 한 번 열고 나면 주소에서 지운다 — 목록으로 나갔다가 다시
+    // 들어올 때 또 열려버리는 걸 막는다
+    window.history.replaceState(null, "", "/chat#session");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomParam, rooms]);
 
   /** 방을 열면 읽음으로 표시한다 (목록의 배지가 바로 사라지게 낙관적 갱신) */
   const openThread = async (c: Chat) => {
@@ -720,7 +738,7 @@ function SessionThread({
       onBack={onBack}
       title={room.gym}
       sub={`${sessionSub(room)} · ${room.members}명`}
-      onTitle={() => router.push(`/room?id=${room.session_id}`)}
+      onTitle={() => router.push(`/room?id=${room.session_id}&from=chat`)}
       action={
         <button
           onClick={openPicker}

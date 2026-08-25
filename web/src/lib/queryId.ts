@@ -23,3 +23,14 @@ export function useQueryId(): string | null | undefined {
 
   return id;
 }
+
+/** 같은 방식으로 아무 쿼리 값이나 읽는다 (?room=, ?from= 등) */
+export function useQueryParam(name: string): string | null | undefined {
+  const [v, setV] = useState<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    setV(new URLSearchParams(window.location.search).get(name));
+  }, [name]);
+
+  return v;
+}
