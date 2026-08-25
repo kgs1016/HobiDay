@@ -781,7 +781,7 @@ function SessionThread({
       onBack={onBack}
       title={room.gym}
       sub={`${sessionSub(room)} · ${room.members}명`}
-      onTitle={() => router.push(`/room?id=${room.session_id}&from=chat`)}
+      onTitle={() => router.push(`/session?id=${room.session_id}&from=chat`)}
       action={
         <button
           onClick={openPicker}

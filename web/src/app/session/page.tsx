@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useQueryId } from "@/lib/queryId";
+import { useQueryId, useQueryParam } from "@/lib/queryId";
 import { notifyPush } from "@/lib/nativePush";
 import { level, levelRangeLabel } from "@/lib/levels";
 import { isProfileComplete } from "@/lib/profileGate";
@@ -28,6 +28,7 @@ type S = Session & { myStatus?: string | null };
 
 export default function SessionDetail() {
   const id = useQueryId();
+  const from = useQueryParam("from");
   const router = useRouter();
   const [s, setS] = useState<S | null | undefined>(undefined);
   const [hostPhoto, setHostPhoto] = useState<string | null>(null);
@@ -54,6 +55,14 @@ export default function SessionDetail() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  /* 모임 채팅방에서 제목을 눌러 들어왔으면 그 방으로 돌려보낸다.
+     방을 여는 건 /chat 의 상태일 뿐 화면 전환이 아니라, 뒤로가기만으로는
+     보던 방이 닫히고 목록으로 떨어진다. */
+  const back = () => {
+    if (from === "chat" && id) router.push(`/chat?room=${id}#session`);
+    else router.back();
+  };
 
   if (s === undefined)
     return <main className="px-4 pt-20 text-center text-muted">불러오는 중…</main>;
@@ -266,7 +275,7 @@ export default function SessionDetail() {
   return (
     <main className="px-4">
       <header className="flex items-center gap-3 pt-5 pb-4">
-        <button onClick={() => router.back()} className="text-lg text-muted">
+        <button onClick={back} className="text-lg text-muted">
           ←
         </button>
         <h1 className="text-[19px] font-extrabold tracking-tight">모임 정보</h1>
