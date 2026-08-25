@@ -45,13 +45,16 @@ const origin = (c: Chat) =>
 
 const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
-/* 끝난 모임의 방은 24시간 뒤에 사라진다 (session_chat_open 이 닫는다).
-   남은 시간을 초읽기로 보여주진 않는다 — 알아서 좋을 게 없고, 1분마다
-   다시 그릴 이유도 없다. */
-const endedNotice = (c: SessionChat): string | null =>
-  new Date(c.ends_at).getTime() < Date.now()
+/* 방은 모임이 끝나거나 취소되고 24시간 뒤에 사라진다
+   (session_chat_open 이 닫는다). 남은 시간을 초읽기로 보여주진 않는다 —
+   알아서 좋을 게 없고, 1분마다 다시 그릴 이유도 없다. */
+function endedNotice(c: SessionChat): string | null {
+  if (c.status === "cancelled")
+    return "모임이 취소되었어요. 하루 뒤에 채팅방이 사라져요.";
+  return new Date(c.ends_at).getTime() < Date.now()
     ? "모임이 종료되었어요. 하루 뒤에 채팅방이 사라져요."
     : null;
+}
 
 /** 모임방 부제 — "토 8/31 · 15:00 · 2:2" */
 const sessionSub = (c: SessionChat) => {

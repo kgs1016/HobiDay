@@ -183,7 +183,21 @@ export default function SessionDetail() {
     const r = await cancelSignup(s.id);
     setBusy(false);
     if (r.error) return alert(`실패: ${r.error}`);
-    alert(waiting ? "신청을 취소했어요. 신청비는 돌려드렸어요." : "모임에서 나왔어요.");
+    // 내가 빠지면서 호스트 혼자 남으면 모임이 통째로 취소된다
+    if (r.cancelled) {
+      if (r.notify?.length)
+        notifyPush(
+          r.notify,
+          "😢 모임이 취소됐어요",
+          `${s.gym} 모임에 남은 사람이 없어 취소됐어요. 신청 크레딧은 돌려드렸어요.`,
+          "/inbox"
+        );
+      alert("모임에서 나왔어요.\n남은 사람이 없어 모임은 취소됐어요.");
+    } else {
+      alert(
+        waiting ? "신청을 취소했어요. 신청비는 돌려드렸어요." : "모임에서 나왔어요."
+      );
+    }
     load();
   };
 

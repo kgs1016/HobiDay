@@ -313,13 +313,20 @@ export async function deleteSession(id: string) {
   return data as { ok?: boolean; notify?: string[]; error?: string };
 }
 
-/** 참가자가 모임에서 빠진다. 대기 중이면 신청비 반환, 확정 후엔 반환 없음. */
+/** 참가자가 모임에서 빠진다. 대기 중이면 신청비 반환, 확정 후엔 반환 없음.
+ *  cancelled — 내가 빠지면서 확정이 1명이 돼 모임 자체가 취소됐다.
+ *  notify    — 그때 남아 있던 사람들 (신청비는 서버가 이미 돌려줬다) */
 export async function cancelSignup(id: string) {
   const sb = getSupabase();
   if (!sb) return { error: "no_client" };
   const { data, error } = await sb.rpc("session_cancel", { p_session: id });
   if (error) return { error: error.message };
-  return data as { ok?: boolean; error?: string };
+  return data as {
+    ok?: boolean;
+    cancelled?: boolean;
+    notify?: string[];
+    error?: string;
+  };
 }
 
 /* ── 조기 확정 ──
@@ -1032,8 +1039,10 @@ export interface SessionChat {
   session_id: string;
   gym: string;
   starts_at: string;
-  /** 방이 닫히는 기준 — 끝나고 3시간 뒤 */
+  /** 방이 닫히는 기준 — 끝나거나 취소되고 24시간 뒤 */
   ends_at: string;
+  status: "open" | "confirmed" | "cancelled" | "done";
+  cancelled_at: string | null;
   capacity: 1 | 2;
   members: number;
   last_body: string | null;
