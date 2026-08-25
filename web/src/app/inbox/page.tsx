@@ -37,7 +37,8 @@ const when = (iso: string) => {
 /* 호스트 승인제라 상태가 셋이다.
    waiting  호스트가 아직 안 봤거나 고민 중
    confirmed 자리가 잡혔다 (모임 성사와는 다르다)
-   cut      호스트가 받지 않았다 */
+   cut      호스트가 받지 않았거나, 답 없이 모임이 시작됐다.
+            둘 다 신청비를 돌려준다 (거절은 즉시, 무응답은 크론이) */
 const STATUS: Record<string, { label: string; cls: string; note?: string }> = {
   waiting: {
     label: "승인 대기",
@@ -52,7 +53,7 @@ const STATUS: Record<string, { label: string; cls: string; note?: string }> = {
   cut: {
     label: "이번엔 못 갔어요",
     cls: "bg-surface2 text-muted",
-    note: "다른 모임을 둘러보세요.",
+    note: "신청비는 돌려드렸어요. 다른 모임을 둘러보세요.",
   },
 };
 
