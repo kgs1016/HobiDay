@@ -166,12 +166,16 @@ export default function Inbox() {
       ? await approveSignup(h.session_id, h.user_id)
       : await rejectSignup(h.session_id, h.user_id);
     setBusy(null);
-    if (ok && !r.error)
+    if (!r.error)
+      // 거절도 알린다. 크레딧이 걸려 있어서 결과를 모르면 계속 기다린다.
+      // (관심 거절은 일부러 안 알린다 — 짝사랑을 드러내지 않기로 했다)
       notifyPush(
         h.user_id,
-        "✅ 모임 신청이 수락됐어요",
-        `${h.gym} 모임에 자리가 잡혔어요`,
-        `/session?id=${h.session_id}`
+        ok ? "✅ 모임 신청이 수락됐어요" : "모임 신청 결과를 알려드려요",
+        ok
+          ? `${h.gym} 모임에 자리가 잡혔어요`
+          : `${h.gym} 모임은 이번엔 함께하지 못하게 됐어요. 신청비는 돌려드렸어요.`,
+        ok ? `/session?id=${h.session_id}` : "/inbox"
       );
     if (r.error) {
       const msg: Record<string, string> = {
