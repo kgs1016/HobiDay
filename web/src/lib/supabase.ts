@@ -108,6 +108,8 @@ export function toSession(
     date: `${DAYS[st.getDay()]} ${st.getMonth() + 1}/${st.getDate()}`,
     start: hm(st),
     end: hm(en),
+    startsAt: r.starts_at,
+    endsAt: r.ends_at,
     capacity: r.capacity,
     levelMin: r.level_min,
     levelMax: r.level_max,
@@ -147,6 +149,21 @@ export async function fetchSessions(): Promise<DbSession[] | null> {
     return null;
   }
   return data as DbSession[];
+}
+
+/** 모임 한 건. 목록과 같은 모양이지만 조건이 다르다 — 관계자(호스트·
+ *  신청자)는 시작했든 끝났든 취소됐든 언제나 열 수 있다. 참가 취소와
+ *  모임 삭제(=환불) 버튼이 상세에만 있어서, 여기가 막히면 낸 크레딧을
+ *  돌려받을 길이 없어진다. */
+export async function fetchSession(id: string): Promise<DbSession | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc("session_detail", { p_session: id });
+  if (error) {
+    console.error("session_detail", error);
+    return null;
+  }
+  return (data as DbSession | null) ?? null;
 }
 
 /** 모임을 연 사람이 프로필에 적은 것들. 프로필 id 가 아니라 모임 id 로 받는다 */

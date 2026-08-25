@@ -15,7 +15,7 @@ import {
   cancelSignup,
   currentUser,
   deleteSession,
-  fetchSessions,
+  fetchSession,
   fetchMyProfileDb,
   joinSession,
   proposeConfirm,
@@ -39,8 +39,9 @@ export default function SessionDetail() {
       setS(MOCK_SESSIONS.find((x) => x.id === id) ?? null);
       return;
     }
-    const [rows, user] = await Promise.all([fetchSessions(), currentUser()]);
-    const row = rows?.find((r) => r.id === id);
+    // 목록에서 찾지 않고 단건으로 받는다. 목록은 "지금 신청할 수 있는
+    // 모임" 만 담아서, 시작했거나 취소된 모임은 여기 없다.
+    const [row, user] = await Promise.all([fetchSession(id), currentUser()]);
     setS(row ? toSession(row, undefined, user?.id) : null);
     if (row?.host_photo) {
       setHostPhoto((await signedPhotoUrls([row.host_photo]))[row.host_photo] ?? null);
@@ -65,6 +66,9 @@ export default function SessionDetail() {
 
   const left = slotsLeft(s);
   const full = left.male <= 0 && left.female <= 0;
+  // 시작하면 더 못 받는다 (서버도 session_join 에서 막는다).
+  // 목데이터에는 startsAt 이 없어서 그때는 늘 false.
+  const started = !!s.startsAt && new Date(s.startsAt).getTime() <= Date.now();
   const joined = s.myStatus === "confirmed" || s.myStatus === "waiting";
 
   /* 조기 확정 — 2:2 로 열었지만 남녀 수가 맞으면 그 인원으로 확정한다.
@@ -460,14 +464,14 @@ export default function SessionDetail() {
       )}
 
       <button
-        // 내가 연 모임에는 신청할 수 없다
-        disabled={busy || joined || s.iAmHost || full}
+        // 내가 연 모임에는 신청할 수 없다. 시작한 모임도 마찬가지.
+        disabled={busy || joined || s.iAmHost || full || started}
         className={`mt-6 mb-8 w-full rounded-xl py-3.5 text-[15px] font-bold disabled:opacity-70 ${
           s.iAmHost
             ? "bg-surface2 text-muted"
             : joined
               ? "bg-mint/15 text-mint"
-              : full
+              : full || started
                 ? "bg-surface2 text-muted"
                 : "bg-accent text-white"
         }`}
@@ -485,9 +489,11 @@ export default function SessionDetail() {
                 : "✓ 자리 잡았어요 · 성비가 맞으면 확정돼요"
             : busy
               ? "신청 중…"
-              : full
-                ? "자리가 다 찼어요"
-                : `참여 신청하기 · ${SESSION_JOIN_COST}크레딧`}
+              : started
+                ? "이미 시작한 모임이에요"
+                : full
+                  ? "자리가 다 찼어요"
+                  : `참여 신청하기 · ${SESSION_JOIN_COST}크레딧`}
       </button>
 
       {s.iAmHost ? (

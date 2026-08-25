@@ -12,6 +12,10 @@ export interface Session {
   date: string; // "토 8/1"
   start: string; // "15:00"
   end: string; // "17:00"
+  /* 원본 ISO. date/start 는 사람이 읽는 값이라 비교에 못 쓴다.
+     "이미 시작했나" 같은 판단은 이걸로 한다. 목데이터에는 없다. */
+  startsAt?: string;
+  endsAt?: string;
   capacity: 1 | 2; // n:n (1 = 1:1, 2 = 2:2)
   levelMin: LevelId;
   levelMax: LevelId;
