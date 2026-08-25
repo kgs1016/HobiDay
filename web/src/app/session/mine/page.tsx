@@ -1,7 +1,7 @@
 "use client";
 
 /* 내가 만든 모임 — "지금 관리할 모임" 만 둔다.
-   끝난 지 1시간이 지나면 서버(my_hosted_sessions)가 목록에서 뺀다.
+   채팅방이 사라지는 시각(24시간)에 서버(my_hosted_sessions)가 목록에서도 뺀다.
    끝난 모임의 기록은 내 정보 > 매칭 기록이 맡는다. */
 
 import { useEffect, useState } from "react";
@@ -163,7 +163,7 @@ export default function MySessions() {
                 끝난 모임
               </h2>
               <p className="mb-2 text-[11.5px] leading-relaxed text-muted">
-                끝나고 1시간이 지나면 이 목록에서 사라져요. 성사된 모임은{" "}
+                24시간이 지나면 채팅방과 함께 이 목록에서 사라져요. 성사된 모임은{" "}
                 <Link href="/me/history" className="font-bold underline">
                   내 정보 &gt; 매칭 기록
                 </Link>
