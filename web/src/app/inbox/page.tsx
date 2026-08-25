@@ -609,9 +609,6 @@ export default function Inbox() {
                   </div>
                 ))}
               </div>
-              <p className="mt-2 text-[11.5px] text-muted">
-                거절은 따로 알려드리지 않아요.
-              </p>
             </section>
           )}
         </div>
