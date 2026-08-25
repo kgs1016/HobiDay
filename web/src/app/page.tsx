@@ -643,10 +643,16 @@ export default function Home() {
             </p>
             <p className="mt-1 text-[12.5px] leading-relaxed text-muted">
               한 줄 남기면 수락될 가능성이 높아요. 비워도 됩니다.
-              <br />
-              <b className="text-ink">보내면 크레딧이 바로 쓰여요</b> — 수락
-              여부와 상관없이 돌려드리지 않아요.
             </p>
+            {/* 보내고 나서 알면 늦다 — 누르기 전에 다 말해준다 */}
+            <ul className="mt-2.5 flex flex-col gap-1 rounded-xl bg-surface2 px-3.5 py-3 text-[11.5px] leading-relaxed text-muted">
+              <li>
+                · <b className="text-ink">보내면 크레딧이 바로 쓰여요.</b> 수락
+                여부와 상관없이 돌려드리지 않아요
+              </li>
+              <li>· 7일 동안 답이 없으면 보낸 관심에서 자동으로 사라져요</li>
+              <li>· 상대가 받지 않으면 그때 사라져요 (따로 알려드리지 않아요)</li>
+            </ul>
             <textarea
               value={reqMsg}
               onChange={(e) => setReqMsg(e.target.value.slice(0, 200))}

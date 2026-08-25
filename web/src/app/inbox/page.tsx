@@ -574,6 +574,12 @@ export default function Inbox() {
           {sent.length > 0 && (
             <section>
               <h2 className="mb-2 text-[14px] font-bold">💌 보낸 관심</h2>
+              {/* 목록에서 사라진 이유를 여기서 설명한다 — 거절인지
+                  7일 만료인지는 일부러 구분하지 않는다 */}
+              <p className="mb-2 text-[11.5px] leading-relaxed text-muted">
+                답을 기다리는 관심만 보여요. 상대가 받지 않거나 7일 동안 답이
+                없으면 목록에서 사라져요.
+              </p>
               <div className="flex flex-col gap-2">
                 {sent.map((r) => (
                   <div

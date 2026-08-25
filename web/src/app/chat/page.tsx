@@ -45,8 +45,8 @@ const origin = (c: Chat) =>
 
 const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
-/** 방이 닫히기까지 — 모임이 끝나면 3시간 뒤에 없어진다 */
-const CHAT_LIFE_HOURS = 3;
+/** 방이 닫히기까지 — 모임이 끝나면 24시간 뒤에 없어진다 */
+const CHAT_LIFE_HOURS = 24;
 
 /** 끝난 모임이면 남은 시간을 알려주는 한 줄, 아직이면 null */
 function endedNotice(c: SessionChat): string | null {
