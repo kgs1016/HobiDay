@@ -64,27 +64,6 @@ begin
   return json_build_object('ok', true);
 end; $$;
 
-create or replace function session_chat_messages(p_session uuid)
-returns json language plpgsql stable security definer set search_path = public as $$
-begin
-  if not session_chat_member(p_session) then
-    return json_build_object('error','not_allowed');
-  end if;
-
-  return (
-    select coalesce(json_agg(row_to_json(t) order by t.created_at), '[]'::json) from (
-      select x.id, x.sender_id, x.body, x.created_at, x.kind,
-             (x.sender_id = auth.uid()) as mine,
-             p.nickname as sender_name,
-             p.photo    as sender_photo,
-             (x.sender_id = s.host_id) as sender_is_host
-        from messages x
-        join sessions s on s.id = x.session_id
-        left join profiles p on p.id = x.sender_id
-       where x.session_id = p_session
-    ) t
-  );
-end $$;
 
 revoke execute on function session_cancel(uuid) from public, anon;
 grant execute on function session_cancel(uuid) to authenticated;
