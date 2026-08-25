@@ -578,8 +578,7 @@ export default function Inbox() {
               {/* 목록에서 사라진 이유를 여기서 설명한다 — 거절인지
                   7일 만료인지는 일부러 구분하지 않는다 */}
               <p className="mb-2 text-[11.5px] leading-relaxed text-muted">
-                보낸 지 7일이 지나면 목록에서 사라져요. 상대가 받지 않아도
-                마찬가지라, 따로 알려드리지는 않아요.
+                상대가 거절하거나 보낸 지 7일이 지나면 목록에서 사라져요.
               </p>
               <div className="flex flex-col gap-2">
                 {sent.map((r) => (
