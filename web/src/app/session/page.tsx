@@ -177,14 +177,16 @@ export default function SessionDetail() {
     router.push("/");
   };
 
-  /* 참가자: 모임에서 빠지기. 대기 중엔 반환, 확정 후엔 반환 없음 */
+  /* 참가자: 모임에서 빠지기.
+     반환 여부는 "내가 승인됐나" 가 아니라 "모임이 성사됐나" 로 갈린다.
+     2:2 에 둘뿐이면 채팅방은 열려 있어도 모임은 아직 안 열린 상태다. */
   const onLeave = async () => {
-    const waiting = s.myStatus !== "confirmed";
+    const settled = s.status === "confirmed"; // 정원 참 · 조기 확정
     if (
       !confirm(
-        waiting
-          ? "신청을 취소할까요? 신청비는 돌려드려요."
-          : "모임에서 나갈까요?\n확정된 자리를 비우는 거라 신청비는 돌려드리지 않아요."
+        settled
+          ? "모임에서 나갈까요?\n성사된 모임의 자리를 비우는 거라 신청비는 돌려드리지 않아요."
+          : "모임에서 나갈까요? 신청비는 돌려드려요."
       )
     )
       return;
@@ -204,7 +206,9 @@ export default function SessionDetail() {
       alert("모임에서 나왔어요.\n남은 사람이 없어 모임은 취소됐어요.");
     } else {
       alert(
-        waiting ? "신청을 취소했어요. 신청비는 돌려드렸어요." : "모임에서 나왔어요."
+        settled
+          ? "모임에서 나왔어요."
+          : "모임에서 나왔어요. 신청비는 돌려드렸어요."
       );
     }
     load();
