@@ -209,10 +209,11 @@ export default function Me() {
                 ))
               )}
               <p className="border-t border-line px-4 py-2.5 text-[11.5px] leading-relaxed text-muted">
-                관심·모임 신청 1회에 {REQUEST_COST}크레딧을 써요. 거절되면
-                돌려드리고, 관심은 7일간 응답이 없어도 자동으로 돌려드려요.
-                모임에서 등반 영상을 올리면 한 번에 {CREDIT_SESSION_VIDEO}
-                크레딧이 쌓여요.
+                관심 보내기 1회에 {REQUEST_COST}크레딧을 써요. 보내는 순간
+                쓰는 거라 수락 여부와 상관없이 돌려드리지 않아요. 모임 신청은
+                같은 {REQUEST_COST}크레딧이지만, 호스트가 받지 않거나 모임이
+                취소되면 돌려드려요. 모임에서 등반 영상을 올리면 한 번에{" "}
+                {CREDIT_SESSION_VIDEO}크레딧이 쌓여요.
               </p>
             </section>
           )}
