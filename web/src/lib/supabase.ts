@@ -424,10 +424,13 @@ export async function approveSignup(sessionId: string, userId: string) {
     p_user: userId,
   });
   if (error) return { error: error.message };
-  // notify — 방이 열렸을 때 이미 확정돼 있던 사람들 (호스트·방금 승인된 사람 제외)
+  /* chat_opened — 이번 승인으로 확정이 2명이 돼서 방이 막 열렸다
+     confirmed   — 이번 승인으로 정원이 다 찼다 (둘은 이제 다른 사건)
+     notify      — 알릴 사람 (호스트·방금 승인된 사람 제외) */
   return data as {
     ok?: boolean;
     chat_opened?: boolean;
+    confirmed?: boolean;
     notify?: string[];
     error?: string;
   };

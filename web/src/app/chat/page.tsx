@@ -736,7 +736,7 @@ function SessionThread({
         <p className="pt-10 text-center text-muted">불러오는 중…</p>
       ) : msgs.length === 0 ? (
         <p className="px-6 pt-10 text-center text-[13px] leading-relaxed text-muted">
-          정원이 다 차서 열린 방이에요.
+          같이 갈 사람이 정해져서 열린 방이에요.
           <br />
           만날 시간과 장소를 여기서 맞춰보세요 🧗
         </p>

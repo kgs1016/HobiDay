@@ -180,19 +180,21 @@ export default function Inbox() {
       };
       return alert(msg[r.error] ?? `실패: ${r.error}`);
     }
-    if (ok && "chat_opened" in r && r.chat_opened) {
-      // 방금 승인된 사람은 위에서 "수락됐어요" 를 받았고, 먼저 확정돼
-      // 있던 사람들은 방이 열린 걸 모른다 — 서버가 준 목록으로 알린다
-      // (r 은 승인/거절 반환의 합집합이라 notify 는 좁혀서 꺼낸다)
-      const notify = (r as { notify?: string[] }).notify;
-      if (notify?.length)
+    // 방 열림(확정 2명)과 정원 참은 이제 다른 사건이다.
+    // 방금 승인된 사람은 위에서 "수락됐어요" 를 받았고, 먼저 확정돼
+    // 있던 사람들은 서버가 준 목록으로 알린다.
+    // (r 은 승인/거절 반환의 합집합이라 좁혀서 꺼낸다)
+    if (ok) {
+      const rr = r as { chat_opened?: boolean; confirmed?: boolean; notify?: string[] };
+      if (rr.confirmed && rr.notify?.length)
         notifyPush(
-          notify,
+          rr.notify,
           "🎉 모임이 확정됐어요",
-          `${h.gym} 모임 정원이 다 찼어요. 채팅방이 열렸어요!`,
+          `${h.gym} 모임 정원이 다 찼어요`,
           "/chat#session"
         );
-      alert("정원이 다 찼어요! 모임 채팅방이 열렸습니다 🎉");
+      if (rr.chat_opened) alert("모임 채팅방이 열렸습니다 🎉");
+      else if (rr.confirmed) alert("정원이 다 찼어요! 모임이 확정됐습니다 🎉");
     }
     load();
   };

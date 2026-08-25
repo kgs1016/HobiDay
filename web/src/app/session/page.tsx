@@ -439,8 +439,10 @@ export default function SessionDetail() {
 
       {s.myStatus === "confirmed" && (
         <div className="mt-5 flex flex-col gap-2">
-          {/* 모임이 성사돼야 방이 열린다 — 자리가 남아도 조기 확정이면 열린다 */}
-          {s.status === "confirmed" && (
+          {/* 방은 호스트 말고 한 명이라도 확정되면 열린다 (확정 2명 이상).
+             정원이 차기를 기다리지 않는다 — 시간·장소를 맞추는 게 방의
+             쓸모라, 맞출 사람이 생긴 시점에 열려 있어야 한다. */}
+          {s.maleJoined + s.femaleJoined >= 2 && (
             <Link
               href="/chat#session"
               className="block rounded-xl border border-mint/50 bg-mint/10 py-3.5 text-center text-[14.5px] font-bold text-mint"
