@@ -36,9 +36,14 @@ function badge(s: MyHostedSession) {
     return s.status === "confirmed"
       ? { label: "완료", cls: "bg-mint/15 text-mint" }
       : { label: "무산됨", cls: "bg-surface2 text-muted" };
+  // 방은 확정 2명부터 열린다 — 정원이 차기 전에도 이미 열려 있다
+  const chatting = s.m_confirmed + s.f_confirmed >= 2;
   if (s.status === "confirmed")
     return { label: "확정 · 채팅방 열림", cls: "bg-mint/15 text-mint" };
-  return { label: "모집 중", cls: "bg-accent/15 text-accent" };
+  return {
+    label: chatting ? "모집 중 · 채팅방 열림" : "모집 중",
+    cls: "bg-accent/15 text-accent",
+  };
 }
 
 function Card({ s }: { s: MyHostedSession }) {

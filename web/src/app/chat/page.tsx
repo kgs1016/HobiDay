@@ -214,11 +214,11 @@ export default function ChatPage() {
         rooms.length === 0 ? (
           <div className="mt-16 flex flex-col items-center gap-2 text-center">
             <span className="text-4xl">🧗</span>
-            <p className="text-[15px] font-bold">아직 확정된 모임이 없어요</p>
+            <p className="text-[15px] font-bold">아직 열린 모임 채팅이 없어요</p>
             <p className="text-[13px] leading-relaxed text-muted">
-              모임 정원이 다 차면
+              호스트가 신청을 받아주면
               <br />
-              참가자 전원이 여기 한 방에 모여요
+              그때부터 참가자끼리 여기서 이야기해요
             </p>
           </div>
         ) : (
