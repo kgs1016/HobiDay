@@ -51,7 +51,7 @@ const STATUS: Record<string, { label: string; cls: string; note?: string }> = {
     note: "남녀 수가 맞으면 모임이 열려요.",
   },
   cut: {
-    label: "이번엔 못 갔어요",
+    label: "거절됨",
     cls: "bg-surface2 text-muted",
     note: "신청비는 돌려드렸어요. 다른 모임을 둘러보세요.",
   },
@@ -577,8 +577,8 @@ export default function Inbox() {
               {/* 목록에서 사라진 이유를 여기서 설명한다 — 거절인지
                   7일 만료인지는 일부러 구분하지 않는다 */}
               <p className="mb-2 text-[11.5px] leading-relaxed text-muted">
-                답을 기다리는 관심만 보여요. 상대가 받지 않거나 7일 동안 답이
-                없으면 목록에서 사라져요.
+                보낸 지 7일이 지나면 목록에서 사라져요. 상대가 받지 않아도
+                마찬가지라, 따로 알려드리지는 않아요.
               </p>
               <div className="flex flex-col gap-2">
                 {sent.map((r) => (
