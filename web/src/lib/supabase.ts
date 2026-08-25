@@ -1032,6 +1032,8 @@ export interface SessionChat {
   session_id: string;
   gym: string;
   starts_at: string;
+  /** 방이 닫히는 기준 — 끝나고 3시간 뒤 */
+  ends_at: string;
   capacity: 1 | 2;
   members: number;
   last_body: string | null;

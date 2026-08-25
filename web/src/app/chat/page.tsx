@@ -45,6 +45,20 @@ const origin = (c: Chat) =>
 
 const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
+/** 방이 닫히기까지 — 모임이 끝나면 3시간 뒤에 없어진다 */
+const CHAT_LIFE_HOURS = 3;
+
+/** 끝난 모임이면 남은 시간을 알려주는 한 줄, 아직이면 null */
+function endedNotice(c: SessionChat): string | null {
+  const end = new Date(c.ends_at).getTime();
+  if (Number.isNaN(end) || end > Date.now()) return null;
+  const left = end + CHAT_LIFE_HOURS * 3600_000 - Date.now();
+  if (left <= 0) return "모임이 종료되었어요. 곧 채팅방이 사라져요.";
+  const mins = Math.ceil(left / 60_000);
+  const when = mins >= 60 ? `${Math.ceil(mins / 60)}시간` : `${mins}분`;
+  return `모임이 종료되었어요. ${when} 뒤에 채팅방이 사라져요.`;
+}
+
 /** 모임방 부제 — "토 8/31 · 15:00 · 2:2" */
 const sessionSub = (c: SessionChat) => {
   const d = new Date(c.starts_at);
@@ -235,6 +249,12 @@ export default function ChatPage() {
                   >
                     {c.last_body ?? sessionSub(c)}
                   </p>
+                  {/* 곧 사라질 방이라는 걸 목록에서도 알린다 */}
+                  {endedNotice(c) && (
+                    <p className="mt-0.5 truncate text-[11.5px] text-muted">
+                      {endedNotice(c)}
+                    </p>
+                  )}
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <span className="text-[11.5px] text-muted">{when(c.last_at)}</span>
@@ -724,6 +744,13 @@ function SessionThread({
 
   const router = useRouter();
 
+  // 끝난 방이면 남은 시간을 알린다. 1분마다 다시 계산해서 문구가 준다.
+  const [ended, setEnded] = useState(() => endedNotice(room));
+  useEffect(() => {
+    const t = setInterval(() => setEnded(endedNotice(room)), 60_000);
+    return () => clearInterval(t);
+  }, [room]);
+
   const openPicker = async () => {
     setPicking(true);
     if (members === null) {
@@ -752,7 +779,7 @@ function SessionThread({
     >
       {msgs === null ? (
         <p className="pt-10 text-center text-muted">불러오는 중…</p>
-      ) : msgs.length === 0 ? (
+      ) : msgs.length === 0 && !ended ? (
         <p className="px-6 pt-10 text-center text-[13px] leading-relaxed text-muted">
           같이 갈 사람이 정해져서 열린 방이에요.
           <br />
@@ -769,6 +796,12 @@ function SessionThread({
               isHost={m.sender_is_host}
             />
           ))}
+          {/* 시스템 안내 — 말풍선이 아니라 가운데 한 줄로 둔다 */}
+          {ended && (
+            <p className="my-2 self-center rounded-full bg-surface2 px-3.5 py-1.5 text-center text-[12px] text-muted">
+              {ended}
+            </p>
+          )}
           <div ref={bottom} />
         </div>
       )}
