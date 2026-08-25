@@ -50,7 +50,7 @@ const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
    알아서 좋을 게 없고, 1분마다 다시 그릴 이유도 없다. */
 function endedNotice(c: SessionChat): string | null {
   if (c.status === "cancelled")
-    return "모임이 취소되었어요. 하루 뒤에 채팅방이 사라져요.";
+    return "매칭이 취소되었어요. 하루 뒤에 채팅방이 사라져요.";
   return new Date(c.ends_at).getTime() < Date.now()
     ? "모임이 종료되었어요. 하루 뒤에 채팅방이 사라져요."
     : null;
