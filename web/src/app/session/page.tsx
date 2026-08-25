@@ -215,6 +215,9 @@ export default function SessionDetail() {
     setBusy(false);
     if (r.error === "is_host") return alert("내가 연 모임이에요!");
     if (r.error === "full") return alert("자리가 이미 다 찼어요.");
+    // 목록에서 사라지기 전에 열어둔 화면에서 누른 경우
+    if (r.error === "started")
+      return alert("이미 시작한 모임이에요. 다른 모임을 찾아보세요.");
     if (r.error === "no_credits")
       return alert(
         `크레딧이 부족해요.
