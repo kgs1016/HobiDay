@@ -166,15 +166,8 @@ export default function Inbox() {
       ? await approveSignup(h.session_id, h.user_id)
       : await rejectSignup(h.session_id, h.user_id);
     setBusy(null);
-    // 거절은 알리지 않는다. 신청함을 열면 "거절됨" 으로 보이고 신청비도
-    // 돌아가 있다 — 굳이 폰을 울려서 알릴 소식은 아니다.
-    if (ok && !r.error)
-      notifyPush(
-        h.user_id,
-        "✅ 모임 신청이 수락됐어요",
-        `${h.gym} 모임에 자리가 잡혔어요`,
-        `/session?id=${h.session_id}`
-      );
+    // 승인·거절 모두 푸시를 보내지 않는다. 신청함을 열면 상태가 그대로
+    // 보이고, 승인되면 모임 채팅방이 열려서 거기서 알게 된다.
     if (r.error) {
       const msg: Record<string, string> = {
         full: "그 성별 자리가 이미 다 찼어요",
