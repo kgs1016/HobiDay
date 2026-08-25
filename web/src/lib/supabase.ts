@@ -685,6 +685,8 @@ export interface Chat {
   level: LevelId;
   home_gym: string;
   photo: string | null;
+  /** 상대가 나갔다 — 방은 남지만 더 보낼 수는 없다 */
+  partner_left?: boolean;
   last_body: string | null;
   last_at: string;
   unread: number;
@@ -692,6 +694,8 @@ export interface Chat {
 
 export interface ChatMessage {
   id: number;
+  /** system = "○○님이 나갔어요" 같은 안내. 말풍선이 아니라 가운데 한 줄 */
+  kind?: "user" | "system";
   sender_id: string;
   body: string;
   created_at: string;

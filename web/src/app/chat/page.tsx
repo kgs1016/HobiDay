@@ -360,6 +360,7 @@ function ChatFrame({
   sub,
   action,
   onTitle,
+  closedNote,
   onSend,
   children,
 }: {
@@ -368,6 +369,8 @@ function ChatFrame({
   sub: string;
   /** 헤더 오른쪽 — 1:1 방은 신고 버튼이 붙는다 */
   action?: React.ReactNode;
+  /** 채워져 있으면 입력창 대신 이 안내를 둔다 (상대가 나간 방) */
+  closedNote?: string | null;
   /** 제목을 누를 때 — 1:1 은 상대 프로필, 모임방은 진행 화면 */
   onTitle?: () => void;
   onSend: (body: string) => Promise<void>;
@@ -437,6 +440,11 @@ function ChatFrame({
       {/* min-h-0 이 없으면 flex 아이템이 내용만큼 커져서 스크롤이 안 걸린다 */}
       <div className="min-h-0 flex-1 overflow-y-auto pb-3">{children}</div>
 
+      {closedNote ? (
+        <p className="shrink-0 bg-bg py-4 text-center text-[12.5px] leading-relaxed text-muted">
+          {closedNote}
+        </p>
+      ) : (
       <form onSubmit={submit} className="flex shrink-0 gap-2 bg-bg py-3">
         <input
           value={text}
@@ -452,6 +460,7 @@ function ChatFrame({
           전송
         </button>
       </form>
+      )}
     </div>
   );
 }
@@ -486,6 +495,14 @@ function Bubble({
       </span>
     </div>
   );
+
+  // "○○님이 나갔어요" 같은 안내 — 누구 말도 아니라 가운데에 둔다
+  if (m.kind === "system")
+    return (
+      <p className="my-2 self-center rounded-full bg-surface2 px-3.5 py-1.5 text-center text-[12px] text-muted">
+        {m.body}
+      </p>
+    );
 
   if (m.mine) return <div className="max-w-[78%] self-end">{bubble}</div>;
 
@@ -619,7 +636,9 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
   const leave = async () => {
     if (
       !confirm(
-        "이 대화방에서 나갈까요?\n방이 상대방에게서도 사라지고, 다시 열 수 없어요."
+        "이 대화방에서 나갈까요?\n" +
+          "내 목록에서만 사라져요. 상대에게는 내가 나갔다고 표시되고,\n" +
+          "상대까지 나가면 대화가 완전히 지워져요."
       )
     )
       return;
@@ -635,6 +654,11 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
         title={chat.nickname}
         sub={`${origin(chat)} · L${chat.level} ${level(chat.level).name}`}
         onTitle={() => setShowProfile(true)}
+        closedNote={
+          chat.partner_left
+            ? "상대가 대화방을 나갔어요. 더 이상 메시지를 보낼 수 없어요."
+            : null
+        }
         action={
           <div className="flex shrink-0 items-center">
             <button
