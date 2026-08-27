@@ -1,5 +1,5 @@
 /* 목데이터 — Supabase 연결 전까지 화면 검증용.
-   실제 스키마는 PRODUCT.md의 데이터 모델 스케치를 따른다. */
+   실제 스키마 기준은 supabase/migrations/ — PRODUCT.md 의 스케치는 낡았다. */
 
 import type { CareerId, LevelId } from "./levels";
 

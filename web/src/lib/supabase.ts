@@ -313,7 +313,8 @@ export async function deleteSession(id: string) {
   return data as { ok?: boolean; notify?: string[]; error?: string };
 }
 
-/** 참가자가 모임에서 빠진다. 대기 중이면 신청비 반환, 확정 후엔 반환 없음.
+/** 참가자가 모임에서 빠진다. 신청비는 언제나 반환 — 정원이 딱 맞아 한 명만
+ *  빠져도 모임이 못 열리므로, 나간 사람만 벌주지 않는다 (leave_always_refunds).
  *  cancelled — 내가 빠지면서 확정이 1명이 돼 모임 자체가 취소됐다.
  *  notify    — 그때 남아 있던 사람들 (신청비는 서버가 이미 돌려줬다) */
 export async function cancelSignup(id: string) {
@@ -903,7 +904,7 @@ export const CREDIT_LABELS: Record<string, string> = {
    실제 적립·차감은 전부 서버가 하고, 여기 값은 안내 문구에만 쓴다.
    ⚠️ SQL 의 credit_rule 을 바꾸면 여기도 같이 바꿀 것. */
 export const REQUEST_COST = 10; // request_extra
-export const SESSION_JOIN_COST = 10; // session_join — 거절·확정 전 취소 시 반환
+export const SESSION_JOIN_COST = 10; // session_join — 모임이 취소되거나 내가 나가면 반환
 export const CREDIT_SESSION_VIDEO = 2; // session_video (모임당 1회)
 
 export interface Credits {
