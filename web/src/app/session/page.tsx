@@ -330,9 +330,6 @@ export default function SessionDetail() {
         </p>
         <div className="mt-3 flex flex-col gap-1 text-[13.5px]">
           <p>{levelRangeLabel(s.levelMin, s.levelMax)}</p>
-          <p className="text-muted">
-            {s.intensity === "chill" ? "😌 가볍게" : "🔥 빡세게"}
-          </p>
           {s.note && <p className="mt-1 text-ink/90">&ldquo;{s.note}&rdquo;</p>}
         </div>
       </section>

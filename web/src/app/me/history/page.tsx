@@ -76,8 +76,7 @@ function Card({
         <div className="min-w-0">
           <p className="truncate text-[14.5px] font-extrabold">{r.gym}</p>
           <p className="mt-0.5 text-[12.5px] text-muted">
-            {when(r.starts_at)} · {r.capacity}:{r.capacity} ·{" "}
-            {r.intensity === "chill" ? "😌 가볍게" : "🔥 빡세게"}
+            {when(r.starts_at)} · {r.capacity}:{r.capacity}
           </p>
         </div>
         {r.i_am_host && (

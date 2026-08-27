@@ -72,7 +72,6 @@ export interface DbSession {
   level_max: LevelId;
   age_min: number;
   age_max: number;
-  intensity: "chill" | "hard";
   note: string | null;
   status: string;
   m_confirmed: number;
@@ -115,7 +114,6 @@ export function toSession(
     levelMax: r.level_max,
     ageMin: r.age_min,
     ageMax: r.age_max,
-    intensity: r.intensity,
     note: r.note ?? undefined,
     maleJoined: Number(r.m_confirmed),
     femaleJoined: Number(r.f_confirmed),
@@ -212,7 +210,6 @@ export async function createSession(p: {
   levelMax: LevelId;
   ageMin: number;
   ageMax: number;
-  intensity: "chill" | "hard";
   note: string;
 }): Promise<{ id?: string; error?: string }> {
   const sb = getSupabase();
@@ -226,7 +223,6 @@ export async function createSession(p: {
     p_level_max: p.levelMax,
     p_age_min: p.ageMin,
     p_age_max: p.ageMax,
-    p_intensity: p.intensity,
     p_after_meal: false, // 뒤풀이 기능은 접었다 — 컬럼만 남아 있다
     p_note: p.note,
   });
@@ -290,7 +286,6 @@ export interface MatchRecord {
   starts_at: string;
   ends_at: string;
   capacity: number;
-  intensity: "chill" | "hard";
   i_am_host: boolean;
   members: number;
   people: MatchMate[];
@@ -553,8 +548,7 @@ export interface Room {
     starts_at: string;
     ends_at: string;
     capacity: 1 | 2;
-    intensity: "chill" | "hard";
-    note: string | null;
+      note: string | null;
   };
   me: { id: string; gender: "m" | "f"; level: LevelId };
   /** 성비 기준 확정 인원 — n:n 의 n */

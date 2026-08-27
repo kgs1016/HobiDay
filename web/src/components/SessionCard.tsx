@@ -60,11 +60,6 @@ export default function SessionCard({
       </p>
       <p className="mt-0.5 text-[13px] text-muted">{ageLabel(s.ageMin, s.ageMax)}</p>
 
-      {/* 강도 */}
-      <p className="mt-1.5 text-[13px] text-muted">
-        {s.intensity === "chill" ? "😌 가볍게" : "🔥 빡세게"}
-      </p>
-
       {/* 호스트 — 참가자와 달리 확정 전에도 보인다 */}
       {s.host && (
         <div className="mt-3 flex items-center gap-2.5 border-t border-line pt-3">

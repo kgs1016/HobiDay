@@ -94,7 +94,6 @@ export default function NewSession() {
   const [levelMax, setLevelMax] = useState<LevelId>(3);
   const [ageMin, setAgeMin] = useState<number>(27);
   const [ageMax, setAgeMax] = useState<number>(33);
-  const [intensity, setIntensity] = useState<"chill" | "hard">("chill");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -168,7 +167,6 @@ export default function NewSession() {
       levelMax,
       ageMin,
       ageMax,
-      intensity,
       note,
     });
     setBusy(false);
@@ -298,22 +296,11 @@ export default function NewSession() {
           </div>
         </Field>
 
-        <Field label="강도">
-          <div className="flex gap-1.5">
-            <Chip active={intensity === "chill"} onClick={() => setIntensity("chill")}>
-              😌 가볍게
-            </Chip>
-            <Chip active={intensity === "hard"} onClick={() => setIntensity("hard")}>
-              🔥 빡세게
-            </Chip>
-          </div>
-        </Field>
-
         <Field label="한마디 (선택)">
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="예: 가볍게 타면서 문제 같이 풀어요"
+            placeholder="예: 초보도 환영해요, 같이 문제 풀어요"
             className="w-full rounded-xl border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-muted/60"
           />
         </Field>
