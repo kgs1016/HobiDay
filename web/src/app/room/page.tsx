@@ -18,6 +18,7 @@ import {
   type Room,
   type RoomPerson,
 } from "@/lib/supabase";
+import { capacityLabel } from "@/lib/capacity";
 
 /* 워밍업 가이드 — 시작 직후가 가장 어색한 구간이라
    같이 할 거리를 주면 아이스브레이킹·부상예방·클린이 배려가 한 번에 해결된다. */
@@ -102,7 +103,6 @@ export default function Room() {
     return <main className="px-4 pt-20 text-center text-muted">불러오는 중…</main>;
 
   const others = room.people.filter((p) => !p.is_me);
-  const opposite = others.filter((p) => p.gender !== room.me.gender);
 
   const onUpload = async (file: File) => {
     if (isDemo) {
@@ -160,7 +160,7 @@ export default function Room() {
           </h1>
           <p className="text-[12px] text-muted">
             {hhmm(room.session.starts_at)}~{hhmm(room.session.ends_at)} ·{" "}
-            {room.matched}:{room.matched}
+            {capacityLabel(room.matched, room.session.gender_mode)}
           </p>
         </div>
       </header>
@@ -180,7 +180,11 @@ export default function Room() {
 
         {others.length === 0 ? (
           <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
-            아직 다른 참가자가 확정되지 않았어요. 성비가 맞으면 여기에 보여요.
+            아직 다른 참가자가 확정되지 않았어요.{" "}
+            {room.session.gender_mode === "any"
+              ? "자리가 차면"
+              : "성비가 맞으면"}{" "}
+            여기에 보여요.
           </p>
         ) : (
           <div className="mt-3 flex flex-col gap-2.5">

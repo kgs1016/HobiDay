@@ -86,6 +86,7 @@ export function buildDemoRoom(): Room {
       starts_at: iso(startsAt),
       ends_at: iso(startsAt + 120 * min),
       capacity: 2,
+      gender_mode: "balanced",
       note: "끝나고 저녁 먹어요",
     },
     me: { id: "demo-me", gender: "m", level: 3 },

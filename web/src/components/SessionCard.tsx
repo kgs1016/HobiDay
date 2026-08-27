@@ -22,7 +22,8 @@ export default function SessionCard({
   hostPhotoUrl?: string;
 }) {
   const left = slotsLeft(s);
-  const full = left.male <= 0 && left.female <= 0;
+  const full = left.total <= 0;
+  const anyGender = s.genderMode === "any";
   /* 이미 신청했거나 내가 연 모임이면 목록에서부터 누를 일이 없다.
      cancelled 는 취소한 것이므로 다시 신청할 수 있어야 한다. */
   const mine =
@@ -97,10 +98,19 @@ export default function SessionCard({
           <span className="text-[13px] font-bold text-muted">모집 마감</span>
         ) : (
           <span className="text-[13px] font-semibold">
-            {left.male > 0 && <span className="text-male">남 {left.male}자리</span>}
-            {left.male > 0 && left.female > 0 && <span className="text-muted"> · </span>}
-            {left.female > 0 && (
-              <span className="text-female">여 {left.female}자리</span>
+            {anyGender ? (
+              /* 성별 무관 모임에는 "남 자리 / 여 자리" 가 없다 */
+              <span>{left.total}자리</span>
+            ) : (
+              <>
+                {left.male > 0 && <span className="text-male">남 {left.male}자리</span>}
+                {left.male > 0 && left.female > 0 && (
+                  <span className="text-muted"> · </span>
+                )}
+                {left.female > 0 && (
+                  <span className="text-female">여 {left.female}자리</span>
+                )}
+              </>
             )}
             <span className="text-muted"> 남음</span>
           </span>

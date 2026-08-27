@@ -13,6 +13,7 @@ import {
   hasSupabase,
   type MyHostedSession,
 } from "@/lib/supabase";
+import { capacityLabel } from "@/lib/capacity";
 
 const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -55,7 +56,7 @@ function Card({ s }: { s: MyHostedSession }) {
         <div className="min-w-0">
           <p className="truncate text-[14.5px] font-extrabold">{s.gym}</p>
           <p className="mt-0.5 text-[12.5px] text-muted">
-            {when(s.starts_at)} · {s.capacity}:{s.capacity}
+            {when(s.starts_at)} · {capacityLabel(s.capacity, s.gender_mode)}
           </p>
         </div>
         <span
@@ -66,7 +67,9 @@ function Card({ s }: { s: MyHostedSession }) {
       </div>
       {active && (
         <p className="mt-2 text-[12.5px] text-muted">
-          확정 남 {s.m_confirmed} · 여 {s.f_confirmed} / 각 {s.capacity}명
+          {s.gender_mode === "any"
+            ? `확정 ${s.m_confirmed + s.f_confirmed} / ${s.capacity}명`
+            : `확정 남 ${s.m_confirmed} · 여 ${s.f_confirmed} / 각 ${s.capacity}명`}
           {s.waiting > 0 && (
             <b className="ml-1.5 text-accent">대기 {s.waiting}</b>
           )}

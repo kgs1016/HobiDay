@@ -218,8 +218,8 @@ export default function Home() {
           <p className="text-[13.5px] font-bold">오픈하면 이런 걸 할 수 있어요</p>
           <div className="mt-3 flex flex-col gap-2.5 text-[12.5px] leading-relaxed text-muted">
             <p>
-              🧗 <b className="text-ink">모임 찾기</b> — 남녀 같은 수(1:1 · 2:2)로
-              모여 함께 볼더링
+              🧗 <b className="text-ink">모임 찾기</b> — 남녀 반반으로, 또는
+              성별 상관없이 모여 함께 볼더링
             </p>
             <p>
               💌 <b className="text-ink">사람 찾기</b> — 마음에 드는 사람에게 관심

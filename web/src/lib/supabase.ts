@@ -2,6 +2,7 @@
    .env.local 에 키가 없으면 null → 화면은 목데이터로 동작(개발 폴백). */
 
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
+import type { GenderMode } from "./capacity";
 import type { CareerId, LevelId } from "./levels";
 import type { Session } from "./mock";
 import type { MyProfile } from "./myProfile";
@@ -67,7 +68,8 @@ export interface DbSession {
   gym: string;
   starts_at: string;
   ends_at: string;
-  capacity: 1 | 2;
+  capacity: number;
+  gender_mode: GenderMode;
   level_min: LevelId;
   level_max: LevelId;
   age_min: number;
@@ -110,6 +112,9 @@ export function toSession(
     startsAt: r.starts_at,
     endsAt: r.ends_at,
     capacity: r.capacity,
+    /* 컬럼이 없던 시절의 DB 를 만나면 성비 모임으로 읽는다 —
+       그때는 전부 성비 모임이었다 */
+    genderMode: r.gender_mode ?? "balanced",
     levelMin: r.level_min,
     levelMax: r.level_max,
     ageMin: r.age_min,
@@ -205,7 +210,8 @@ export async function createSession(p: {
   gym: string;
   startsAt: string; // ISO
   endsAt: string;
-  capacity: 1 | 2;
+  capacity: number;
+  genderMode: GenderMode;
   levelMin: LevelId;
   levelMax: LevelId;
   ageMin: number;
@@ -225,6 +231,7 @@ export async function createSession(p: {
     p_age_max: p.ageMax,
     p_after_meal: false, // 뒤풀이 기능은 접었다 — 컬럼만 남아 있다
     p_note: p.note,
+    p_gender_mode: p.genderMode,
   });
   if (error) return { error: error.message };
   return data as { id?: string; error?: string };
@@ -252,6 +259,7 @@ export interface MyHostedSession {
   starts_at: string;
   ends_at: string;
   capacity: number;
+  gender_mode: GenderMode;
   status: "open" | "confirmed" | "cancelled" | "done";
   m_confirmed: number;
   f_confirmed: number;
@@ -287,6 +295,7 @@ export interface MatchRecord {
   ends_at: string;
   capacity: number;
   i_am_host: boolean;
+  gender_mode: GenderMode;
   members: number;
   people: MatchMate[];
 }
@@ -358,6 +367,7 @@ export async function acceptConfirm(id: string) {
     ok?: boolean;
     confirmed?: boolean;
     capacity?: number;
+    gender_mode?: GenderMode;
     waiting?: number;
     /** 확정된 순간 알릴 사람들 (나 제외, 호스트 포함) */
     notify?: string[];
@@ -374,7 +384,8 @@ export interface MySignup {
   gym: string;
   starts_at: string;
   ends_at: string;
-  capacity: 1 | 2;
+  capacity: number;
+  gender_mode: GenderMode;
   session_status: string;
   my_status: "waiting" | "confirmed" | "cut";
   host_nickname: string | null;
@@ -386,7 +397,8 @@ export interface HostedRequest {
   session_id: string;
   gym: string;
   starts_at: string;
-  capacity: 1 | 2;
+  capacity: number;
+  gender_mode: GenderMode;
   created_at: string;
   user_id: string;
   nickname: string;
@@ -401,6 +413,8 @@ export interface HostedRequest {
   intro: string | null;
   photo: string | null;
   same_gender_confirmed: number;
+  /** 성별 무관 모임은 성별로 세면 안 된다 — 자리 판단은 이걸로 */
+  confirmed_total: number;
 }
 
 /** 호스트가 걸어둔 조기 확정 제안 */
@@ -408,7 +422,8 @@ export interface ConfirmProposal {
   session_id: string;
   gym: string;
   starts_at: string;
-  capacity: 1 | 2;
+  capacity: number;
+  gender_mode: GenderMode;
   early_confirm_at: string;
   host_nickname: string | null;
   host_photo: string | null;
@@ -547,11 +562,13 @@ export interface Room {
     gym: string;
     starts_at: string;
     ends_at: string;
-    capacity: 1 | 2;
-      note: string | null;
+    capacity: number;
+    gender_mode: GenderMode;
+    note: string | null;
   };
   me: { id: string; gender: "m" | "f"; level: LevelId };
-  /** 성비 기준 확정 인원 — n:n 의 n */
+  /** 지금 확정된 인원. 성비 모임은 짝이 맞는 수(n:n 의 n),
+      성별 무관 모임은 그냥 머릿수다. */
   matched: number;
   people: RoomPerson[];
   videos: RoomVideo[];
@@ -1045,7 +1062,8 @@ export interface SessionChat {
   ends_at: string;
   status: "open" | "confirmed" | "cancelled" | "done";
   cancelled_at: string | null;
-  capacity: 1 | 2;
+  capacity: number;
+  gender_mode: GenderMode;
   members: number;
   last_body: string | null;
   last_at: string;

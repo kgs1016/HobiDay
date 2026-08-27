@@ -25,6 +25,7 @@ import {
   type ReceivedRequest,
   type SentRequest,
 } from "@/lib/supabase";
+import { capacityRo } from "@/lib/capacity";
 
 const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -193,7 +194,10 @@ export default function Inbox() {
     }
     if (r.error) {
       const msg: Record<string, string> = {
-        full: "그 성별 자리가 이미 다 찼어요",
+        full:
+          h.gender_mode === "any"
+            ? "정원이 이미 다 찼어요"
+            : "그 성별 자리가 이미 다 찼어요",
         not_waiting: "이미 처리된 신청이에요",
         not_host: "내가 연 모임이 아니에요",
         started: "이미 시작한 모임이에요",
@@ -231,7 +235,7 @@ export default function Inbox() {
     setBusy(null);
     if (r.error) {
       const msg: Record<string, string> = {
-        not_balanced: "그 사이 남녀 수가 어긋났어요",
+        not_balanced: "그 사이 인원이 어긋났어요",
         no_proposal: "호스트가 제안을 거뒀어요",
         not_open: "이미 확정된 모임이에요",
       };
@@ -239,7 +243,10 @@ export default function Inbox() {
     }
     if (r.confirmed) {
       alert(
-        `모임이 확정됐어요! 🎉\n${r.capacity}:${r.capacity}로 진행하고, 모임 채팅방이 열렸어요.`
+        `모임이 확정됐어요! 🎉\n${capacityRo(
+          r.capacity ?? p.matched,
+          r.gender_mode ?? p.gender_mode
+        )} 진행하고, 모임 채팅방이 열렸어요.`
       );
     }
     load();
@@ -333,10 +340,10 @@ export default function Inbox() {
                         </div>
                       </div>
                       <p className="mt-2.5 text-[12.5px] leading-relaxed text-muted">
-                        {p.capacity}:{p.capacity}로 열린 모임인데, 자리를 더
-                        기다리지 않고{" "}
+                        {capacityRo(p.capacity, p.gender_mode)} 열린 모임인데,
+                        자리를 더 기다리지 않고{" "}
                         <b className="text-ink">
-                          {p.matched}:{p.matched}로 진행
+                          {capacityRo(p.matched, p.gender_mode)} 진행
                         </b>
                         하자는 제안이에요. 받으면 바로 확정되고 모임 채팅방이
                         열려요.
@@ -373,7 +380,13 @@ export default function Inbox() {
                 <div className="flex flex-col gap-2">
                   {hosted.map((h) => {
                     const key = `${h.session_id}:${h.user_id}`;
-                    const noRoom = h.same_gender_confirmed >= h.capacity;
+                    /* 성별 무관 모임은 성별로 세면 안 된다 — 총원으로 본다.
+                       서버(session_has_seat)와 같은 셈이어야 "받기" 를 눌렀을
+                       때 full 로 튕기지 않는다. */
+                    const noRoom =
+                      h.gender_mode === "any"
+                        ? h.confirmed_total >= h.capacity
+                        : h.same_gender_confirmed >= h.capacity;
                     return (
                       <div
                         key={key}
@@ -415,8 +428,11 @@ export default function Inbox() {
 
                         {noRoom && (
                           <p className="mt-2.5 text-[12px] text-muted">
-                            {h.gender === "m" ? "남성" : "여성"} 자리가 이미 다
-                            찼어요. 받으려면 확정된 참가자가 빠져야 해요.
+                            {h.gender_mode === "any"
+                              ? "자리가"
+                              : `${h.gender === "m" ? "남성" : "여성"} 자리가`}{" "}
+                            이미 다 찼어요. 받으려면 확정된 참가자가 빠져야
+                            해요.
                           </p>
                         )}
 
@@ -577,7 +593,10 @@ export default function Inbox() {
                               cls: "bg-mint/15 text-mint",
                               note: "정원이 다 찼어요. 채팅에서 만나요.",
                             }
-                          : (STATUS[s.my_status] ?? STATUS.waiting);
+                          : s.my_status === "confirmed" && s.gender_mode === "any"
+                            /* 성별 무관 모임엔 "남녀 수" 라는 조건이 없다 */
+                            ? { ...STATUS.confirmed, note: "정원이 차면 모임이 열려요." }
+                            : (STATUS[s.my_status] ?? STATUS.waiting);
 
                   /* 관계가 끝난 카드는 링크를 걸지 않는다. 거절당한
                      모임의 상세를 열어봐야 할 이유가 없고, 서버도 이제

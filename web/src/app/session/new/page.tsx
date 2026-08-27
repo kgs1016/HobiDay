@@ -3,6 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LEVELS, type LevelId } from "@/lib/levels";
+import {
+  CAPACITY_CHOICES,
+  GENDER_MODES,
+  capacityChipLabel,
+  type GenderMode,
+} from "@/lib/capacity";
 import { hasSupabase, currentUser, fetchMyProfileDb, createSession } from "@/lib/supabase";
 import { isProfileComplete } from "@/lib/profileGate";
 
@@ -89,13 +95,24 @@ export default function NewSession() {
   }, []);
   const [startTime, setStartTime] = useState("15:00");
   const [endTime, setEndTime] = useState("17:00");
-  const [capacity, setCapacity] = useState<1 | 2>(2);
+  /* 성비를 먼저 고르고 정원을 고른다 — 정원의 뜻이 성비에 따라 달라진다.
+     반반이면 성별당 인원(2 = 2:2), 무관이면 총 인원(4 = 4명). */
+  const [genderMode, setGenderMode] = useState<GenderMode>("balanced");
+  const [capacity, setCapacity] = useState(2);
   const [levelMin, setLevelMin] = useState<LevelId>(2);
   const [levelMax, setLevelMax] = useState<LevelId>(3);
   const [ageMin, setAgeMin] = useState<number>(27);
   const [ageMax, setAgeMax] = useState<number>(33);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+
+  /* 모드를 바꾸면 정원도 그 모드에서 고를 수 있는 값으로 옮겨준다.
+     그냥 두면 "무관인데 정원 1(혼자 하는 모임)" 이 만들어져 서버가
+     거절한다. 2 는 양쪽 모드에 다 있어서 안전한 착지점이다. */
+  const pickMode = (m: GenderMode) => {
+    setGenderMode(m);
+    if (!CAPACITY_CHOICES[m].includes(capacity)) setCapacity(2);
+  };
 
   const toggleLevel = (id: LevelId) => {
     // 인접 1단계까지만 허용 — 클릭한 레벨을 포함해 범위 재계산
@@ -163,6 +180,7 @@ export default function NewSession() {
       startsAt: new Date(`${date}T${startTime}:00`).toISOString(),
       endsAt: new Date(`${date}T${endTime}:00`).toISOString(),
       capacity,
+      genderMode,
       levelMin,
       levelMax,
       ageMin,
@@ -175,8 +193,14 @@ export default function NewSession() {
       return alert("모임 시간이 너무 임박했어요. 지금부터 30분 뒤부터 열 수 있어요");
     if (r.error === "past") return alert("이미 지난 시각이에요. 시간을 다시 골라주세요");
     if (r.error === "too_far") return alert("모임은 90일 안쪽으로만 열 수 있어요");
+    if (r.error === "bad_capacity" || r.error === "bad_mode")
+      return alert("정원을 다시 골라주세요");
     if (r.error) return alert(`등록 실패: ${r.error}`);
-    alert("모임을 열었어요! 성비가 맞으면 확정돼요.");
+    alert(
+      genderMode === "any"
+        ? "모임을 열었어요! 정원이 차면 확정돼요."
+        : "모임을 열었어요! 성비가 맞으면 확정돼요."
+    );
     router.push("/");
   };
 
@@ -234,19 +258,37 @@ export default function NewSession() {
           <p className="mt-1.5 text-[12px] text-muted">1.5~2시간을 권장해요</p>
         </Field>
 
+        <Field label="성비">
+          <div className="flex gap-1.5">
+            {GENDER_MODES.map((m) => (
+              <Chip
+                key={m.id}
+                active={genderMode === m.id}
+                onClick={() => pickMode(m.id)}
+              >
+                {m.label}
+              </Chip>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[12px] text-muted">
+            {GENDER_MODES.find((m) => m.id === genderMode)?.hint}
+          </p>
+        </Field>
+
         <Field label="정원">
           <div className="flex gap-1.5">
-            <Chip active={capacity === 1} onClick={() => setCapacity(1)}>
-              1:1 (2명)
-            </Chip>
-            <Chip active={capacity === 2} onClick={() => setCapacity(2)}>
-              2:2 (4명)
-            </Chip>
+            {CAPACITY_CHOICES[genderMode].map((c) => (
+              <Chip key={c} active={capacity === c} onClick={() => setCapacity(c)}>
+                {capacityChipLabel(c, genderMode)}
+              </Chip>
+            ))}
           </div>
           <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
-            {capacity === 1
-              ? "남 1 · 여 1. 단둘이 등반해요."
-              : "남 2 · 여 2. 2명만 모이면 1:1로 진행돼요 — 성비가 적은 쪽에 맞춰져요."}
+            {genderMode === "any"
+              ? `호스트 포함 ${capacity}명. 다 차면 확정돼요.`
+              : capacity === 1
+                ? "남 1 · 여 1. 단둘이 등반해요."
+                : "남 2 · 여 2. 2명만 모이면 1:1로 진행돼요 — 성비가 적은 쪽에 맞춰져요."}
           </p>
         </Field>
 

@@ -27,6 +27,7 @@ import {
   type SessionChat,
   type SessionChatMessage,
 } from "@/lib/supabase";
+import { capacityLabel } from "@/lib/capacity";
 
 const when = (iso: string) => {
   const d = new Date(iso);
@@ -56,11 +57,14 @@ function endedNotice(c: SessionChat): string | null {
     : null;
 }
 
-/** 모임방 부제 — "토 8/31 · 15:00 · 2:2" */
+/** 모임방 부제 — "토 8/31 · 15:00 · 2:2" (성별 무관 모임은 "4명") */
 const sessionSub = (c: SessionChat) => {
   const d = new Date(c.starts_at);
   const hm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-  return `${DAYS[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()} · ${hm} · ${c.capacity}:${c.capacity}`;
+  return `${DAYS[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()} · ${hm} · ${capacityLabel(
+    c.capacity,
+    c.gender_mode
+  )}`;
 };
 
 type Tab = "request" | "session";
