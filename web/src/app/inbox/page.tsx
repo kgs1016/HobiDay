@@ -529,19 +529,55 @@ export default function Inbox() {
               <h2 className="mb-2 text-[14px] font-bold">🧗 신청한 모임</h2>
               <div className="flex flex-col gap-2">
                 {signups.map((s) => {
-                  // 호스트가 모임을 취소하면 상세 화면이 못 여는 상태가 된다 —
-                  // 링크 없이 취소 안내만 남긴다 (대기 중이었다면 신청비는 반환됨)
+                  /* 내 신청 상태만 보면 모임이 어느 단계인지가 빠진다.
+                     그래서 이미 끝난 모임을 "남녀 수가 맞으면 모임이
+                     열려요" 라고 안내하고 있었다. 모임 쪽을 먼저 본다 —
+                     모임 상세 화면과 같은 순서다. */
                   const cancelled = s.session_status === "cancelled";
+                  const gone = new Date(s.ends_at).getTime() <= Date.now();
+                  const running =
+                    !gone && new Date(s.starts_at).getTime() <= Date.now();
+                  const mine = s.my_status === "confirmed";
                   const st = cancelled
                     ? {
                         label: "모임 취소됨",
                         cls: "bg-surface2 text-muted",
-                        note:
-                          s.my_status === "confirmed"
-                            ? "호스트가 모임을 취소했어요. 신청 크레딧은 돌려드렸어요."
-                            : "호스트가 모임을 취소했어요. 대기 중이던 신청 크레딧은 돌려드렸어요.",
+                        note: mine
+                          ? "모임이 취소됐어요. 신청 크레딧은 돌려드렸어요."
+                          : "모임이 취소됐어요. 대기 중이던 신청 크레딧은 돌려드렸어요.",
                       }
-                    : (STATUS[s.my_status] ?? STATUS.waiting);
+                    : gone
+                      ? !mine
+                        ? STATUS.cut
+                        : s.session_status === "confirmed"
+                          ? {
+                              label: "다녀왔어요",
+                              cls: "bg-mint/15 text-mint",
+                              note: "매칭 기록에서 다시 볼 수 있어요.",
+                            }
+                          : {
+                              /* 정원을 못 채운 채 끝난 모임. 매칭 기록은
+                                 성사된 모임만 담으므로 여기서 "다시 볼 수
+                                 있어요" 라고 하면 거짓말이 된다. */
+                              label: "열리지 못했어요",
+                              cls: "bg-surface2 text-muted",
+                              note: "정원이 다 차지 않아 모임이 열리지 못했어요.",
+                            }
+                      : running
+                        ? mine
+                          ? {
+                              label: "오늘 모임이에요",
+                              cls: "bg-mint/15 text-mint",
+                              note: "모임이 진행 중이에요.",
+                            }
+                          : STATUS.cut
+                        : mine && s.session_status === "confirmed"
+                          ? {
+                              label: "모임 확정",
+                              cls: "bg-mint/15 text-mint",
+                              note: "정원이 다 찼어요. 채팅에서 만나요.",
+                            }
+                          : (STATUS[s.my_status] ?? STATUS.waiting);
                   const body = (
                     <>
                       <div className="flex items-start justify-between gap-2">

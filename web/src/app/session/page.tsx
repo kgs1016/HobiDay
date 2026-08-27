@@ -83,6 +83,10 @@ export default function SessionDetail() {
      (채팅방에서 들어오니까). 그런데 문구는 아직 살아있는 모임만
      염두에 두고 있었다. 상태를 먼저 보고 말한다. */
   const dead = !!s.cancelled || ended;
+  /* 시작한 모임의 대기 신청은 이미 끝난 것이다 — 크론이 곧 신청비를
+     돌려준다. 신청함은 이걸 반영해서 "거절됨" 으로 보여주는데 이 화면만
+     "승인 대기 중" 이라고 해서, 같은 신청이 두 화면에서 다르게 보였다. */
+  const missed = started && s.myStatus === "waiting";
   const joined = s.myStatus === "confirmed" || s.myStatus === "waiting";
 
   /* 조기 확정 — 2:2 로 열었지만 남녀 수가 맞으면 그 인원으로 확정한다.
@@ -298,7 +302,7 @@ export default function SessionDetail() {
 
       {/* 끝났는지 취소됐는지부터 말한다. 이게 없으면 아래 문구들이
           전부 "아직 갈 수 있는 모임" 처럼 읽힌다. */}
-      {dead && (
+      {(dead || started) && (
         <p
           className={`mb-3 rounded-xl px-4 py-3 text-[13px] font-bold ${
             s.cancelled
@@ -308,7 +312,9 @@ export default function SessionDetail() {
         >
           {s.cancelled
             ? "이 모임은 취소됐어요. 채팅방은 24시간 뒤에 사라져요."
-            : "이미 끝난 모임이에요."}
+            : ended
+              ? "이미 끝난 모임이에요."
+              : "지금 진행 중인 모임이에요."}
         </p>
       )}
 
@@ -545,9 +551,11 @@ export default function SessionDetail() {
             안 열린다. */}
         {s.cancelled
           ? "취소된 모임이에요"
-          : ended
-            ? "끝난 모임이에요"
-            : s.iAmHost
+          : missed
+            ? "이번엔 함께하지 못했어요 · 신청비는 돌려드려요"
+            : ended
+              ? "끝난 모임이에요"
+              : s.iAmHost
               ? "내가 연 모임이에요"
               : joined
                 ? s.myStatus !== "confirmed"
