@@ -625,7 +625,9 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
   const send = async (body: string) => {
     const r = await sendChat(chat.match_id, body);
     if (r.error) {
-      if (r.error === "closed") return alert("상대가 대화방을 나갔어요.");
+      // closed = 내가 나간 방 · left = 상대가 나간 방 (차단당한 경우 포함)
+      if (r.error === "closed" || r.error === "left")
+        return alert("상대가 대화방을 나갔어요.");
       return alert(`전송 실패: ${r.error}`);
     }
     // 실패해도 조용히 — 알림이 전송을 막으면 안 된다
