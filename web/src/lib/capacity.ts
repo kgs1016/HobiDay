@@ -9,9 +9,11 @@
 
 export type GenderMode = "balanced" | "any";
 
-export const GENDER_MODES: { id: GenderMode; label: string; hint: string }[] = [
-  { id: "balanced", label: "남녀 반반", hint: "남녀 수를 맞춰서 모아요" },
-  { id: "any", label: "성별 무관", hint: "성별은 안 따지고 인원만 채워요" },
+/* 라벨이 "성비" 라서 칩은 그 뒤에 붙는 값만 말하면 된다 —
+   "성비 반반" · "성비 상관없음". 설명을 따로 달지 않아도 읽힌다. */
+export const GENDER_MODES: { id: GenderMode; label: string }[] = [
+  { id: "balanced", label: "반반" },
+  { id: "any", label: "상관없음" },
 ];
 
 /** 모드별 정원 선택지. 뜻이 다르므로 숫자도 다르다 */

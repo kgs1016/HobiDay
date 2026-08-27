@@ -270,9 +270,6 @@ export default function NewSession() {
               </Chip>
             ))}
           </div>
-          <p className="mt-1.5 text-[12px] text-muted">
-            {GENDER_MODES.find((m) => m.id === genderMode)?.hint}
-          </p>
         </Field>
 
         <Field label="정원">
@@ -283,13 +280,6 @@ export default function NewSession() {
               </Chip>
             ))}
           </div>
-          <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
-            {genderMode === "any"
-              ? `호스트 포함 ${capacity}명. 다 차면 확정돼요.`
-              : capacity === 1
-                ? "남 1 · 여 1. 단둘이 등반해요."
-                : "남 2 · 여 2. 2명만 모이면 1:1로 진행돼요 — 성비가 적은 쪽에 맞춰져요."}
-          </p>
         </Field>
 
         <Field label="레벨 범위 (인접 1단계까지)">
