@@ -578,6 +578,17 @@ export default function Inbox() {
                               note: "정원이 다 찼어요. 채팅에서 만나요.",
                             }
                           : (STATUS[s.my_status] ?? STATUS.waiting);
+
+                  /* 관계가 끝난 카드는 링크를 걸지 않는다. 거절당한
+                     모임의 상세를 열어봐야 할 이유가 없고, 서버도 이제
+                     그 문을 닫았다 — 링크를 두면 "찾을 수 없어요" 로
+                     떨어진다. 아직 자리가 걸려 있거나 실제로 다녀온
+                     모임만 열어본다. */
+                  const openable =
+                    !cancelled &&
+                    mine &&
+                    s.my_status !== "cut" &&
+                    !(gone && s.session_status !== "confirmed");
                   const body = (
                     <>
                       <div className="flex items-start justify-between gap-2">
@@ -600,14 +611,7 @@ export default function Inbox() {
                       )}
                     </>
                   );
-                  return cancelled ? (
-                    <div
-                      key={s.id}
-                      className="rounded-2xl border border-line bg-surface p-4 opacity-70"
-                    >
-                      {body}
-                    </div>
-                  ) : (
+                  return openable ? (
                     <Link
                       key={s.id}
                       href={`/session?id=${s.id}`}
@@ -615,6 +619,13 @@ export default function Inbox() {
                     >
                       {body}
                     </Link>
+                  ) : (
+                    <div
+                      key={s.id}
+                      className="rounded-2xl border border-line bg-surface p-4 opacity-70"
+                    >
+                      {body}
+                    </div>
                   );
                 })}
               </div>
