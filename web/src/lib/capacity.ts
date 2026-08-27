@@ -10,9 +10,9 @@
 export type GenderMode = "balanced" | "any";
 
 /* 라벨이 "성비" 라서 칩은 그 뒤에 붙는 값만 말하면 된다 —
-   "성비 반반" · "성비 상관없음". 설명을 따로 달지 않아도 읽힌다. */
+   "성비 맞춤" · "성비 상관없음". 설명을 따로 달지 않아도 읽힌다. */
 export const GENDER_MODES: { id: GenderMode; label: string }[] = [
-  { id: "balanced", label: "반반" },
+  { id: "balanced", label: "맞춤" },
   { id: "any", label: "상관없음" },
 ];
 
