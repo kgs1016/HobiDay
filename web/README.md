@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HobiDay 웹앱
 
-## Getting Started
+볼더링 모임 매칭 앱 하비데이의 프런트엔드 — Next.js (App Router) + Supabase.
+같은 코드가 웹(Vercel)과 네이티브 앱(Capacitor 웹뷰) 두 곳에 실린다.
 
-First, run the development server:
+## 개발
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Supabase 키는 `.env.local` 에 넣는다 (git 에 안 올라간다):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+새 대시보드는 anon 키를 PUBLISHABLE_KEY 라고 부른다 — 어느 이름이든 인식한다
+(`src/lib/supabase.ts`). **키가 없으면 화면은 목데이터로 돈다.** 개발 폴백이라
+에러 없이 조용히 목이 나오니, 실제 데이터가 안 보이면 키부터 확인할 것.
+키 받는 곳과 샌드박스 DB 세우는 법은 [`../supabase/README.md`](../supabase/README.md).
 
-## Learn More
+## 빌드가 두 가지다
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run build      # 웹 배포용 (Vercel) — export 아님
+npm run sync       # 네이티브용 — output: 'export' 로 빌드해 android/ios 에 반영
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+왜 갈라지는지, 그리고 **새 화면에 `[id]` 동적 경로를 쓰면 안 되는 이유**는
+[AGENTS.md](AGENTS.md) 에 있다. `[id]` 를 쓰면 웹 배포는 멀쩡하고 네이티브
+빌드만 깨지니, 새 화면을 만들면 `npm run sync` 가 도는지 확인할 것.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 어디가 기준인가
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- DB 스키마·정책의 현재 기준: `../supabase/migrations/` 의 헤더 주석 + `../supabase/verify.sql`
+- 데이터 접근은 전부 `src/lib/supabase.ts` 를 거친다
+- 금액·정원 같은 값은 서버 `credit_rule()` 과 짝이다 — 한쪽만 바꾸지 말 것
+  (`../supabase/README.md` 의 "주의" 참고)
