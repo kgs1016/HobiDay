@@ -170,6 +170,9 @@ export default function SessionDetail() {
     const r = await deleteSession(s.id);
     setBusy(false);
     if (r.error === "not_host") return alert("호스트만 삭제할 수 있어요");
+    // 시작 전에 띄워둔 화면으로 눌렀을 때 — 서버가 막는다
+    if (r.error === "started")
+      return alert("이미 시작한 모임이라 바꿀 수 없어요.");
     if (r.error) return alert(`삭제 실패: ${r.error}`);
     if (r.notify?.length)
       notifyPush(r.notify, "😢 모임이 취소됐어요", `${s.gym} 모임이 취소됐어요. 신청 크레딧은 돌려드렸어요.`, "/inbox");
@@ -193,6 +196,9 @@ export default function SessionDetail() {
     setBusy(true);
     const r = await cancelSignup(s.id);
     setBusy(false);
+    // 시작 전에 띄워둔 화면으로 눌렀을 때 — 서버가 막는다
+    if (r.error === "started")
+      return alert("이미 시작한 모임이라 바꿀 수 없어요.");
     if (r.error) return alert(`실패: ${r.error}`);
     // 내가 빠지면서 호스트 혼자 남으면 모임이 통째로 취소된다
     if (r.cancelled) {
