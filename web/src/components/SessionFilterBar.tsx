@@ -113,7 +113,6 @@ export default function SessionFilterBar({
   gyms: string[];
 }) {
   const [open, setOpen] = useState<Facet | null>(null);
-  const n = activeFilterCount(f);
 
   /* 배열형 조건은 눌렀다 다시 누르면 빠진다 */
   const toggle = <T,>(list: T[], v: T): T[] =>
@@ -178,13 +177,15 @@ export default function SessionFilterBar({
               </button>
             );
           })}
-          {n > 0 && (
+          {/* 몇 개가 걸렸는지는 숫자로 말하지 않는다. 켜진 버튼이 색으로
+              이미 말하고 있고, 옆에 붙은 숫자는 결과 개수로도 읽힌다. */}
+          {activeFilterCount(f) > 0 && (
             <button
               type="button"
               onClick={() => onChange(EMPTY_FILTER)}
               className="shrink-0 rounded-full border border-line bg-surface px-3.5 py-2 text-[13px] font-semibold text-muted"
             >
-              초기화 {n}
+              초기화
             </button>
           )}
         </div>
