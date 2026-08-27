@@ -9,6 +9,11 @@
 --    사람. 거절된 뒤에는 남들과 같은 문으로만 들어온다(살아 있고 아직
 --    시작 안 한 모임). 다시 신청하고 싶으면 그 길이 열려 있다.
 --
+-- 곁들여 여기서 s.intensity 를 빼둔다. 바로 다음 마이그레이션이 그
+-- 컬럼을 떼는데, 이 파일이 컬럼을 읽고 있으면 두 파일을 한 덩어리로
+-- 묶어 다시 돌릴 때 여기서 걸린다 (컬럼이 이미 없으니까). 어차피
+-- 사라질 값이라 미리 뺀다.
+--
 -- ② 받은 신청함만 3시간이 남아 있었다. 보낸 신청은 24시간으로 옮겼는데
 --    여기를 빠뜨렸다. 같은 화면의 두 탭이 다른 시계를 봤다.
 
@@ -17,7 +22,7 @@ returns json language sql stable security definer set search_path = public as $$
   select row_to_json(t) from (
     select s.id, s.gym, s.starts_at, s.ends_at, s.capacity,
            s.level_min, s.level_max, s.age_min, s.age_max,
-           s.intensity, s.after_meal, s.note, s.status,
+           s.after_meal, s.note, s.status,
            s.host_id,
            h.nickname as host_nickname,
            h.photo    as host_photo,
