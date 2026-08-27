@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { careerLabel, level } from "@/lib/levels";
 import { notifyPush } from "@/lib/nativePush";
+import { AvatarFallback } from "@/components/icons";
+import { ChalkBagIllust } from "@/components/illustrations";
 import {
   hasSupabase,
   acceptConfirm,
@@ -46,7 +48,7 @@ const STATUS: Record<string, { label: string; cls: string; note?: string }> = {
   },
   confirmed: {
     label: "자리 확정",
-    cls: "bg-mint/15 text-mint",
+    cls: "bg-accent-soft text-accent-pressed",
     note: "남녀 수가 맞으면 모임이 열려요.",
   },
   cut: {
@@ -58,8 +60,6 @@ const STATUS: Record<string, { label: string; cls: string; note?: string }> = {
 
 type Tab = "received" | "sent";
 
-/* 클래스 이름을 문자열로 조립하면 Tailwind 가 못 찾아서 크기가 안 먹는다.
-   쓰는 크기가 하나뿐이라 그대로 적는다. */
 function Avatar({ url }: { url?: string }) {
   return url ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -69,17 +69,15 @@ function Avatar({ url }: { url?: string }) {
       className="h-14 w-14 shrink-0 rounded-full object-cover"
     />
   ) : (
-    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-surface2 text-xl">
-      🧗
-    </div>
+    <AvatarFallback size={56} />
   );
 }
 
-function Empty({ icon, title, sub }: { icon: string; title: string; sub?: string }) {
+function Empty({ title, sub }: { title: string; sub?: string }) {
   return (
-    <div className="mt-16 flex flex-col items-center gap-2 text-center">
-      <span className="text-4xl">{icon}</span>
-      <p className="text-[15px] font-bold">{title}</p>
+    <div className="mt-16 flex flex-col items-center gap-1.5 text-center">
+      <ChalkBagIllust size={64} />
+      <p className="mt-3 text-[15px] font-semibold">{title}</p>
       {sub && (
         <p className="whitespace-pre-line text-[13px] leading-relaxed text-muted">
           {sub}
@@ -192,7 +190,7 @@ export default function Inbox() {
           `${h.gym} 모임 정원이 다 찼어요. 채팅방이 열렸어요!`,
           "/chat#session"
         );
-      alert("정원이 다 찼어요! 모임 채팅방이 열렸습니다 🎉");
+      alert("정원이 다 찼어요! 모임 채팅방이 열렸습니다.");
     }
     load();
   };
@@ -217,7 +215,7 @@ export default function Inbox() {
     }
     if (r.confirmed) {
       alert(
-        `모임이 확정됐어요! 🎉\n${r.capacity}:${r.capacity}로 진행하고, 모임 채팅방이 열렸어요.`
+        `모임이 확정됐어요!\n${r.capacity}:${r.capacity}로 진행하고, 모임 채팅방이 열렸어요.`
       );
     }
     load();
@@ -227,13 +225,13 @@ export default function Inbox() {
     return (
       <main className="px-4">
         <header className="pt-6 pb-4">
-          <h1 className="text-[19px] font-extrabold tracking-tight">신청함</h1>
+          <h1 className="text-[20px] font-bold tracking-tight">신청함</h1>
         </header>
         <div className="mt-14 flex flex-col items-center gap-3 text-center">
           <p className="text-[14px] text-muted">로그인하면 신청 내역이 보여요</p>
           <Link
             href="/login"
-            className="rounded-xl bg-accent px-6 py-2.5 text-[14px] font-bold text-white"
+            className="rounded-xl bg-accent px-6 py-2.5 text-[14px] font-semibold text-white active:bg-accent-pressed"
           >
             로그인 하기
           </Link>
@@ -247,7 +245,7 @@ export default function Inbox() {
   return (
     <main className="px-4">
       <header className="pt-6 pb-3">
-        <h1 className="text-[19px] font-extrabold tracking-tight">신청함</h1>
+        <h1 className="text-[20px] font-bold tracking-tight">신청함</h1>
       </header>
 
       {/* 내가 답해야 하는 것과 내가 기다리는 것은 성격이 달라서 나눈다 */}
@@ -261,13 +259,15 @@ export default function Inbox() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`flex flex-1 items-center justify-center gap-1.5 pb-2.5 pt-1 text-[15px] font-bold ${
-              tab === key ? "border-b-2 border-accent text-ink" : "text-muted"
+            className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 pb-2.5 pt-1.5 text-[15px] ${
+              tab === key
+                ? "border-ink font-semibold text-ink"
+                : "border-transparent font-medium text-faint"
             }`}
           >
             {label}
             {badge > 0 && (
-              <span className="min-w-[17px] rounded-full bg-accent px-1 text-[10.5px] font-extrabold leading-[17px] text-white">
+              <span className="min-w-[16px] rounded-full bg-danger px-1 text-[10px] font-bold leading-[16px] text-white">
                 {badge > 9 ? "9+" : badge}
               </span>
             )}
@@ -276,61 +276,56 @@ export default function Inbox() {
       </div>
 
       {loading ? (
-        <p className="pt-14 text-center text-muted">불러오는 중…</p>
+        <p className="pt-16 text-center text-[13.5px] text-faint">불러오는 중…</p>
       ) : tab === "received" ? (
         receivedCount === 0 ? (
           <Empty
-            icon="📥"
             title="답할 게 없어요"
-            sub={
-              "내 모임에 신청이 오거나\n받은 관심이 있으면 여기에 쌓여요"
-            }
+            sub={"내 모임에 신청이 오거나\n받은 관심이 있으면 여기에 쌓여요"}
           />
         ) : (
-          <div className="flex flex-col gap-6 py-4 pb-6">
+          <div className="flex flex-col gap-7 py-4 pb-6">
             {/* 호스트의 조기 확정 제안 — 답 한 번에 모임이 열린다 */}
             {proposals.length > 0 && (
               <section>
-                <h2 className="mb-2 text-[14px] font-bold">
-                  🤝 모임 확정 제안{" "}
-                  <span className="font-medium text-mint">{proposals.length}</span>
+                <h2 className="mb-2 text-[15px] font-bold">
+                  모임 확정 제안{" "}
+                  <span className="font-normal text-muted">{proposals.length}</span>
                 </h2>
                 <div className="flex flex-col gap-2">
                   {proposals.map((p) => (
                     <div
                       key={p.session_id}
-                      className="rounded-2xl border border-mint/40 bg-mint/10 p-4"
+                      className="rounded-xl border border-line bg-surface p-4"
                     >
                       <div className="flex items-center gap-3.5">
                         <Avatar url={p.host_photo ? photos[p.host_photo] : undefined} />
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-[15px] font-extrabold">{p.gym}</p>
+                          <p className="truncate text-[15px] font-semibold">{p.gym}</p>
                           <p className="mt-0.5 text-[12.5px] text-muted">
                             {when(p.starts_at)} · 호스트 {p.host_nickname ?? "—"}
                           </p>
                         </div>
                       </div>
                       <p className="mt-2.5 text-[12.5px] leading-relaxed text-muted">
-                        {p.capacity}:{p.capacity}로 열린 모임인데, 자리를 더
-                        기다리지 않고{" "}
-                        <b className="text-ink">
+                        자리를 더 기다리지 않고{" "}
+                        <b className="font-semibold text-ink">
                           {p.matched}:{p.matched}로 진행
                         </b>
-                        하자는 제안이에요. 받으면 바로 확정되고 모임 채팅방이
-                        열려요.
+                        하자는 제안이에요. 받으면 바로 확정되고 채팅방이 열려요.
                       </p>
                       <div className="mt-3 grid grid-cols-2 gap-2">
                         <button
                           disabled={busy === p.session_id}
                           onClick={() => decideProposal(p, false)}
-                          className="rounded-xl border border-line py-2.5 text-[13px] font-bold text-muted disabled:opacity-50"
+                          className="rounded-xl border border-line py-2.5 text-[13px] font-medium text-muted disabled:opacity-50"
                         >
                           더 기다릴래요
                         </button>
                         <button
                           disabled={busy === p.session_id}
                           onClick={() => decideProposal(p, true)}
-                          className="rounded-xl bg-mint py-2.5 text-[13px] font-bold text-white disabled:opacity-50"
+                          className="rounded-xl bg-accent py-2.5 text-[13px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
                         >
                           {busy === p.session_id ? "처리 중…" : "좋아요, 확정할게요"}
                         </button>
@@ -344,9 +339,9 @@ export default function Inbox() {
             {/* 내가 연 모임에 온 신청 */}
             {hosted.length > 0 && (
               <section>
-                <h2 className="mb-2 text-[14px] font-bold">
-                  🧗 내 모임 신청{" "}
-                  <span className="font-medium text-accent">{hosted.length}</span>
+                <h2 className="mb-2 text-[15px] font-bold">
+                  내 모임 신청{" "}
+                  <span className="font-normal text-muted">{hosted.length}</span>
                 </h2>
                 <div className="flex flex-col gap-2">
                   {hosted.map((h) => {
@@ -355,17 +350,17 @@ export default function Inbox() {
                     return (
                       <div
                         key={key}
-                        className="rounded-2xl border border-line bg-surface p-4"
+                        className="rounded-xl border border-line bg-surface p-4"
                       >
-                        <p className="text-[12px] font-semibold text-muted">
+                        <p className="text-[12px] text-faint">
                           {h.gym} · {when(h.starts_at)}
                         </p>
                         <div className="mt-2.5 flex items-center gap-3.5">
                           <Avatar url={h.photo ? photos[h.photo] : undefined} />
                           <div className="min-w-0 flex-1">
-                            <p className="text-[15px] font-extrabold">
+                            <p className="text-[15px] font-semibold">
                               {h.nickname}
-                              <span className="ml-1.5 text-[12px] font-medium text-muted">
+                              <span className="ml-1.5 text-[12px] font-normal text-muted">
                                 {[h.age, h.height && `${h.height}cm`, h.area]
                                   .filter(Boolean)
                                   .join(" · ")}
@@ -386,7 +381,7 @@ export default function Inbox() {
                         </div>
 
                         {h.intro && (
-                          <p className="mt-2.5 rounded-r-lg border-l-[3px] border-line bg-surface2 px-3 py-2 text-[13px] leading-relaxed">
+                          <p className="mt-2.5 rounded-lg bg-surface2 px-3.5 py-2.5 text-[13px] leading-relaxed">
                             &ldquo;{h.intro}&rdquo;
                           </p>
                         )}
@@ -402,14 +397,14 @@ export default function Inbox() {
                           <button
                             disabled={busy === key}
                             onClick={() => decide(h, false)}
-                            className="rounded-xl border border-line py-2.5 text-[13px] font-bold text-muted disabled:opacity-50"
+                            className="rounded-xl border border-line py-2.5 text-[13px] font-medium text-muted disabled:opacity-50"
                           >
                             거절
                           </button>
                           <button
                             disabled={busy === key || noRoom}
                             onClick={() => decide(h, true)}
-                            className="rounded-xl bg-accent py-2.5 text-[13px] font-bold text-white disabled:opacity-40"
+                            className="rounded-xl bg-accent py-2.5 text-[13px] font-semibold text-white active:bg-accent-pressed disabled:opacity-40"
                           >
                             {busy === key ? "처리 중…" : "받기"}
                           </button>
@@ -418,7 +413,7 @@ export default function Inbox() {
                     );
                   })}
                 </div>
-                <p className="mt-2 text-[11.5px] text-muted">
+                <p className="mt-2 text-[11.5px] text-faint">
                   거절하면 상대에게 알리지 않아요.
                 </p>
               </section>
@@ -427,22 +422,22 @@ export default function Inbox() {
             {/* 받은 관심 */}
             {received.length > 0 && (
               <section>
-                <h2 className="mb-2 text-[14px] font-bold">
-                  💌 받은 관심{" "}
-                  <span className="font-medium text-accent">{received.length}</span>
+                <h2 className="mb-2 text-[15px] font-bold">
+                  받은 관심{" "}
+                  <span className="font-normal text-muted">{received.length}</span>
                 </h2>
                 <div className="flex flex-col gap-2">
                   {received.map((r) => (
                     <div
                       key={r.id}
-                      className="rounded-2xl border border-accent/40 bg-accent/[0.06] p-4"
+                      className="rounded-xl border border-line bg-surface p-4"
                     >
                       <div className="flex items-center gap-3.5">
                         <Avatar url={r.photo ? photos[r.photo] : undefined} />
                         <div className="min-w-0 flex-1">
-                          <p className="text-[15px] font-extrabold">
+                          <p className="text-[15px] font-semibold">
                             {r.nickname}
-                            <span className="ml-1.5 text-[12px] font-medium text-muted">
+                            <span className="ml-1.5 text-[12px] font-normal text-muted">
                               {[r.age, r.height && `${r.height}cm`, r.area]
                                 .filter(Boolean)
                                 .join(" · ")}
@@ -462,7 +457,7 @@ export default function Inbox() {
                       </div>
 
                       {r.message && (
-                        <p className="mt-2.5 rounded-r-lg border-l-[3px] border-accent bg-surface2 px-3 py-2 text-[13px] leading-relaxed">
+                        <p className="mt-2.5 rounded-lg bg-surface2 px-3.5 py-2.5 text-[13px] leading-relaxed">
                           &ldquo;{r.message}&rdquo;
                         </p>
                       )}
@@ -471,14 +466,14 @@ export default function Inbox() {
                         <button
                           disabled={busy === r.id}
                           onClick={() => respond(r.id, false)}
-                          className="rounded-xl border border-line py-2.5 text-[13px] font-bold text-muted disabled:opacity-50"
+                          className="rounded-xl border border-line py-2.5 text-[13px] font-medium text-muted disabled:opacity-50"
                         >
                           거절
                         </button>
                         <button
                           disabled={busy === r.id}
                           onClick={() => respond(r.id, true)}
-                          className="rounded-xl bg-accent py-2.5 text-[13px] font-bold text-white disabled:opacity-50"
+                          className="rounded-xl bg-accent py-2.5 text-[13px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
                         >
                           {busy === r.id ? "처리 중…" : "수락하고 채팅"}
                         </button>
@@ -486,7 +481,7 @@ export default function Inbox() {
                     </div>
                   ))}
                 </div>
-                <p className="mt-2 text-[11.5px] text-muted">
+                <p className="mt-2 text-[11.5px] text-faint">
                   거절하면 상대에게 알리지 않아요.
                 </p>
               </section>
@@ -495,16 +490,15 @@ export default function Inbox() {
         )
       ) : signups.length === 0 && sent.length === 0 ? (
         <Empty
-          icon="📤"
           title="아직 보낸 게 없어요"
           sub={"모임에 신청하거나 관심을 보내면\n여기서 진행 상황이 보여요"}
         />
       ) : (
-        <div className="flex flex-col gap-6 py-4 pb-6">
+        <div className="flex flex-col gap-7 py-4 pb-6">
           {/* 신청한 모임 */}
           {signups.length > 0 && (
             <section>
-              <h2 className="mb-2 text-[14px] font-bold">🧗 신청한 모임</h2>
+              <h2 className="mb-2 text-[15px] font-bold">신청한 모임</h2>
               <div className="flex flex-col gap-2">
                 {signups.map((s) => {
                   // 호스트가 모임을 취소하면 상세 화면이 못 여는 상태가 된다 —
@@ -524,7 +518,7 @@ export default function Inbox() {
                     <>
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="truncate text-[14.5px] font-extrabold">
+                          <p className="truncate text-[14.5px] font-semibold">
                             {s.gym}
                           </p>
                           <p className="mt-0.5 text-[12.5px] text-muted">
@@ -532,20 +526,20 @@ export default function Inbox() {
                           </p>
                         </div>
                         <span
-                          className={`shrink-0 rounded-full px-2.5 py-1 text-[11.5px] font-bold ${st.cls}`}
+                          className={`shrink-0 rounded-md px-2.5 py-1 text-[11.5px] font-medium ${st.cls}`}
                         >
                           {st.label}
                         </span>
                       </div>
                       {st.note && (
-                        <p className="mt-2 text-[12.5px] text-muted">{st.note}</p>
+                        <p className="mt-2 text-[12.5px] text-faint">{st.note}</p>
                       )}
                     </>
                   );
                   return cancelled ? (
                     <div
                       key={s.id}
-                      className="rounded-2xl border border-line bg-surface p-4 opacity-70"
+                      className="rounded-xl border border-line bg-surface p-4 opacity-70"
                     >
                       {body}
                     </div>
@@ -553,7 +547,7 @@ export default function Inbox() {
                     <Link
                       key={s.id}
                       href={`/session?id=${s.id}`}
-                      className="block rounded-2xl border border-line bg-surface p-4"
+                      className="block rounded-xl border border-line bg-surface p-4 transition-colors active:bg-surface2"
                     >
                       {body}
                     </Link>
@@ -566,17 +560,17 @@ export default function Inbox() {
           {/* 보낸 관심 */}
           {sent.length > 0 && (
             <section>
-              <h2 className="mb-2 text-[14px] font-bold">💌 보낸 관심</h2>
+              <h2 className="mb-2 text-[15px] font-bold">보낸 관심</h2>
               <div className="flex flex-col gap-2">
                 {sent.map((r) => (
                   <div
                     key={r.id}
-                    className="flex items-center justify-between gap-2 rounded-2xl border border-line bg-surface p-4"
+                    className="flex items-center justify-between gap-2 rounded-xl border border-line bg-surface p-4"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-[14.5px] font-extrabold">
+                      <p className="truncate text-[14.5px] font-semibold">
                         {r.nickname}
-                        <span className="ml-1.5 text-[12px] font-medium text-muted">
+                        <span className="ml-1.5 text-[12px] font-normal text-muted">
                           {r.age} · L{r.level} {level(r.level).name}
                         </span>
                       </p>
@@ -585,9 +579,9 @@ export default function Inbox() {
                       </p>
                     </div>
                     <span
-                      className={`shrink-0 rounded-full px-2.5 py-1 text-[11.5px] font-bold ${
+                      className={`shrink-0 rounded-md px-2.5 py-1 text-[11.5px] font-medium ${
                         r.status === "accepted"
-                          ? "bg-mint/15 text-mint"
+                          ? "bg-accent-soft text-accent-pressed"
                           : "bg-surface2 text-muted"
                       }`}
                     >
@@ -596,7 +590,7 @@ export default function Inbox() {
                   </div>
                 ))}
               </div>
-              <p className="mt-2 text-[11.5px] text-muted">
+              <p className="mt-2 text-[11.5px] text-faint">
                 거절은 따로 알려드리지 않아요.
               </p>
             </section>

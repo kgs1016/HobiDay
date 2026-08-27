@@ -13,15 +13,16 @@ export const metadata: Metadata = {
     title: "하비데이",
     capable: true,
     // black-translucent 는 콘텐츠를 상태바 아래로 밀지 않고 겹쳐 놔서
-    // 로고가 시계와 부딪혔다. black 은 상태바 영역을 따로 확보한다.
-    statusBarStyle: "black",
+    // 로고가 시계와 부딪혔다. default 는 상태바 영역을 따로 확보하고
+    // 밝은 배경 위에 검은 시계를 얹는다 — 라이트 UI 와 맞는 조합.
+    statusBarStyle: "default",
   },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0f0e0d",
+  themeColor: "#f7f8fa",
   // 아이폰 노치·홈바 영역까지 배경을 채운다
   viewportFit: "cover",
 };

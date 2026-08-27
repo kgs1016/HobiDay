@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import BackButton from "@/components/BackButton";
+import { CameraIcon } from "@/components/icons";
 import { CAREERS, LEVELS, type CareerId, type LevelId } from "@/lib/levels";
 import { loadMyProfile, saveMyProfile, type MyProfile } from "@/lib/myProfile";
 import { isProfileComplete } from "@/lib/profileGate";
@@ -25,7 +27,7 @@ const MBTI = [
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-2 text-[13.5px] font-bold">{label}</p>
+      <p className="mb-2 text-[13.5px] font-semibold">{label}</p>
       {children}
     </div>
   );
@@ -44,10 +46,10 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-3.5 py-2 text-[13px] font-semibold transition-colors ${
+      className={`rounded-full border px-3.5 py-2 text-[13px] font-medium transition-colors ${
         active
-          ? "bg-accent text-white"
-          : "border border-line bg-surface text-muted"
+          ? "border-accent bg-accent text-white"
+          : "border-line bg-surface text-muted"
       }`}
     >
       {children}
@@ -57,7 +59,7 @@ function Chip({
 
 const inputCls =
   // iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다 — 16px 유지
-  "w-full rounded-xl border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-muted/60";
+  "w-full rounded-lg border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-faint focus:border-accent focus:outline-none";
 
 export default function ProfileNew() {
   const router = useRouter();
@@ -192,14 +194,10 @@ export default function ProfileNew() {
 
   return (
     <main className="px-4">
-      <header className="flex items-center gap-3 pt-5 pb-4">
+      <header className="flex items-center gap-2 pt-4 pb-4">
         {/* 온보딩 중에는 나갈 곳이 없다 — 뒤로 버튼을 두면 빈 프로필로 빠져나간다 */}
-        {!onboarding && (
-          <button onClick={() => router.back()} className="text-lg text-muted">
-            ←
-          </button>
-        )}
-        <h1 className="text-[19px] font-extrabold tracking-tight">
+        {!onboarding && <BackButton />}
+        <h1 className="text-[18px] font-bold tracking-tight">
           {onboarding
             ? "프로필 만들기"
             : editing
@@ -209,15 +207,14 @@ export default function ProfileNew() {
       </header>
 
       {onboarding ? (
-        <p className="mb-5 rounded-xl border border-accent/40 bg-accent/10 px-4 py-3 text-[12.5px] leading-relaxed text-muted">
-          <b className="text-accent">시작하기 전에 프로필을 완성해주세요.</b>
+        <p className="mb-5 rounded-lg bg-accent-soft px-4 py-3 text-[12.5px] leading-relaxed text-muted">
+          <b className="font-semibold text-ink">시작 전에 프로필을 완성해주세요.</b>
           <br />
-          서로 얼굴과 실력을 아는 사람들끼리 만나는 게 이 앱의 전부예요. 모두가
-          같은 조건이라 부담 갖지 않으셔도 돼요.
+          서로 얼굴과 실력을 알고 만나는 서비스예요. 모두가 같은 조건이에요.
         </p>
       ) : (
-        <p className="mb-5 rounded-xl border border-line bg-surface2 px-4 py-3 text-[12.5px] leading-relaxed text-muted">
-          여기 올린 프로필은 <b className="text-ink">사람 찾기 목록에 공개</b>돼요.
+        <p className="mb-5 rounded-lg bg-surface2 px-4 py-3 text-[12.5px] leading-relaxed text-muted">
+          여기 올린 프로필은 사람 찾기 목록에 공개돼요.
         </p>
       )}
 
@@ -238,8 +235,8 @@ export default function ProfileNew() {
                   className="h-20 w-20 rounded-full object-cover"
                 />
               ) : (
-                <span className="flex h-20 w-20 items-center justify-center rounded-full border border-dashed border-line bg-surface2 text-2xl">
-                  📷
+                <span className="flex h-20 w-20 items-center justify-center rounded-full border border-dashed border-line bg-surface2 text-faint">
+                  <CameraIcon size={26} />
                 </span>
               )}
               <input
@@ -256,10 +253,10 @@ export default function ProfileNew() {
             </label>
             <div className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-muted">
               {photoBusy ? (
-                <p className="font-bold text-ink">올리는 중…</p>
+                <p className="font-semibold text-ink">올리는 중…</p>
               ) : (
                 <>
-                  <p className="font-bold text-ink">
+                  <p className="font-semibold text-ink">
                     {photo ? "사진 바꾸기" : "얼굴이 보이는 사진 1장"}
                   </p>
                   <p className="mt-0.5">
@@ -285,7 +282,7 @@ export default function ProfileNew() {
         <Field label="성별">
           {editing ? (
             <>
-              <span className="inline-block rounded-full border border-line bg-surface2 px-3.5 py-2 text-[13px] font-semibold text-muted">
+              <span className="inline-block rounded-full border border-line bg-surface2 px-3.5 py-2 text-[13px] font-medium text-muted">
                 {gender === "f" ? "여성" : "남성"}
               </span>
               <p className="mt-1.5 text-[12px] text-muted">
@@ -403,7 +400,7 @@ export default function ProfileNew() {
         <button
           type="submit"
           disabled={busy}
-          className="rounded-xl bg-accent py-3.5 text-[15px] font-bold text-white disabled:opacity-50"
+          className="rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
         >
           {busy ? "저장 중…" : editing ? "수정 완료" : "프로필 올리기"}
         </button>
