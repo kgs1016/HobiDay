@@ -97,7 +97,7 @@ export function toSession(
   /* 내 user id — 호스트 판별용. session_list 가 i_am_host 를 안 내려주는
      (마이그레이션 이전) DB 에서도 host_id 로 판단할 수 있게 받아둔다. */
   myId?: string
-): Session & { myStatus: string | null } {
+): Session & { myStatus: string | null; cancelled: boolean } {
   const st = new Date(r.starts_at);
   const en = new Date(r.ends_at);
   const hm = (d: Date) =>
@@ -120,6 +120,10 @@ export function toSession(
     maleJoined: Number(r.m_confirmed),
     femaleJoined: Number(r.f_confirmed),
     status: r.status === "open" ? "open" : "confirmed",
+    /* Session 의 status 에는 'cancelled' 가 없다(목데이터와 공유하는
+       타입이다). 취소를 눌러 담은 자리 — 이게 없으면 취소된 모임이
+       확정된 모임처럼 보인다. */
+    cancelled: r.status === "cancelled",
     isAway: myHomeGym ? r.gym !== myHomeGym : false,
     myStatus: r.my_status,
     iAmHost: r.i_am_host ?? (!!myId && r.host_id === myId),
@@ -327,6 +331,17 @@ export async function cancelSignup(id: string) {
     notify?: string[];
     error?: string;
   };
+}
+
+/** 끝났거나 취소된 모임의 채팅방에서만 빠진다.
+ *  자리를 반납하는 게 아니라서 신청비도 매칭 기록도 건드리지 않는다.
+ *  아직 진행 중인 모임에서는 서버가 still_running 으로 막는다. */
+export async function leaveSessionChat(id: string) {
+  const sb = getSupabase();
+  if (!sb) return { error: "no_client" };
+  const { data, error } = await sb.rpc("session_chat_leave", { p_session: id });
+  if (error) return { error: error.message };
+  return data as { ok?: boolean; error?: string };
 }
 
 /* ── 조기 확정 ──
@@ -1042,6 +1057,8 @@ export async function markChatRead(matchId: string) {
 export interface SessionChat {
   session_id: string;
   gym: string;
+  /** 호스트는 자기 모임에서 나갈 수 없다 — 지우는 것뿐이다 */
+  i_am_host: boolean;
   starts_at: string;
   /** 방이 닫히는 기준 — 끝나거나 취소되고 24시간 뒤 */
   ends_at: string;

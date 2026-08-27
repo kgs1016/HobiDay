@@ -24,7 +24,7 @@ import {
   withdrawConfirm,
 } from "@/lib/supabase";
 
-type S = Session & { myStatus?: string | null };
+type S = Session & { myStatus?: string | null; cancelled?: boolean };
 
 export default function SessionDetail() {
   const id = useQueryId();
@@ -178,15 +178,15 @@ export default function SessionDetail() {
   };
 
   /* 참가자: 모임에서 빠지기.
-     신청비는 언제나 돌려준다. 정원이 딱 맞춰져 있어서 한 명만 빠져도
-     모임은 못 열리고, 어차피 시작 시각에 취소되며 전원 환불된다. */
+     호스트가 받아준 뒤로는 내 자리가 잡힌 것이라, 자의로 비우면
+     신청비는 돌려주지 않는다. 승인 전이면 잡힌 자리가 없어 돌려준다. */
   const onLeave = async () => {
-    const settled = s.status === "confirmed"; // 정원 참 · 조기 확정
+    const mine = s.myStatus === "confirmed"; // 호스트가 받아준 자리
     if (
       !confirm(
-        settled
-          ? "모임에서 나갈까요?\n자리가 비면 모임이 열리지 못해 취소돼요. 신청비는 돌려드려요."
-          : "모임에서 나갈까요? 신청비는 돌려드려요."
+        mine
+          ? "모임에서 나갈까요?\n자리를 비우는 거라 신청비는 돌려드리지 않아요.\n채팅방도 목록에서 사라져요."
+          : "신청을 취소할까요? 신청비는 돌려드려요."
       )
     )
       return;
@@ -205,7 +205,9 @@ export default function SessionDetail() {
         );
       alert("모임에서 나왔어요.\n남은 사람이 없어 모임은 취소됐어요.");
     } else {
-      alert("모임에서 나왔어요. 신청비는 돌려드렸어요.");
+      alert(
+        mine ? "모임에서 나왔어요." : "신청을 취소했어요. 신청비는 돌려드렸어요."
+      );
     }
     load();
   };
@@ -519,7 +521,7 @@ export default function SessionDetail() {
                   : `참여 신청하기 · ${SESSION_JOIN_COST}크레딧`}
       </button>
 
-      {s.iAmHost ? (
+      {s.iAmHost && !started && !s.cancelled ? (
         <button
           onClick={onDelete}
           disabled={busy}
@@ -529,7 +531,9 @@ export default function SessionDetail() {
         </button>
       ) : null}
 
-      {joined && !s.iAmHost && (
+      {/* 시작했거나 취소된 모임에는 반납할 자리가 없다.
+          남은 채팅방 정리는 채팅방의 나가기가 맡는다. */}
+      {joined && !s.iAmHost && !started && !s.cancelled && (
         <button
           onClick={onLeave}
           disabled={busy}
