@@ -122,6 +122,9 @@ export default function Room() {
     }
     const r = await addSessionVideo(id, up.path!);
     setUploading(false);
+    // 등반 인증은 실제로 등반한 모임에서만 — 서버가 막는다
+    if (r.error === "not_started")
+      return alert("모임이 시작한 뒤에 인증할 수 있어요.");
     if (r.error) return alert(`실패: ${r.error}`);
     if (r.earned)
       alert(

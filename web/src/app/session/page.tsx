@@ -78,6 +78,11 @@ export default function SessionDetail() {
   // 시작하면 더 못 받는다 (서버도 session_join 에서 막는다).
   // 목데이터에는 startsAt 이 없어서 그때는 늘 false.
   const started = !!s.startsAt && new Date(s.startsAt).getTime() <= Date.now();
+  const ended = !!s.endsAt && new Date(s.endsAt).getTime() <= Date.now();
+  /* 이 화면은 목록에서 떼어낸 뒤로 끝난 모임·취소된 모임도 연다
+     (채팅방에서 들어오니까). 그런데 문구는 아직 살아있는 모임만
+     염두에 두고 있었다. 상태를 먼저 보고 말한다. */
+  const dead = !!s.cancelled || ended;
   const joined = s.myStatus === "confirmed" || s.myStatus === "waiting";
 
   /* 조기 확정 — 2:2 로 열었지만 남녀 수가 맞으면 그 인원으로 확정한다.
@@ -289,6 +294,22 @@ export default function SessionDetail() {
         <h1 className="text-[19px] font-extrabold tracking-tight">모임 정보</h1>
       </header>
 
+      {/* 끝났는지 취소됐는지부터 말한다. 이게 없으면 아래 문구들이
+          전부 "아직 갈 수 있는 모임" 처럼 읽힌다. */}
+      {dead && (
+        <p
+          className={`mb-3 rounded-xl px-4 py-3 text-[13px] font-bold ${
+            s.cancelled
+              ? "bg-danger/10 text-danger"
+              : "bg-surface2 text-muted"
+          }`}
+        >
+          {s.cancelled
+            ? "이 모임은 취소됐어요. 채팅방은 24시간 뒤에 사라져요."
+            : "이미 끝난 모임이에요."}
+        </p>
+      )}
+
       <section className="rounded-2xl border border-line bg-surface p-5">
         <p className="text-[18px] font-extrabold tracking-tight">
           {s.gym}
@@ -327,7 +348,8 @@ export default function SessionDetail() {
               {b.g === "m" ? "남" : "여"} 확정
             </span>
           ))}
-          {Array.from({ length: Math.max(0, left.male) }, (_, i) => (
+          {!dead &&
+            Array.from({ length: Math.max(0, left.male) }, (_, i) => (
             <span
               key={`em${i}`}
               className="rounded-full border border-dashed border-line px-3 py-1.5 text-[12.5px] font-semibold text-muted"
@@ -335,7 +357,8 @@ export default function SessionDetail() {
               남 모집중
             </span>
           ))}
-          {Array.from({ length: Math.max(0, left.female) }, (_, i) => (
+          {!dead &&
+            Array.from({ length: Math.max(0, left.female) }, (_, i) => (
             <span
               key={`ef${i}`}
               className="rounded-full border border-dashed border-line px-3 py-1.5 text-[12.5px] font-semibold text-muted"
@@ -351,7 +374,7 @@ export default function SessionDetail() {
       </section>
 
       {/* 조기 확정 — 자리가 남아도 성비가 맞으면 그 인원으로 갈 수 있다 */}
-      {s.iAmHost && canEarlyConfirm && !proposed && (
+      {s.iAmHost && !dead && canEarlyConfirm && !proposed && (
         <section className="mt-4 rounded-2xl border border-mint/40 bg-mint/10 p-5">
           <p className="text-[14.5px] font-extrabold">
             {matched}:{matched}로 확정할까요?
@@ -371,7 +394,7 @@ export default function SessionDetail() {
         </section>
       )}
 
-      {s.iAmHost && proposed && (
+      {s.iAmHost && !dead && proposed && (
         <section className="mt-4 rounded-2xl border border-line bg-surface p-5">
           <p className="text-[14.5px] font-extrabold">
             참가자의 답을 기다리는 중…
@@ -390,7 +413,7 @@ export default function SessionDetail() {
         </section>
       )}
 
-      {iAmGuest && proposed && !s.myAck && (
+      {iAmGuest && !dead && proposed && !s.myAck && (
         <section className="mt-4 rounded-2xl border border-mint/40 bg-mint/10 p-5">
           <p className="text-[14.5px] font-extrabold">
             호스트가 {matched}:{matched}로 하자고 해요
@@ -485,20 +508,22 @@ export default function SessionDetail() {
               💬 모임 채팅 열기
             </Link>
           )}
+          {!dead && (
           <Link
             href={`/room?id=${s.id}`}
             className="block rounded-xl border border-accent/50 bg-accent/10 py-3.5 text-center text-[14.5px] font-bold text-accent"
           >
             🧗 모임 진행 화면 열기
           </Link>
+          )}
         </div>
       )}
 
       <button
         // 내가 연 모임에는 신청할 수 없다. 시작한 모임도 마찬가지.
-        disabled={busy || joined || s.iAmHost || full || started}
+        disabled={busy || joined || s.iAmHost || full || started || dead}
         className={`mt-6 mb-8 w-full rounded-xl py-3.5 text-[15px] font-bold disabled:opacity-70 ${
-          s.iAmHost
+          dead || s.iAmHost
             ? "bg-surface2 text-muted"
             : joined
               ? "bg-mint/15 text-mint"
@@ -508,26 +533,36 @@ export default function SessionDetail() {
         }`}
         onClick={onJoin}
       >
-        {/* "확정" 이 두 가지를 뜻한다 — 내 자리가 잡혔다 · 모임이 성사됐다.
-            성비가 안 맞으면 자리는 잡혀도 모임은 아직 안 열린다. */}
-        {s.iAmHost
-          ? "내가 연 모임이에요"
-          : joined
-            ? s.myStatus !== "confirmed"
-              ? "승인 대기 중 · 호스트가 확인하면 알려드려요"
-              : s.status === "confirmed"
-                ? "✓ 모임이 확정됐어요"
-                : "✓ 자리 잡았어요 · 성비가 맞으면 확정돼요"
-            : busy
-              ? "신청 중…"
-              : started
-                ? "이미 시작한 모임이에요"
-                : full
-                  ? "자리가 다 찼어요"
-                  : `참여 신청하기 · ${SESSION_JOIN_COST}크레딧`}
+        {/* 끝났거나 취소된 모임이면 그 말이 먼저다. 예전엔 이 분기가
+            없어서, 채팅에 "매칭이 취소되었어요" 가 떠 있는 모임을 열어도
+            "✓ 모임이 확정됐어요" 라고 했다. toSession 이 cancelled 를
+            confirmed 로 뭉개는 탓에 여기서는 구분조차 못 했다.
+
+            "확정" 이 두 가지를 뜻하는 것도 그대로다 — 내 자리가 잡혔다 ·
+            모임이 성사됐다. 성비가 안 맞으면 자리는 잡혀도 모임은 아직
+            안 열린다. */}
+        {s.cancelled
+          ? "취소된 모임이에요"
+          : ended
+            ? "끝난 모임이에요"
+            : s.iAmHost
+              ? "내가 연 모임이에요"
+              : joined
+                ? s.myStatus !== "confirmed"
+                  ? "승인 대기 중 · 호스트가 확인하면 알려드려요"
+                  : s.status === "confirmed"
+                    ? "✓ 모임이 확정됐어요"
+                    : "✓ 자리 잡았어요 · 성비가 맞으면 확정돼요"
+                : busy
+                  ? "신청 중…"
+                  : started
+                    ? "이미 시작한 모임이에요"
+                    : full
+                      ? "자리가 다 찼어요"
+                      : `참여 신청하기 · ${SESSION_JOIN_COST}크레딧`}
       </button>
 
-      {s.iAmHost && !started && !s.cancelled ? (
+      {s.iAmHost && !started && !dead ? (
         <button
           onClick={onDelete}
           disabled={busy}
@@ -539,7 +574,7 @@ export default function SessionDetail() {
 
       {/* 시작했거나 취소된 모임에는 반납할 자리가 없다.
           남은 채팅방 정리는 채팅방의 나가기가 맡는다. */}
-      {joined && !s.iAmHost && !started && !s.cancelled && (
+      {joined && !s.iAmHost && !started && !dead && (
         <button
           onClick={onLeave}
           disabled={busy}
