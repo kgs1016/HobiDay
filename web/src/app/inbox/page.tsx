@@ -178,11 +178,26 @@ export default function Inbox() {
           : `${h.gym} 모임은 이번엔 함께하지 못하게 됐어요. 신청비는 돌려드렸어요.`,
         ok ? `/session?id=${h.session_id}` : "/inbox"
       );
+    /* 이미 확정된 사람과 차단 사이라 서버가 자동으로 잘라냈다.
+       신청자에게는 여느 거절과 똑같이 보인다 — 차단은 드러내지 않는다. */
+    if (r.error === "blocked_member") {
+      notifyPush(
+        h.user_id,
+        "모임 신청 결과를 알려드려요",
+        `${h.gym} 모임은 이번엔 함께하지 못하게 됐어요. 신청비는 돌려드렸어요.`,
+        "/inbox"
+      );
+      load();
+      return alert(
+        "이미 확정된 참가자와 차단된 사이예요.\n이 신청은 자동으로 취소하고 신청비를 돌려드렸어요."
+      );
+    }
     if (r.error) {
       const msg: Record<string, string> = {
         full: "그 성별 자리가 이미 다 찼어요",
         not_waiting: "이미 처리된 신청이에요",
         not_host: "내가 연 모임이 아니에요",
+        started: "이미 시작한 모임이에요",
       };
       return alert(msg[r.error] ?? `실패: ${r.error}`);
     }

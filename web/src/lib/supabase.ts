@@ -1177,7 +1177,8 @@ export async function reportUser(
     p_ref: refId ?? null,
   });
   if (error) return { error: error.message };
-  return data as { ok?: boolean; error?: string };
+  // left_sessions — 신고와 함께 내가 빠진(또는 상대를 내보낸) 모임 수
+  return data as { ok?: boolean; left_sessions?: number; error?: string };
 }
 
 export async function blockUser(targetId: string) {
