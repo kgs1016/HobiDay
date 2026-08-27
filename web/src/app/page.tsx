@@ -4,11 +4,17 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { isProfileComplete } from "@/lib/profileGate";
 import SessionCard from "@/components/SessionCard";
+import SessionFilterBar from "@/components/SessionFilterBar";
 import ProfileTodo from "@/components/ProfileTodo";
 import ReportSheet from "@/components/ReportSheet";
 import { notifyPush } from "@/lib/nativePush";
 import { MOCK_SESSIONS, MOCK_PEOPLE, type Session, type Person } from "@/lib/mock";
 import { careerLabel, level } from "@/lib/levels";
+import {
+  EMPTY_FILTER,
+  activeFilterCount,
+  applySessionFilter,
+} from "@/lib/sessionFilter";
 import { loadMyProfile, type MyProfile } from "@/lib/myProfile";
 import {
   hasSupabase,
@@ -45,6 +51,8 @@ export default function Home() {
     mockMode ? MOCK_PEOPLE : []
   );
   const [live, setLive] = useState(false);
+  // 모임 찾기 필터 — 서버를 다시 부르지 않고 받아온 목록에서 거른다
+  const [filter, setFilter] = useState(EMPTY_FILTER);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   // 관심 보내기
   const [credits, setCredits] = useState<Credits | null>(null);
@@ -320,6 +328,11 @@ export default function Home() {
     );
   }
 
+  /* 필터에 쓸 짐 목록은 지금 열려 있는 모임에서 뽑는다. 고정 목록을
+     두면 아무 모임도 없는 짐이 선택지에 남아 결과 0으로 데려간다. */
+  const gymChoices = Array.from(new Set(sessions.map((s) => s.gym))).sort();
+  const shown = applySessionFilter(sessions, filter);
+
   return (
     <main className="px-4">
       {/* 헤더 */}
@@ -390,12 +403,19 @@ export default function Home() {
 
       {tab === "session" ? (
         <>
+          <SessionFilterBar
+            value={filter}
+            onChange={setFilter}
+            gyms={gymChoices}
+          />
           <div className="flex flex-col gap-3 pt-3 pb-6">
             {!live && hasSupabase() === false && (
               <p className="rounded-xl border border-dashed border-line px-4 py-2.5 text-center text-[11.5px] text-muted">
                 미리보기 데이터예요 · Supabase 연결 후 실제 모임이 표시됩니다
               </p>
             )}
+            {/* 빈 화면이 두 가지다. 열린 모임이 없는 것과, 있는데 내가
+                건 조건에 안 걸리는 것 — 할 일이 다르니 말도 다르게 한다. */}
             {sessions.length === 0 ? (
               <div className="py-14 text-center">
                 <p className="text-3xl">🧗</p>
@@ -404,8 +424,19 @@ export default function Home() {
                   첫 모임을 직접 열어보세요!
                 </p>
               </div>
+            ) : shown.length === 0 ? (
+              <div className="py-14 text-center">
+                <p className="text-3xl">🔍</p>
+                <p className="mt-2 text-[14px] font-bold">조건에 맞는 모임이 없어요</p>
+                <button
+                  onClick={() => setFilter(EMPTY_FILTER)}
+                  className="mt-3 rounded-xl border border-line px-4 py-2 text-[13px] font-bold text-muted"
+                >
+                  필터 초기화
+                </button>
+              </div>
             ) : (
-              sessions.map((s) => (
+              shown.map((s) => (
                 <SessionCard
                   key={s.id}
                   session={s}

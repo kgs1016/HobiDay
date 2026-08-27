@@ -134,6 +134,24 @@ export const MOCK_SESSIONS: Session[] = [
     status: "open",
     host: { id: "p4", nickname: "민지", age: 26, area: "연희동", level: 4 },
   },
+  {
+    id: "s5",
+    gym: "더월클라이밍 연남",
+    date: "목 8/6",
+    start: "10:00",
+    end: "12:00",
+    capacity: 3,
+    genderMode: "any",
+    levelMin: 1,
+    levelMax: 2,
+    ageMin: 24,
+    ageMax: 33,
+    note: "성별 상관없이 셋이서 가볍게",
+    maleJoined: 2,
+    femaleJoined: 0,
+    status: "open",
+    host: { id: "p2", nickname: "지훈", age: 29, area: "망원동", level: 2 },
+  },
 ];
 
 export const MOCK_PEOPLE: Person[] = [
