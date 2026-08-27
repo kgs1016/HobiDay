@@ -76,6 +76,20 @@ npx supabase migration repair --status applied <버전>
   한쪽만 바꾸면 화면 문구와 실제 동작이 어긋난다
   (예: `credit_rule()` ↔ `web/src/lib/supabase.ts` 의 `REQUEST_COST`)
 
+## schema.sql 은 지웠다
+
+이 폴더에 있던 `schema.sql` (SQL Editor 에 통째로 붙여넣는 초기 세팅 파일)은
+`20260801000000_base_schema` 로 옮겨진 뒤에도 8월 초 시점 그대로 남아 있었다.
+정원 (2,3) · 신청 즉시 확정 · 신청비와 차단 필터 없음 — 전부 옛 규칙인데
+파일 머리에는 "몇 번을 다시 돌려도 안전하다" 라고 적혀 있었다.
+
+`create or replace function` 은 함수를 통째로 갈아치우므로, 이걸 본 DB 에서
+실행하면 승인제·신청비·차단이 들어간 현재 함수들이 소리 없이 옛 로직으로
+돌아간다 — `verify.sql` 이 경고하는 바로 그 사고다. 그래서 지웠다.
+
+- 빈 DB 세우기 → 아래 샌드박스 절차대로 `db push` (base_schema 부터 전부 올라간다)
+- 초기 스키마가 궁금하면 → `migrations/20260801000000_base_schema.sql` (내용 동일)
+
 ## 테스트용 프로젝트 (샌드박스)
 
 DB 가 하나뿐이면 브랜치에서 DB 변경을 확인할 데가 없다. Supabase 무료
