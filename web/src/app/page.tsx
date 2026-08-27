@@ -10,6 +10,7 @@ import ReportSheet from "@/components/ReportSheet";
 import { notifyPush } from "@/lib/nativePush";
 import { MOCK_SESSIONS, MOCK_PEOPLE, type Session, type Person } from "@/lib/mock";
 import { careerLabel, level } from "@/lib/levels";
+import { GYMS } from "@/lib/meetupOptions";
 import {
   EMPTY_FILTER,
   activeFilterCount,
@@ -328,9 +329,16 @@ export default function Home() {
     );
   }
 
-  /* 필터에 쓸 짐 목록은 지금 열려 있는 모임에서 뽑는다. 고정 목록을
-     두면 아무 모임도 없는 짐이 선택지에 남아 결과 0으로 데려간다. */
-  const gymChoices = Array.from(new Set(sessions.map((s) => s.gym))).sort();
+  /* 필터의 짐 목록은 전체를 보여준다. 짐으로 거르는 이유는 "내가 갈 수
+     있는 곳" 을 정하는 것이라, 오늘 모임이 없다고 선택지에서 빠지면
+     오히려 이상하다. 목록에 없는 짐으로 열린 모임도 있으니(만들 때 직접
+     입력할 수 있다) 그것들을 뒤에 붙인다. */
+  const gymChoices = [
+    ...GYMS,
+    ...Array.from(new Set(sessions.map((s) => s.gym)))
+      .filter((g) => !GYMS.includes(g))
+      .sort(),
+  ];
   const shown = applySessionFilter(sessions, filter);
 
   return (

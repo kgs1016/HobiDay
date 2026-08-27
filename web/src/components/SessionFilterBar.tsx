@@ -1,21 +1,24 @@
 "use client";
 
 /* 모임 찾기 필터 — 목록 위에 가로로 늘어선 버튼들.
-   버튼 하나가 조건 하나고, 누르면 아래에서 시트가 올라온다.
-   고르는 즉시 목록이 걸러진다 ("적용" 을 따로 누르지 않는다). */
+   버튼 하나가 조건 하나고, 누르면 그 조건만 다루는 설정 화면이 아래에서
+   올라온다. 고른 값은 버튼 안에 그대로 적혀서, 열어보지 않아도 지금
+   무슨 조건이 걸려 있는지 보인다.
+
+   시간 · 레벨 · 나이대는 범위로 잡는다. 성비를 고르면 정원 화면이 그에
+   맞춰 바뀐다 — 모임 만들기와 같은 짜임이다. */
 
 import { useState } from "react";
 import { LEVELS, type LevelId } from "@/lib/levels";
 import { GENDER_MODES } from "@/lib/capacity";
+import { AGE_FROM, AGE_TO, ageBandLabel } from "@/lib/meetupOptions";
 import {
-  AGE_BANDS,
   EMPTY_FILTER,
-  SEAT_CHOICES,
-  TIME_BANDS,
   activeFilterCount,
+  seatChoices,
+  withGenderMode,
   ymd,
   type SessionFilter,
-  type TimeBand,
 } from "@/lib/sessionFilter";
 
 type Facet = "gym" | "date" | "time" | "gender" | "seats" | "level" | "age";
@@ -30,54 +33,47 @@ const TITLES: Record<Facet, string> = {
   age: "나이대",
 };
 
-/** 고른 게 있으면 버튼에 그 값을 적는다 — 시트를 열지 않아도 보이게 */
+/** 고른 게 있으면 버튼에 그 값을 적는다 — 없으면 조건 이름 그대로 */
 function chipLabel(f: SessionFilter, k: Facet): string {
-  const many = (n: number, base: string) => `${base} ${n}`;
   switch (k) {
     case "gym":
       return f.gyms.length === 0
         ? "짐"
         : f.gyms.length === 1
           ? f.gyms[0]
-          : many(f.gyms.length, "짐");
+          : `짐 ${f.gyms.length}`;
     case "date": {
       if (!f.date) return "날짜";
       const [, m, d] = f.date.split("-");
       return `${Number(m)}/${Number(d)}`;
     }
     case "time":
-      return f.times.length === 0
-        ? "시간"
-        : f.times.length === 1
-          ? TIME_BANDS.find((b) => b.id === f.times[0])!.label
-          : many(f.times.length, "시간");
+      if (!f.timeFrom && !f.timeTo) return "시간";
+      if (f.timeFrom && f.timeTo) return `${f.timeFrom}~${f.timeTo}`;
+      return f.timeFrom ? `${f.timeFrom}~` : `~${f.timeTo}`;
     case "gender":
       return f.genderMode
         ? GENDER_MODES.find((m) => m.id === f.genderMode)!.label
         : "성비";
-    case "seats":
-      return f.seats.length === 0
-        ? "정원"
-        : f.seats.length === 1
-          ? `${f.seats[0]}명`
-          : many(f.seats.length, "정원");
+    case "seats": {
+      if (f.seats.length === 0) return "정원";
+      const opts = seatChoices(f.genderMode);
+      return f.seats.length === 1
+        ? opts.find((o) => o.seats === f.seats[0])!.label
+        : `정원 ${f.seats.length}`;
+    }
     case "level":
-      return f.levels.length === 0
-        ? "레벨"
-        : f.levels.length === 1
-          ? `L${f.levels[0]}`
-          : many(f.levels.length, "레벨");
-    case "age":
-      return f.ages.length === 0
-        ? "나이대"
-        : f.ages.length === 1
-          ? AGE_BANDS.find((b) => b.id === f.ages[0])!.label
-          : many(f.ages.length, "나이대");
+      if (!f.levelMin || !f.levelMax) return "레벨";
+      return f.levelMin === f.levelMax
+        ? `L${f.levelMin}`
+        : `L${f.levelMin}~L${f.levelMax}`;
+    case "age": {
+      if (f.ageFrom == null || f.ageTo == null) return "나이대";
+      const a = ageBandLabel(f.ageFrom);
+      const b = ageBandLabel(f.ageTo);
+      return a === b ? a : `${a}~${b}`;
+    }
   }
-}
-
-function isOn(f: SessionFilter, k: Facet) {
-  return chipLabel(f, k) !== TITLES[k];
 }
 
 /** 시트 안의 선택지 */
@@ -103,6 +99,10 @@ function Opt({
   );
 }
 
+const inputCls =
+  // iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다
+  "w-full rounded-xl border border-line bg-bg px-3 py-2.5 text-[16px] text-ink [color-scheme:dark]";
+
 export default function SessionFilterBar({
   value: f,
   onChange,
@@ -110,7 +110,6 @@ export default function SessionFilterBar({
 }: {
   value: SessionFilter;
   onChange: (next: SessionFilter) => void;
-  /** 지금 열려 있는 모임들의 짐 목록 — 없는 짐을 고르게 두지 않는다 */
   gyms: string[];
 }) {
   const [open, setOpen] = useState<Facet | null>(null);
@@ -120,7 +119,28 @@ export default function SessionFilterBar({
   const toggle = <T,>(list: T[], v: T): T[] =>
     list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
 
+  /* 레벨 범위 — 밖을 누르면 그쪽으로 넓히고, 안을 누르면 그 한 칸으로
+     좁힌다. 모임 만들기의 레벨 고르기와 같은 손놀림이다. 다만 여기엔
+     "인접 1단계" 제한이 없다 — 찾는 쪽은 넓게 볼 수 있어야 한다. */
+  const pickLevel = (id: LevelId) => {
+    if (!f.levelMin || !f.levelMax) return onChange({ ...f, levelMin: id, levelMax: id });
+    if (id < f.levelMin) return onChange({ ...f, levelMin: id });
+    if (id > f.levelMax) return onChange({ ...f, levelMax: id });
+    onChange({ ...f, levelMin: id, levelMax: id });
+  };
+
+  const clear: Record<Facet, Partial<SessionFilter>> = {
+    gym: { gyms: [] },
+    date: { date: "" },
+    time: { timeFrom: "", timeTo: "" },
+    gender: { genderMode: null, seats: [] },
+    seats: { seats: [] },
+    level: { levelMin: null, levelMax: null },
+    age: { ageFrom: null, ageTo: null },
+  };
+
   const today = ymd(new Date());
+  const seatOpts = seatChoices(f.genderMode);
 
   return (
     <>
@@ -128,7 +148,8 @@ export default function SessionFilterBar({
       <div className="-mx-4 overflow-x-auto px-4 pt-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="flex w-max gap-1.5">
           {(Object.keys(TITLES) as Facet[]).map((k) => {
-            const on = isOn(f, k);
+            const label = chipLabel(f, k);
+            const on = label !== TITLES[k];
             return (
               <button
                 key={k}
@@ -140,7 +161,7 @@ export default function SessionFilterBar({
                     : "border-line bg-surface text-muted"
                 }`}
               >
-                {chipLabel(f, k)}
+                {label}
                 <svg
                   width="12"
                   height="12"
@@ -179,109 +200,172 @@ export default function SessionFilterBar({
             style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-[17px] font-extrabold">{TITLES[open]}</p>
+            <div className="flex items-center justify-between">
+              <p className="text-[17px] font-extrabold">{TITLES[open]}</p>
+              <button
+                type="button"
+                onClick={() => onChange({ ...f, ...clear[open] })}
+                className="text-[12.5px] font-semibold text-muted"
+              >
+                지우기
+              </button>
+            </div>
 
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              {open === "gym" &&
-                (gyms.length === 0 ? (
-                  <p className="text-[13px] text-muted">열려 있는 모임이 없어요.</p>
-                ) : (
-                  gyms.map((g) => (
-                    <Opt
-                      key={g}
-                      on={f.gyms.includes(g)}
-                      onClick={() => onChange({ ...f, gyms: toggle(f.gyms, g) })}
-                    >
-                      {g}
-                    </Opt>
-                  ))
-                ))}
-
-              {open === "date" && (
-                /* 지난 날짜는 아예 못 고른다. 골라봐야 시작한 모임은
-                   목록에서 내려가 결과가 언제나 0이다. */
-                <input
-                  type="date"
-                  value={f.date}
-                  min={today}
-                  onChange={(e) => onChange({ ...f, date: e.target.value })}
-                  className="w-full rounded-xl border border-line bg-bg px-3 py-2.5 text-[16px] text-ink [color-scheme:dark]"
-                />
-              )}
-
-              {open === "time" &&
-                TIME_BANDS.map((b) => (
+            {open === "gym" && (
+              <div className="mt-4 flex flex-wrap gap-1.5">
+                {gyms.map((g) => (
                   <Opt
-                    key={b.id}
-                    on={f.times.includes(b.id)}
-                    onClick={() =>
-                      onChange({ ...f, times: toggle<TimeBand>(f.times, b.id) })
-                    }
+                    key={g}
+                    on={f.gyms.includes(g)}
+                    onClick={() => onChange({ ...f, gyms: toggle(f.gyms, g) })}
                   >
-                    {b.label}
+                    {g}
                   </Opt>
                 ))}
+              </div>
+            )}
 
-              {open === "gender" &&
-                GENDER_MODES.map((m) => (
+            {open === "date" && (
+              /* 지난 날짜는 아예 못 고른다. 골라봐야 시작한 모임은 목록에서
+                 내려가 결과가 언제나 0이다. */
+              <input
+                type="date"
+                value={f.date}
+                min={today}
+                onChange={(e) => onChange({ ...f, date: e.target.value })}
+                className={`mt-4 ${inputCls}`}
+              />
+            )}
+
+            {open === "time" && (
+              <>
+                <p className="mt-4 text-[12.5px] text-muted">
+                  모임이 <b className="text-ink">시작하는</b> 시각 기준이에요.
+                </p>
+                <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                  <input
+                    type="time"
+                    value={f.timeFrom}
+                    onChange={(e) => onChange({ ...f, timeFrom: e.target.value })}
+                    className={inputCls}
+                  />
+                  <span className="text-[13px] text-muted">~</span>
+                  <input
+                    type="time"
+                    value={f.timeTo}
+                    onChange={(e) => onChange({ ...f, timeTo: e.target.value })}
+                    className={inputCls}
+                  />
+                </div>
+              </>
+            )}
+
+            {open === "gender" && (
+              <div className="mt-4 flex flex-wrap gap-1.5">
+                {GENDER_MODES.map((m) => (
                   <Opt
                     key={m.id}
                     on={f.genderMode === m.id}
                     onClick={() =>
-                      onChange({
-                        ...f,
-                        genderMode: f.genderMode === m.id ? null : m.id,
-                      })
+                      onChange(
+                        withGenderMode(f, f.genderMode === m.id ? null : m.id)
+                      )
                     }
                   >
                     {m.label}
                   </Opt>
                 ))}
+              </div>
+            )}
 
-              {open === "seats" &&
-                SEAT_CHOICES.map((c) => (
-                  <Opt
-                    key={c}
-                    on={f.seats.includes(c)}
-                    onClick={() => onChange({ ...f, seats: toggle(f.seats, c) })}
-                  >
-                    {c}명
-                  </Opt>
-                ))}
+            {open === "seats" && (
+              <>
+                {/* 선택지가 성비를 따라간다. 반반이면 홀수가 아예 안 나온다 */}
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {seatOpts.map((o) => (
+                    <Opt
+                      key={o.seats}
+                      on={f.seats.includes(o.seats)}
+                      onClick={() => onChange({ ...f, seats: toggle(f.seats, o.seats) })}
+                    >
+                      {o.label}
+                    </Opt>
+                  ))}
+                </div>
+                {!f.genderMode && (
+                  <p className="mt-2.5 text-[12px] leading-relaxed text-muted">
+                    성비를 먼저 고르면 그 방식의 정원만 보여드려요.
+                  </p>
+                )}
+              </>
+            )}
 
-              {open === "level" &&
-                LEVELS.map((l) => (
-                  <Opt
-                    key={l.id}
-                    on={f.levels.includes(l.id)}
-                    onClick={() =>
-                      onChange({ ...f, levels: toggle<LevelId>(f.levels, l.id) })
-                    }
-                  >
-                    L{l.id} {l.name}
-                  </Opt>
-                ))}
+            {open === "level" && (
+              <>
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {LEVELS.map((l) => (
+                    <Opt
+                      key={l.id}
+                      on={
+                        !!f.levelMin &&
+                        !!f.levelMax &&
+                        l.id >= f.levelMin &&
+                        l.id <= f.levelMax
+                      }
+                      onClick={() => pickLevel(l.id)}
+                    >
+                      L{l.id} {l.name}
+                    </Opt>
+                  ))}
+                </div>
+                <p className="mt-2.5 text-[12px] leading-relaxed text-muted">
+                  {f.levelMin && f.levelMax
+                    ? "범위 밖을 누르면 넓어지고, 안을 누르면 그 레벨만 남아요."
+                    : "두 개를 누르면 범위가 돼요."}
+                </p>
+              </>
+            )}
 
-              {open === "age" &&
-                AGE_BANDS.map((b) => (
-                  <Opt
-                    key={b.id}
-                    on={f.ages.includes(b.id)}
-                    onClick={() => onChange({ ...f, ages: toggle(f.ages, b.id) })}
-                  >
-                    {b.label}
-                  </Opt>
-                ))}
-            </div>
-
-            {open === "date" && f.date && (
-              <button
-                type="button"
-                onClick={() => onChange({ ...f, date: "" })}
-                className="mt-3 text-[12.5px] font-semibold text-muted"
-              >
-                날짜 조건 지우기
-              </button>
+            {open === "age" && (
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <select
+                  value={f.ageFrom ?? ""}
+                  onChange={(e) =>
+                    onChange({
+                      ...f,
+                      ageFrom: e.target.value ? Number(e.target.value) : null,
+                      // 한쪽만 고르면 걸러지지 않는다 — 반대쪽을 끝까지 채운다
+                      ageTo: f.ageTo ?? AGE_TO[AGE_TO.length - 1][1],
+                    })
+                  }
+                  className={inputCls}
+                >
+                  <option value="">나이 무관</option>
+                  {AGE_FROM.map(([label, v]) => (
+                    <option key={v} value={v}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={f.ageTo ?? ""}
+                  onChange={(e) =>
+                    onChange({
+                      ...f,
+                      ageTo: e.target.value ? Number(e.target.value) : null,
+                      ageFrom: f.ageFrom ?? AGE_FROM[0][1],
+                    })
+                  }
+                  className={inputCls}
+                >
+                  <option value="">나이 무관</option>
+                  {AGE_TO.map(([label, v]) => (
+                    <option key={v} value={v}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
 
             <button

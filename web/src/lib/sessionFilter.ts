@@ -3,6 +3,10 @@
    성비 · 정원 · 레벨 · 나이대. 조건을 새로 만들지 않고 그대로 뒤집은
    것이라, 여는 쪽과 찾는 쪽이 같은 말을 쓴다.
 
+   시간 · 레벨 · 나이대는 칸을 고르는 게 아니라 범위를 잡는다. 모임 자체가
+   범위로 열리기 때문에("L2~L3", "20대 후반~30대 초반") 한 칸만 고르게
+   하면 걸치는 모임을 놓친다.
+
    서버를 다시 부르지 않고 이미 받아온 목록에서 거른다. 목록은 시작 전
    모임만 담고 있어서(session_list) 양이 적고, 조건을 바꿀 때마다 왕복하면
    손끝보다 느리다. */
@@ -11,59 +15,67 @@ import type { LevelId } from "./levels";
 import type { Session } from "./mock";
 import { totalSeats, type GenderMode } from "./capacity";
 
-/** 시작 시각 기준. 저녁이 대부분이라 그 안을 더 쪼개지는 않았다 */
-export type TimeBand = "morning" | "day" | "evening";
-
-export const TIME_BANDS: { id: TimeBand; label: string; from: number; to: number }[] = [
-  { id: "morning", label: "오전", from: 0, to: 12 },
-  { id: "day", label: "낮", from: 12, to: 17 },
-  { id: "evening", label: "저녁", from: 17, to: 24 },
-];
-
-/** 나이대 — 모임 만들기의 "20대 후반부터 ~ 30대 초반까지" 와 같은 눈금 */
-export const AGE_BANDS: { id: string; label: string; from: number; to: number }[] = [
-  { id: "20e", label: "20대 초반", from: 20, to: 23 },
-  { id: "20m", label: "20대 중반", from: 24, to: 26 },
-  { id: "20l", label: "20대 후반", from: 27, to: 29 },
-  { id: "30e", label: "30대 초반", from: 30, to: 33 },
-  { id: "30m", label: "30대 중반", from: 34, to: 36 },
-  { id: "30l", label: "30대 후반", from: 37, to: 39 },
-];
-
-/** 정원은 총 인원으로 센다. 그래야 1:1 과 2명이 한 칸에 놓인다 */
-export const SEAT_CHOICES = [2, 3, 4];
-
 export interface SessionFilter {
   gyms: string[];
   /** "YYYY-MM-DD" · 빈 문자열이면 전체 */
   date: string;
-  times: TimeBand[];
+  /** 시작 시각 범위 "HH:MM" · 빈 문자열이면 열려 있음 */
+  timeFrom: string;
+  timeTo: string;
   genderMode: GenderMode | null;
+  /** 총 인원. 성비 모드가 달라도 같은 잣대로 세려면 총원이어야 한다 */
   seats: number[];
-  levels: LevelId[];
-  ages: string[];
+  levelMin: LevelId | null;
+  levelMax: LevelId | null;
+  ageFrom: number | null;
+  ageTo: number | null;
 }
 
 export const EMPTY_FILTER: SessionFilter = {
   gyms: [],
   date: "",
-  times: [],
+  timeFrom: "",
+  timeTo: "",
   genderMode: null,
   seats: [],
-  levels: [],
-  ages: [],
+  levelMin: null,
+  levelMax: null,
+  ageFrom: null,
+  ageTo: null,
 };
+
+/* 정원 선택지는 성비를 따라간다. 성비를 "맞춤" 으로 잡아놓고 3명을
+   고를 수 있으면 결과가 언제나 0이다 — 반반은 홀수가 안 나온다. */
+export function seatChoices(
+  mode: GenderMode | null
+): { seats: number; label: string }[] {
+  if (mode === "balanced")
+    return [
+      { seats: 2, label: "1:1 (2명)" },
+      { seats: 4, label: "2:2 (4명)" },
+    ];
+  return [2, 3, 4].map((n) => ({ seats: n, label: `${n}명` }));
+}
+
+/** 성비를 바꾸면 그 모드에 없는 정원은 떨군다 */
+export function withGenderMode(
+  f: SessionFilter,
+  mode: GenderMode | null
+): SessionFilter {
+  const ok = seatChoices(mode).map((c) => c.seats);
+  return { ...f, genderMode: mode, seats: f.seats.filter((s) => ok.includes(s)) };
+}
 
 /** 몇 가지 조건이 걸려 있나 — 초기화 버튼을 띄울지 정한다 */
 export function activeFilterCount(f: SessionFilter) {
   return (
     (f.gyms.length ? 1 : 0) +
     (f.date ? 1 : 0) +
-    (f.times.length ? 1 : 0) +
+    (f.timeFrom || f.timeTo ? 1 : 0) +
     (f.genderMode ? 1 : 0) +
     (f.seats.length ? 1 : 0) +
-    (f.levels.length ? 1 : 0) +
-    (f.ages.length ? 1 : 0)
+    (f.levelMin ? 1 : 0) +
+    (f.ageFrom || f.ageTo ? 1 : 0)
   );
 }
 
@@ -74,11 +86,6 @@ export function ymd(d: Date) {
   ).padStart(2, "0")}`;
 }
 
-/** 카드에 적힌 "15:00" 에서 시(hour)만 — 목데이터에도 있는 값이라 이걸 쓴다 */
-function startHour(s: Session) {
-  return Number(s.start.slice(0, 2));
-}
-
 export function applySessionFilter(list: Session[], f: SessionFilter) {
   return list.filter((s) => {
     if (f.gyms.length && !f.gyms.includes(s.gym)) return false;
@@ -87,37 +94,24 @@ export function applySessionFilter(list: Session[], f: SessionFilter) {
        내년 모임과 구분이 안 된다. 목데이터에는 ISO 가 없으니 그냥 통과. */
     if (f.date && s.startsAt && ymd(new Date(s.startsAt)) !== f.date) return false;
 
-    if (f.times.length) {
-      const h = startHour(s);
-      const hit = f.times.some((id) => {
-        const b = TIME_BANDS.find((x) => x.id === id)!;
-        return h >= b.from && h < b.to;
-      });
-      if (!hit) return false;
-    }
+    /* "HH:MM" 은 0으로 채워져 있어서 문자열 비교가 곧 시각 비교다 */
+    if (f.timeFrom && s.start < f.timeFrom) return false;
+    if (f.timeTo && s.start > f.timeTo) return false;
 
-    if (f.genderMode) {
-      const mode = s.genderMode ?? "balanced";
-      if (mode !== f.genderMode) return false;
-    }
+    if (f.genderMode && (s.genderMode ?? "balanced") !== f.genderMode) return false;
 
     if (f.seats.length && !f.seats.includes(totalSeats(s.capacity, s.genderMode))) {
       return false;
     }
 
-    /* 레벨·나이대는 모임이 "범위" 로 열려 있다. 고른 값이 그 범위에
-       걸치기만 하면 보여준다 — 정확히 같아야 한다고 하면 L2~L3 모임이
-       L2 를 고른 사람에게 안 보인다. */
-    if (f.levels.length && !f.levels.some((l) => l >= s.levelMin && l <= s.levelMax)) {
-      return false;
+    /* 레벨·나이대는 모임이 범위로 열려 있다. 두 범위가 겹치기만 하면
+       보여준다 — 감싸야 한다고 하면 L2~L3 모임이 L2 만 고른 사람에게
+       안 보인다. */
+    if (f.levelMin && f.levelMax) {
+      if (f.levelMin > s.levelMax || f.levelMax < s.levelMin) return false;
     }
-
-    if (f.ages.length) {
-      const hit = f.ages.some((id) => {
-        const b = AGE_BANDS.find((x) => x.id === id)!;
-        return b.from <= s.ageMax && b.to >= s.ageMin;
-      });
-      if (!hit) return false;
+    if (f.ageFrom != null && f.ageTo != null) {
+      if (f.ageFrom > s.ageMax || f.ageTo < s.ageMin) return false;
     }
 
     return true;

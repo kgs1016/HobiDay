@@ -9,32 +9,9 @@ import {
   capacityChipLabel,
   type GenderMode,
 } from "@/lib/capacity";
+import { AGE_FROM, AGE_TO, GYMS } from "@/lib/meetupOptions";
 import { hasSupabase, currentUser, fetchMyProfileDb, createSession } from "@/lib/supabase";
 import { isProfileComplete } from "@/lib/profileGate";
-
-/** 빠른 선택용. 여기 없는 짐은 직접 입력한다 (서울·경기 전체 대상). */
-const GYMS = [
-  "더클라임 B홍대",
-  "더클라임 연남",
-  "더월클라이밍 연남",
-  "홍대클라이밍",
-  "써미트클라이밍",
-];
-
-const AGE_FROM = [
-  ["20대 초반부터", 20],
-  ["20대 중반부터", 24],
-  ["20대 후반부터", 27],
-  ["30대 초반부터", 30],
-  ["30대 중반부터", 34],
-] as const;
-
-const AGE_TO = [
-  ["20대 후반까지", 29],
-  ["30대 초반까지", 33],
-  ["30대 중반까지", 36],
-  ["30대 후반까지", 39],
-] as const;
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
