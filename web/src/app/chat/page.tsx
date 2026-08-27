@@ -16,8 +16,6 @@ import {
   fetchSessionChats,
   hasSupabase,
   leaveChat,
-  leaveSessionChat,
-  cancelSignup,
   markChatRead,
   markSessionChatRead,
   sendChat,
@@ -768,49 +766,6 @@ function SessionThread({
   const router = useRouter();
 
   const ended = endedNotice(room);
-  /* 모임이 끝났거나 터지면 나갈 모임이 없다. 방만 정리하면 된다.
-     아직 살아있으면 나가기는 곧 자리를 반납하는 것이다. */
-  const dead = ended !== null;
-
-  const leave = async () => {
-    // 살아있는 모임의 호스트에게 "나가기" 는 없다 — 지우는 것뿐이다
-    if (!dead && room.i_am_host) {
-      if (
-        confirm(
-          "내가 연 모임이라 나갈 수 없어요.\n" +
-            "모임을 없애려면 모임 정보에서 삭제해야 해요. 지금 갈까요?"
-        )
-      )
-        router.push(`/session?id=${room.session_id}&from=chat`);
-      return;
-    }
-    if (
-      !confirm(
-        dead
-          ? "이 채팅방에서 나갈까요?\n내 채팅 목록에서 사라져요. 매칭 기록에는 그대로 남아요."
-          : "모임에서 나갈까요?\n" +
-              "자리를 비우는 거라 신청비는 돌려드리지 않아요.\n" +
-              "채팅방도 목록에서 사라져요."
-      )
-    )
-      return;
-    if (dead) {
-      const r = await leaveSessionChat(room.session_id);
-      if (r.error) return alert(`실패: ${r.error}`);
-    } else {
-      const r = await cancelSignup(room.session_id);
-      if (r.error) return alert(`실패: ${r.error}`);
-      // 내가 빠지면서 호스트 혼자 남으면 모임이 통째로 취소된다
-      if (r.cancelled && r.notify?.length)
-        notifyPush(
-          r.notify,
-          "😢 모임이 취소됐어요",
-          `${room.gym} 모임에 남은 사람이 없어 취소됐어요. 신청 크레딧은 돌려드렸어요.`,
-          "/inbox"
-        );
-    }
-    onBack();
-  };
 
   const openPicker = async () => {
     setPicking(true);
@@ -828,22 +783,13 @@ function SessionThread({
       sub={`${sessionSub(room)} · ${room.members}명`}
       onTitle={() => router.push(`/session?id=${room.session_id}&from=chat`)}
       action={
-        <div className="flex shrink-0 items-center">
-          <button
-            onClick={leave}
-            aria-label={dead ? "채팅방 나가기" : "모임에서 나가기"}
-            className="px-2 py-1 text-[12px] font-semibold text-muted/70"
-          >
-            나가기
-          </button>
-          <button
-            onClick={openPicker}
-            aria-label="신고하기"
-            className="px-2 py-1 text-[12px] font-semibold text-muted/70"
-          >
-            신고
-          </button>
-        </div>
+        <button
+          onClick={openPicker}
+          aria-label="신고하기"
+          className="shrink-0 px-2 py-1 text-[12px] font-semibold text-muted/70"
+        >
+          신고
+        </button>
       }
       onSend={send}
     >

@@ -333,17 +333,6 @@ export async function cancelSignup(id: string) {
   };
 }
 
-/** 끝났거나 취소된 모임의 채팅방에서만 빠진다.
- *  자리를 반납하는 게 아니라서 신청비도 매칭 기록도 건드리지 않는다.
- *  아직 진행 중인 모임에서는 서버가 still_running 으로 막는다. */
-export async function leaveSessionChat(id: string) {
-  const sb = getSupabase();
-  if (!sb) return { error: "no_client" };
-  const { data, error } = await sb.rpc("session_chat_leave", { p_session: id });
-  if (error) return { error: error.message };
-  return data as { ok?: boolean; error?: string };
-}
-
 /* ── 조기 확정 ──
    2:2 로 열었는데 남 1 · 여 1 에서 멈춘 모임을, 그 인원으로 확정한다.
    호스트가 걸고 게스트가 받아야 성립한다. */
@@ -1057,8 +1046,6 @@ export async function markChatRead(matchId: string) {
 export interface SessionChat {
   session_id: string;
   gym: string;
-  /** 호스트는 자기 모임에서 나갈 수 없다 — 지우는 것뿐이다 */
-  i_am_host: boolean;
   starts_at: string;
   /** 방이 닫히는 기준 — 끝나거나 취소되고 24시간 뒤 */
   ends_at: string;
