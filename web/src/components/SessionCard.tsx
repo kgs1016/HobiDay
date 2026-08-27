@@ -13,6 +13,9 @@ function ageLabel(min: number, max: number) {
   return a === b ? a : `${a}~${b}`;
 }
 
+/* 목록의 한 줄 — 떠 있는 카드가 아니라 feed 의 항목이다.
+   테두리·그림자·둥근 컨테이너 없이 사진과 여백, 얇은 divider(부모의
+   divide-y)로만 구분한다. */
 export default function SessionCard({
   session: s,
   hostPhotoUrl,
@@ -27,6 +30,8 @@ export default function SessionCard({
 }) {
   const left = slotsLeft(s);
   const full = left.male <= 0 && left.female <= 0;
+  const total = s.capacity * 2;
+  const joined = s.maleJoined + s.femaleJoined;
   /* 이미 신청했거나 내가 연 모임이면 목록에서부터 누를 일이 없다.
      cancelled 는 취소한 것이므로 다시 신청할 수 있어야 한다. */
   const mine =
@@ -38,7 +43,7 @@ export default function SessionCard({
           ? "참여 중"
           : null;
 
-  /* 목록에서는 자리 현황만 보여준다 — 실제 신청은 상세 화면에서 한다 */
+  /* 목록에서는 모집 현황만 — 실제 신청은 상세 화면에서 한다 */
   const slots = mine ? (
     <span
       className={`shrink-0 text-[12px] font-medium ${
@@ -48,20 +53,17 @@ export default function SessionCard({
       {mine}
     </span>
   ) : full ? (
-    <span className="shrink-0 text-[12px] font-medium text-faint">마감</span>
+    <span className="shrink-0 text-[12px] text-faint">마감</span>
   ) : (
-    <span className="shrink-0 text-[12px] font-medium text-ink">
-      {[left.male > 0 && `남 ${left.male}`, left.female > 0 && `여 ${left.female}`]
-        .filter(Boolean)
-        .join(" · ")}
-      <span className="font-normal text-muted"> 남음</span>
+    <span className="shrink-0 text-[12.5px] text-muted">
+      <b className="font-semibold text-ink">{joined}</b> / {total}명
     </span>
   );
 
   return (
     <Link
       href={`/session?id=${s.id}`}
-      className="flex gap-3.5 rounded-xl border border-line bg-surface p-3 transition-colors active:bg-surface2"
+      className="flex gap-3.5 py-4 transition-colors active:bg-surface2"
     >
       {/* 클라이밍짐 사진 */}
       {gymPhotoUrl ? (
@@ -69,11 +71,11 @@ export default function SessionCard({
         <img
           src={gymPhotoUrl}
           alt=""
-          className="h-24 w-24 shrink-0 rounded-lg object-cover"
+          className="h-[84px] w-[84px] shrink-0 rounded-lg object-cover"
         />
       ) : (
-        <span className="flex h-24 w-24 shrink-0 items-center justify-center rounded-lg bg-surface2 text-faint">
-          <PhotoIcon size={26} />
+        <span className="flex h-[84px] w-[84px] shrink-0 items-center justify-center rounded-lg bg-surface2 text-faint">
+          <PhotoIcon size={24} />
         </span>
       )}
 
@@ -89,20 +91,20 @@ export default function SessionCard({
         </p>
 
         {/* 일시 */}
-        <p className="mt-0.5 text-[13px] text-muted">
+        <p className="mt-[3px] text-[13px] text-muted">
           {s.date} · {s.start}–{s.end}
         </p>
 
-        {/* 구하는 나이대 · 사람 조건 — 사진 옆 좁은 폭이라 레벨은 짧게 */}
-        <p className="mt-0.5 truncate text-[12.5px] text-muted">
+        {/* 구하는 조건 — 사진 옆 좁은 폭이라 레벨은 짧게 */}
+        <p className="mt-[3px] truncate text-[12.5px] text-muted">
           {s.levelMin === s.levelMax
             ? `L${s.levelMin}`
             : `L${s.levelMin}–L${s.levelMax}`}{" "}
           · {ageLabel(s.ageMin, s.ageMax)}
         </p>
 
-        {/* 호스트 프로필 · 자리 현황 */}
-        <div className="mt-auto flex items-center justify-between gap-2 pt-1.5">
+        {/* 호스트 · 모집 현황 */}
+        <div className="mt-auto flex items-center justify-between gap-2 pt-1">
           {s.host ? (
             <div className="flex min-w-0 items-center gap-1.5">
               {hostPhotoUrl ? (

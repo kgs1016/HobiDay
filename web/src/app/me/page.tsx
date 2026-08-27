@@ -125,7 +125,7 @@ export default function Me() {
       </header>
 
       {/* 프로필 — 카드가 아니라 화면의 첫 번째 섹션 */}
-      <section className="bg-surface px-4 py-5">
+      <section className="px-4 pb-5">
         <div className="flex items-center gap-4">
           {photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -175,8 +175,8 @@ export default function Me() {
         )}
       </section>
 
-      {/* 크레딧 · 내 영상 */}
-      <section className="mt-2 bg-surface px-4">
+      {/* 크레딧 · 내 영상 — 섹션 사이는 얇은 회색 밴드로 구분한다 */}
+      <section className="border-t-8 border-surface2 px-4">
         <button
           onClick={() => setShowCredits((v) => !v)}
           className="flex w-full items-center justify-between border-b border-line py-3.5 text-left"
@@ -234,7 +234,7 @@ export default function Me() {
       </section>
 
       {/* 메뉴 */}
-      <section className="mt-2 bg-surface px-4">
+      <section className="border-t-8 border-surface2 px-4">
         <MenuRow href="/profile/new" label="프로필 수정" />
         {/* 오픈 전 잠금 중엔 모임 화면이 닫혀 있어 눌러도 홈으로 튕긴다 — 숨긴다 */}
         {!locked && <MenuRow href="/session/mine" label="내가 만든 모임" />}
@@ -243,7 +243,7 @@ export default function Me() {
 
       {/* 계정 */}
       {authed && (
-        <section className="mt-2 bg-surface px-4">
+        <section className="border-t-8 border-surface2 px-4">
           <button
             onClick={logout}
             className="flex w-full items-center border-b border-line py-3.5 text-left text-[15px] text-muted last:border-b-0"
@@ -262,7 +262,7 @@ export default function Me() {
       )}
 
       {authed && leaving && (
-        <section className="mt-2 bg-surface px-4 py-5">
+        <section className="border-t-8 border-surface2 px-4 py-5">
           <p className="text-[15px] font-bold">정말 탈퇴할까요?</p>
           <ul className="mt-3 flex flex-col gap-1.5 text-[12.5px] leading-relaxed text-muted">
             <li>· 프로필과 사진·영상이 모두 지워져요</li>
@@ -282,7 +282,7 @@ export default function Me() {
             onChange={(e) => setConfirmText(e.target.value)}
             placeholder="탈퇴"
             /* iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다 */
-            className="mt-2 w-full rounded-lg border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+            className="mt-2 w-full rounded-lg bg-surface2 px-3.5 py-3 text-[16px] text-ink placeholder:text-faint focus:outline-none"
           />
           <div className="mt-3 flex gap-2">
             <button

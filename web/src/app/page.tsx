@@ -6,11 +6,11 @@ import { isProfileComplete } from "@/lib/profileGate";
 import SessionCard from "@/components/SessionCard";
 import ProfileTodo from "@/components/ProfileTodo";
 import ReportSheet from "@/components/ReportSheet";
-import { AvatarFallback, PlusIcon } from "@/components/icons";
+import { AvatarFallback, ChevronDownIcon, PlusIcon } from "@/components/icons";
 import { HoldIllust, ShoeIllust } from "@/components/illustrations";
 import { notifyPush } from "@/lib/nativePush";
 import { MOCK_SESSIONS, MOCK_PEOPLE, type Session, type Person } from "@/lib/mock";
-import { careerLabel, level } from "@/lib/levels";
+import { careerLabel, level, LEVELS, type LevelId } from "@/lib/levels";
 import { loadMyProfile, type MyProfile } from "@/lib/myProfile";
 import {
   hasSupabase,
@@ -31,6 +31,40 @@ import {
   type Credits,
 } from "@/lib/supabase";
 
+/* 목록 필터 — 서버는 그대로 두고 받은 목록을 화면에서만 거른다.
+   date 는 "토 8/1" 형태라 첫 글자가 요일이다. */
+type DayFilter = "all" | "weekend" | "weekday";
+const DAY_LABEL: Record<DayFilter, string> = {
+  all: "날짜",
+  weekend: "주말",
+  weekday: "평일",
+};
+const isWeekend = (s: Session) => ["토", "일"].includes(s.date.trim().charAt(0));
+
+function FilterChip({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1 rounded-full border px-3 py-1.5 text-[13px] ${
+        active
+          ? "border-accent bg-accent-soft font-medium text-accent-pressed"
+          : "border-line text-muted"
+      }`}
+    >
+      {label}
+      <ChevronDownIcon size={12} strokeWidth={2} />
+    </button>
+  );
+}
+
 export default function Home() {
   // Supabase 키가 없을 때만 목데이터로 화면을 본다 (개발 폴백).
   // 실제 배포에선 목데이터를 초기값으로 두면 안 된다 — 확인이 끝나기 전에
@@ -47,6 +81,10 @@ export default function Home() {
   );
   const [live, setLive] = useState(false);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  // 목록 필터
+  const [dayFilter, setDayFilter] = useState<DayFilter>("all");
+  const [levelFilter, setLevelFilter] = useState<LevelId | 0>(0); // 0 = 전체
+  const [filterSheet, setFilterSheet] = useState<null | "day" | "level">(null);
   // 관심 보내기
   const [credits, setCredits] = useState<Credits | null>(null);
   const [sentTo, setSentTo] = useState<Set<string>>(new Set());
@@ -202,7 +240,7 @@ export default function Home() {
           )}
         </header>
 
-        <section className="mx-auto mt-8 flex max-w-sm items-center justify-between rounded-xl bg-surface px-5 py-4">
+        <section className="mx-auto mt-8 flex max-w-sm items-center justify-between rounded-xl bg-surface2 px-5 py-4">
           <p className="text-[14px] text-muted">내 크레딧</p>
           <p className="text-[20px] font-bold">
             {(credits?.balance ?? 0).toLocaleString()}
@@ -213,7 +251,7 @@ export default function Home() {
           보낼 수 있어요
         </p>
 
-        <section className="mx-auto mt-6 max-w-sm rounded-xl bg-surface p-5">
+        <section className="mx-auto mt-6 max-w-sm rounded-xl bg-surface2 p-5">
           <p className="text-[13.5px] font-semibold">오픈하면 할 수 있는 것</p>
           <div className="mt-3 flex flex-col gap-2.5 text-[13px] leading-relaxed">
             <p>
@@ -238,7 +276,7 @@ export default function Home() {
         <div className="mx-auto mt-4 max-w-sm">
           <Link
             href="/profile/new"
-            className="block rounded-xl border border-line bg-surface py-3.5 text-center text-[14px] font-semibold text-ink"
+            className="block rounded-xl border border-line py-3.5 text-center text-[14px] font-semibold text-ink"
           >
             내 프로필 다듬기
           </Link>
@@ -284,14 +322,14 @@ export default function Home() {
           </Link>
           <Link
             href="/intro.html"
-            className="rounded-xl border border-line bg-surface py-3.5 text-center text-[14px] font-medium text-ink"
+            className="rounded-xl border border-line py-3.5 text-center text-[14px] font-medium text-ink"
           >
             하비데이가 뭔가요?
           </Link>
         </div>
 
         {preOpen && (
-          <section className="mx-auto mt-7 max-w-sm rounded-xl bg-surface px-5 py-4 text-center">
+          <section className="mx-auto mt-7 max-w-sm rounded-xl bg-surface2 px-5 py-4 text-center">
             <p className="text-[13px] font-semibold">
               {openDay ? `${openDay} 오픈 · ` : ""}지금은 사전 가입 중이에요
             </p>
@@ -318,24 +356,34 @@ export default function Home() {
     );
   }
 
+  // 화면 표시용 필터 — 원본 sessions 는 건드리지 않는다
+  const shownSessions = sessions.filter((s) => {
+    if (dayFilter === "weekend" && !isWeekend(s)) return false;
+    if (dayFilter === "weekday" && isWeekend(s)) return false;
+    if (levelFilter && (levelFilter < s.levelMin || levelFilter > s.levelMax))
+      return false;
+    return true;
+  });
+  const filtering = dayFilter !== "all" || levelFilter !== 0;
+
   return (
     <main className="px-4">
-      {/* 헤더 — 로고는 작게, 행동은 하나만 */}
+      {/* 헤더 — 로고는 작게, 행동은 텍스트 하나만 */}
       <header className="flex items-center justify-between pt-5 pb-3">
         <p className="text-[16px] font-bold tracking-[1.5px] text-accent">
           HOBIDAY
         </p>
         <Link
           href="/session/new"
-          className="flex items-center gap-1 rounded-lg bg-accent-soft px-3 py-1.5 text-[13px] font-semibold text-accent-pressed"
+          className="flex items-center gap-1 py-1 text-[13.5px] font-semibold text-accent-pressed"
         >
           <PlusIcon size={14} strokeWidth={2.2} />
           모임 만들기
         </Link>
       </header>
 
-      {/* 탭 */}
-      <div className="flex border-b border-line">
+      {/* 탭 — 텍스트만, 밑줄은 글자 폭만큼 */}
+      <div className="flex gap-5 border-b border-line">
         {(
           [
             ["session", "모임"],
@@ -345,9 +393,9 @@ export default function Home() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`flex-1 border-b-2 pb-2.5 pt-1.5 text-[15px] ${
+            className={`-mb-px border-b-2 pb-2.5 pt-1 text-[15.5px] ${
               tab === key
-                ? "border-ink font-semibold text-ink"
+                ? "border-ink font-bold text-ink"
                 : "border-transparent font-medium text-faint"
             }`}
           >
@@ -358,97 +406,121 @@ export default function Home() {
 
       {tab === "session" ? (
         <>
-          <div className="flex flex-col gap-3 pt-3 pb-6">
-            {!live && hasSupabase() === false && (
-              <p className="rounded-lg border border-dashed border-line px-4 py-2.5 text-center text-[11.5px] text-faint">
-                미리보기 데이터예요 · Supabase 연결 후 실제 모임이 표시됩니다
+          {/* 필터 — 조작 가능한 것만 pill 로 만든다 */}
+          <div className="flex gap-1.5 pt-3">
+            <FilterChip
+              active={dayFilter !== "all"}
+              label={DAY_LABEL[dayFilter]}
+              onClick={() => setFilterSheet("day")}
+            />
+            <FilterChip
+              active={levelFilter !== 0}
+              label={levelFilter ? `L${levelFilter}` : "레벨"}
+              onClick={() => setFilterSheet("level")}
+            />
+          </div>
+
+          {!live && hasSupabase() === false && (
+            <p className="mt-3 rounded-lg bg-surface2 px-4 py-2.5 text-center text-[11.5px] text-faint">
+              미리보기 데이터예요 · Supabase 연결 후 실제 모임이 표시됩니다
+            </p>
+          )}
+
+          {sessions.length === 0 ? (
+            <div className="flex flex-col items-center py-16 text-center">
+              <HoldIllust size={68} />
+              <p className="mt-4 text-[15px] font-semibold">
+                아직 열린 모임이 없어요
               </p>
-            )}
-            {sessions.length === 0 ? (
-              <div className="flex flex-col items-center py-16 text-center">
-                <HoldIllust size={68} />
-                <p className="mt-4 text-[15px] font-semibold">
-                  아직 열린 모임이 없어요
-                </p>
-                <p className="mt-1 text-[13px] text-muted">
-                  첫 모임을 직접 열어보세요.
-                </p>
-                <Link
-                  href="/session/new"
-                  className="mt-4 rounded-lg bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-white active:bg-accent-pressed"
-                >
-                  모임 만들기
-                </Link>
-              </div>
-            ) : (
-              sessions.map((s) => (
+              <p className="mt-1 text-[13px] text-muted">
+                첫 모임을 직접 열어보세요.
+              </p>
+              <Link
+                href="/session/new"
+                className="mt-4 rounded-lg bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-white active:bg-accent-pressed"
+              >
+                모임 만들기
+              </Link>
+            </div>
+          ) : shownSessions.length === 0 ? (
+            <div className="py-16 text-center">
+              <p className="text-[14px] font-medium">조건에 맞는 모임이 없어요</p>
+              <button
+                onClick={() => {
+                  setDayFilter("all");
+                  setLevelFilter(0);
+                }}
+                className="mt-3 text-[13px] font-medium text-accent-pressed"
+              >
+                필터 지우기
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col divide-y divide-line pb-6">
+              {shownSessions.map((s) => (
                 <SessionCard
                   key={s.id}
                   session={s}
                   hostPhotoUrl={s.host?.photo ? photoUrls[s.host.photo] : undefined}
                 />
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </>
       ) : (
-        <div className="flex flex-col gap-3 py-4 pb-6">
-          {/* 내 프로필 (공개 중) */}
+        <div className="pb-6">
+          {/* 내 프로필 (공개 중) — 목록 위의 한 줄 */}
           {me ? (
-            <div className="rounded-xl border border-line bg-surface p-4">
-              <div className="flex items-center gap-3.5">
-                {me.photo && photoUrls[me.photo] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={photoUrls[me.photo]}
-                    alt="내 프로필 사진"
-                    className="h-14 w-14 shrink-0 rounded-full object-cover"
-                  />
-                ) : (
-                  <AvatarFallback size={56} />
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-semibold">
-                    {me.nickname}
-                    <span className="ml-1.5 align-middle text-[11px] font-medium text-accent-pressed">
-                      공개 중
-                    </span>
-                  </p>
-                  <p className="mt-0.5 text-[12.5px] text-muted">
-                    {[
-                      me.age,
-                      me.area,
-                      `L${me.level} ${level(me.level).name}`,
-                      me.homeGym,
-                      me.mbti,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                  {me.intro && (
-                    <p className="mt-1 text-[12.5px] text-muted">
-                      &ldquo;{me.intro}&rdquo;
-                    </p>
-                  )}
-                </div>
-                <Link
-                  href="/profile/new"
-                  className="shrink-0 rounded-lg border border-line px-3 py-1.5 text-[12px] font-medium text-muted"
-                >
-                  관리
-                </Link>
+            <div className="flex items-center gap-3.5 border-b border-line py-4">
+              {me.photo && photoUrls[me.photo] ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={photoUrls[me.photo]}
+                  alt="내 프로필 사진"
+                  className="h-12 w-12 shrink-0 rounded-full object-cover"
+                />
+              ) : (
+                <AvatarFallback size={48} />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-[14.5px] font-semibold">
+                  {me.nickname}
+                  <span className="ml-1.5 align-middle text-[11px] font-medium text-accent-pressed">
+                    공개 중
+                  </span>
+                </p>
+                <p className="mt-0.5 truncate text-[12.5px] text-muted">
+                  {[
+                    me.age,
+                    me.area,
+                    `L${me.level}`,
+                    careerLabel(me.careerId) && `클라이밍 ${careerLabel(me.careerId)}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
               </div>
+              <Link
+                href="/profile/new"
+                className="shrink-0 text-[13px] font-medium text-muted"
+              >
+                관리
+              </Link>
             </div>
           ) : (
             <Link
               href="/profile/new"
-              className="rounded-xl border border-dashed border-line px-4 py-3.5 text-center text-[13px] font-medium text-muted"
+              className="mt-3 block rounded-lg bg-surface2 px-4 py-3.5 text-center text-[13px] font-medium text-muted"
             >
               내 프로필을 올리면 여기에 공개돼요
             </Link>
           )}
 
-          {me && <ProfileTodo profile={me} />}
+          {me && (
+            <div className="pt-3">
+              <ProfileTodo profile={me} />
+            </div>
+          )}
 
           {/* 이성만 걸러 오므로 빈 경우가 생긴다. 아무것도 안 그리면
               고장난 것처럼 보인다 — 왜 비었는지 말해준다. */}
@@ -464,66 +536,137 @@ export default function Home() {
             </div>
           )}
 
-          {people.map((p) => (
-            <div
-              key={p.id}
-              className="flex items-center gap-3.5 rounded-xl border border-line bg-surface p-4"
-            >
-              {/* 사진·정보를 누르면 상세 — 관심을 보내기 전에 크게 본다 */}
-              <button
-                onClick={() => setDetail(p)}
-                className="flex min-w-0 flex-1 items-center gap-3.5 text-left"
-              >
-                {p.photo && photoUrls[p.photo] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={photoUrls[p.photo]}
-                    alt={p.nickname}
-                    className="h-16 w-16 shrink-0 rounded-full object-cover"
-                  />
-                ) : (
-                  <AvatarFallback size={64} />
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-semibold">
-                    {p.nickname}
-                    <span className="ml-1.5 text-[13px] font-normal text-muted">
-                      {p.age}
-                    </span>
-                  </p>
-                  <p className="mt-0.5 truncate text-[12.5px] text-muted">
-                    {[
-                      p.area,
-                      `L${p.level}`,
-                      careerLabel(p.careerId) && `클라이밍 ${careerLabel(p.careerId)}`,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                  {p.intro && (
-                    <p className="mt-1 truncate text-[12.5px] text-faint">
-                      &ldquo;{p.intro}&rdquo;
-                    </p>
+          <div className="flex flex-col divide-y divide-line">
+            {people.map((p) => (
+              <div key={p.id} className="flex items-center gap-4 py-4">
+                {/* 사진·정보를 누르면 상세 — 관심을 보내기 전에 크게 본다 */}
+                <button
+                  onClick={() => setDetail(p)}
+                  className="flex min-w-0 flex-1 items-center gap-4 text-left"
+                >
+                  {p.photo && photoUrls[p.photo] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={photoUrls[p.photo]}
+                      alt={p.nickname}
+                      className="h-[72px] w-[72px] shrink-0 rounded-full object-cover"
+                    />
+                  ) : (
+                    <AvatarFallback size={72} />
                   )}
-                </div>
-              </button>
-              {/* 관심 하나로 통일 — 보내면 상대 신청함에 뜨고, 수락하면 채팅이 열린다 */}
-              <button
-                disabled={sentTo.has(p.id)}
-                onClick={() => {
-                  setReqTarget(p);
-                  setReqMsg("");
-                }}
-                className={`shrink-0 rounded-lg px-3.5 py-2 text-[12.5px] font-semibold ${
-                  sentTo.has(p.id)
-                    ? "bg-surface2 text-faint"
-                    : "bg-accent text-white active:bg-accent-pressed"
-                }`}
-              >
-                {sentTo.has(p.id) ? "보냈어요" : "관심"}
-              </button>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[15.5px] font-semibold">
+                      {p.nickname}
+                      <span className="ml-1.5 text-[13.5px] font-normal text-muted">
+                        {p.age}
+                      </span>
+                    </p>
+                    <p className="mt-0.5 truncate text-[13px] text-muted">
+                      {[p.area, `L${p.level}`].filter(Boolean).join(" · ")}
+                    </p>
+                    {careerLabel(p.careerId) && (
+                      <p className="mt-0.5 text-[12.5px] text-faint">
+                        클라이밍 {careerLabel(p.careerId)}
+                      </p>
+                    )}
+                  </div>
+                </button>
+                {/* 관심 하나로 통일 — 보내면 상대 신청함에 뜨고, 수락하면 채팅이 열린다 */}
+                <button
+                  disabled={sentTo.has(p.id)}
+                  onClick={() => {
+                    setReqTarget(p);
+                    setReqMsg("");
+                  }}
+                  className={`shrink-0 rounded-lg px-3.5 py-2 text-[12.5px] font-semibold ${
+                    sentTo.has(p.id)
+                      ? "bg-surface2 text-faint"
+                      : "bg-accent text-white active:bg-accent-pressed"
+                  }`}
+                >
+                  {sentTo.has(p.id) ? "보냈어요" : "관심"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 필터 선택 시트 */}
+      {filterSheet && (
+        <div
+          className="fixed inset-0 z-30 flex items-end bg-black/50"
+          onClick={() => setFilterSheet(null)}
+        >
+          <div
+            className="mx-auto w-full max-w-md rounded-t-2xl bg-surface p-5"
+            style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom))" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-[16px] font-bold">
+              {filterSheet === "day" ? "날짜" : "레벨"}
+            </p>
+            <div className="mt-3 flex flex-col">
+              {filterSheet === "day"
+                ? (
+                    [
+                      ["all", "전체"],
+                      ["weekend", "주말"],
+                      ["weekday", "평일"],
+                    ] as const
+                  ).map(([v, label]) => (
+                    <button
+                      key={v}
+                      onClick={() => {
+                        setDayFilter(v);
+                        setFilterSheet(null);
+                      }}
+                      className={`border-b border-line py-3.5 text-left text-[15px] last:border-b-0 ${
+                        dayFilter === v
+                          ? "font-semibold text-accent-pressed"
+                          : "text-ink"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))
+                : [
+                    <button
+                      key="all"
+                      onClick={() => {
+                        setLevelFilter(0);
+                        setFilterSheet(null);
+                      }}
+                      className={`border-b border-line py-3.5 text-left text-[15px] ${
+                        levelFilter === 0
+                          ? "font-semibold text-accent-pressed"
+                          : "text-ink"
+                      }`}
+                    >
+                      전체
+                    </button>,
+                    ...LEVELS.map((l) => (
+                      <button
+                        key={l.id}
+                        onClick={() => {
+                          setLevelFilter(l.id);
+                          setFilterSheet(null);
+                        }}
+                        className={`border-b border-line py-3.5 text-left text-[15px] last:border-b-0 ${
+                          levelFilter === l.id
+                            ? "font-semibold text-accent-pressed"
+                            : "text-ink"
+                        }`}
+                      >
+                        L{l.id} {l.name}
+                        <span className="ml-1.5 text-[12.5px] text-faint">
+                          {l.colors}
+                        </span>
+                      </button>
+                    )),
+                  ]}
             </div>
-          ))}
+          </div>
         </div>
       )}
 
@@ -630,7 +773,7 @@ export default function Home() {
               onChange={(e) => setReqMsg(e.target.value.slice(0, 200))}
               rows={3}
               placeholder={`예: 같은 ${reqTarget.homeGym} 다니네요! 주말에 같이 타요`}
-              className="mt-3 w-full resize-none rounded-lg border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+              className="mt-3 w-full resize-none rounded-lg bg-surface2 px-3.5 py-3 text-[16px] text-ink placeholder:text-faint focus:outline-none"
             />
             <p className="mt-1 text-right text-[11.5px] text-faint">
               {reqMsg.length}/200

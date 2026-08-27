@@ -82,6 +82,14 @@ export function ChevronRightIcon(p: IconProps) {
   );
 }
 
+export function ChevronDownIcon(p: IconProps) {
+  return (
+    <Base {...p}>
+      <path d="m5.5 9.5 6.5 6.5 6.5-6.5" />
+    </Base>
+  );
+}
+
 export function PlusIcon(p: IconProps) {
   return (
     <Base {...p}>

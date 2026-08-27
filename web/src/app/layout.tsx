@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f7f8fa",
+  themeColor: "#ffffff",
   // 아이폰 노치·홈바 영역까지 배경을 채운다
   viewportFit: "cover",
 };

@@ -110,7 +110,7 @@ export default function RequireProfile({
       </header>
 
       {missing.length > 0 && (
-        <section className="mx-auto mt-7 max-w-sm rounded-xl bg-surface px-5 py-4">
+        <section className="mx-auto mt-7 max-w-sm rounded-xl bg-surface2 px-5 py-4">
           <p className="text-[12.5px] text-faint">아직 빠진 것</p>
           <ul className="mt-2 flex flex-col gap-1.5">
             {missing.map((m) => (

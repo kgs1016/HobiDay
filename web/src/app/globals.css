@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
-/* HOBIDAY 디자인 토큰 — 밝은 neutral + 하늘색 단일 accent.
-   accent 는 주요 행동(CTA·선택 상태·핵심 링크)에만 아껴 쓴다.
-   성별·기능별로 색을 나누지 않는다. */
+/* HOBIDAY 디자인 토큰 — 흰 캔버스 + 하늘색 단일 accent.
+   화면 전체는 순수한 흰색이고, 회색(surface2)은 입력창·자리표시·
+   아주 약한 그룹 구분에만 쓴다. accent 는 주요 행동(CTA·선택 상태·
+   핵심 링크)에만 아껴 쓴다. 성별·기능별로 색을 나누지 않는다. */
 @theme {
-  --color-bg: #f7f8fa;
+  --color-bg: #ffffff;
   --color-surface: #ffffff;
-  --color-surface2: #f2f4f6;
-  --color-line: #e5e8eb;
+  --color-surface2: #f7f8fa;
+  --color-line: #eceff2;
   --color-ink: #191f28;
   --color-muted: #6b7684;
   --color-faint: #8b95a1;
