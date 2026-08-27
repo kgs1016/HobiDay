@@ -73,9 +73,6 @@ export default function Notifications() {
         <div className="mt-16 flex flex-col items-center gap-2 text-center">
           <span className="text-4xl">🔔</span>
           <p className="text-[15px] font-bold">새 알림이 없어요</p>
-          <p className="text-[12.5px] text-muted">
-            신청·수락·채팅 소식이 여기 쌓여요
-          </p>
         </div>
       ) : (
         <div className="flex flex-col gap-2">

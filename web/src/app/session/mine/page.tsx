@@ -133,12 +133,10 @@ export default function MySessions() {
       ) : list === null ? (
         <p className="pt-14 text-center text-muted">불러오는 중…</p>
       ) : list.length === 0 ? (
-        <div className="mt-16 flex flex-col items-center gap-2 text-center">
-          <span className="text-4xl">🧗</span>
-          <p className="text-[15px] font-bold">아직 만든 모임이 없어요</p>
+        <div className="mt-16 flex flex-col items-center text-center">
           <Link
             href="/"
-            className="mt-2 rounded-xl bg-accent px-6 py-2.5 text-[14px] font-bold text-white"
+            className="rounded-xl bg-accent px-6 py-2.5 text-[14px] font-bold text-white"
           >
             모임 만들러 가기
           </Link>
