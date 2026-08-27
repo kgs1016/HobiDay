@@ -22,6 +22,7 @@ import {
   fetchCredits,
   type AppFlags,
   fetchInboxCounts,
+  fetchNotifications,
   fetchSentRequests,
   sendRequest,
   signedPhotoUrls,
@@ -49,6 +50,8 @@ export default function Home() {
   const [credits, setCredits] = useState<Credits | null>(null);
   const [sentTo, setSentTo] = useState<Set<string>>(new Set());
   const [counts, setCounts] = useState<Awaited<ReturnType<typeof fetchInboxCounts>>>(null);
+  // 종 아이콘 배지 — 안 읽은 알림 수만 쓴다
+  const [unread, setUnread] = useState(0);
   const [reqTarget, setReqTarget] = useState<Person | null>(null);
   const [reqMsg, setReqMsg] = useState("");
   const [reqBusy, setReqBusy] = useState(false);
@@ -112,14 +115,16 @@ export default function Home() {
       if (ppl) setPeople(ppl);
       if (paths.length > 0) setPhotoUrls(await signedPhotoUrls(paths));
 
-      const [sent, c, cr] = await Promise.all([
+      const [sent, c, cr, notis] = await Promise.all([
         fetchSentRequests(),
         fetchInboxCounts(),
         fetchCredits(),
+        fetchNotifications(),
       ]);
       if (sent) setSentTo(new Set(sent.map((s) => s.to_id)));
       if (c) setCounts(c);
       if (cr) setCredits(cr);
+      if (notis) setUnread(notis.unread);
 
       setReady(true); // 여기까지 와야 목록을 그린다
     })();
@@ -319,9 +324,24 @@ export default function Home() {
     <main className="px-4">
       {/* 헤더 */}
       <header className="pt-6 pb-4">
-        <p className="text-[17px] font-extrabold tracking-[2px] text-accent">
-          HOBIDAY
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-[17px] font-extrabold tracking-[2px] text-accent">
+            HOBIDAY
+          </p>
+          {/* 알림함 — 푸시를 놓쳐도 여기 남아 있다 */}
+          <Link
+            href="/notifications"
+            aria-label="알림"
+            className="relative -mr-1 px-1 py-1 text-[19px] leading-none"
+          >
+            🔔
+            {unread > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 min-w-[17px] rounded-full bg-danger px-1 text-center text-[10px] font-bold leading-[17px] text-white">
+                {unread > 99 ? "99+" : unread}
+              </span>
+            )}
+          </Link>
+        </div>
         {/* 프로필 관리는 내 정보 탭에서 들어가면 되니 홈에서는 뺐다.
             애초에 프로필이 없으면 RequireProfile 이 막아서 이 화면에
             들어오지도 못한다 — 여기에 "올리기" 버튼이 있을 이유가 없었다. */}

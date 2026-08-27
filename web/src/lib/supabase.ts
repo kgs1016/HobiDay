@@ -1160,6 +1160,34 @@ export type ReportReason = (typeof REPORT_REASONS)[number]["id"];
 export type ReportContext = "profile" | "chat" | "session";
 
 /** 신고하면 차단까지 함께 걸린다 (서버에서 처리) */
+/* ── 알림함 ──
+   푸시는 놓치면 끝이라, 같은 소식을 DB 에도 쌓아둔다. 종 아이콘. */
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  body: string;
+  url: string | null;
+  created_at: string;
+  read_at: string | null;
+}
+
+export async function fetchNotifications() {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc("my_notifications");
+  if (error) return null;
+  return data as { unread: number; items: AppNotification[] };
+}
+
+/** 알림함을 열면 다 읽은 것으로 친다. 읽고 24시간 뒤에 사라진다. */
+export async function markNotificationsRead() {
+  const sb = getSupabase();
+  if (!sb) return 0;
+  const { data, error } = await sb.rpc("notifications_read");
+  return error ? 0 : (data as number);
+}
+
 export async function reportUser(
   targetId: string,
   reason: ReportReason,
