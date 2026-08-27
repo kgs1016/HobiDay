@@ -180,7 +180,8 @@ export default function SessionDetail() {
       return alert("이미 시작한 모임이라 바꿀 수 없어요.");
     if (r.error) return alert(`삭제 실패: ${r.error}`);
     if (r.notify?.length)
-      notifyPush(r.notify, "😢 모임이 취소됐어요", `${s.gym} 모임이 취소됐어요. 신청 크레딧은 돌려드렸어요.`, "/inbox");
+      // 알림함에는 session_collapse 가 이미 남겼다 — 푸시만 쏜다
+      notifyPush(r.notify, "😢 모임이 취소됐어요", `${s.gym} 모임이 취소됐어요. 신청 크레딧은 돌려드렸어요.`, "/inbox", { pushOnly: true });
     alert("모임을 삭제했어요. 신청비는 전원 돌려드렸어요.");
     router.push("/");
   };
@@ -212,7 +213,8 @@ export default function SessionDetail() {
           r.notify,
           "😢 모임이 취소됐어요",
           `${s.gym} 모임에 남은 사람이 없어 취소됐어요. 신청 크레딧은 돌려드렸어요.`,
-          "/inbox"
+          "/inbox",
+          { pushOnly: true }
         );
       alert("모임에서 나왔어요.\n남은 사람이 없어 모임은 취소됐어요.");
     } else {

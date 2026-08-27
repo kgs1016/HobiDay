@@ -80,18 +80,27 @@ export async function notifyPush(
   to: string | string[],
   title: string,
   body: string,
-  url?: string
+  url?: string,
+  /** 서버가 이미 알림함에 남긴 소식이면 푸시만 쏜다 (모임 취소 등).
+   *  안 그러면 알림함에 같은 줄이 두 번 쌓인다. */
+  opts?: { pushOnly?: boolean }
 ): Promise<void> {
   const sb = getSupabase();
   if (!sb) return;
   const list = Array.isArray(to) ? to : [to];
-  await Promise.allSettled([
+  const jobs: Promise<unknown>[] = [
     sb.functions.invoke("push", { body: { to: list, title, body, url } }),
-    sb.rpc("notify_send", {
-      p_to: list,
-      p_title: title,
-      p_body: body,
-      p_url: url ?? null,
-    }),
-  ]);
+  ];
+  if (!opts?.pushOnly)
+    jobs.push(
+      Promise.resolve(
+        sb.rpc("notify_send", {
+          p_to: list,
+          p_title: title,
+          p_body: body,
+          p_url: url ?? null,
+        })
+      )
+    );
+  await Promise.allSettled(jobs);
 }

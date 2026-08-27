@@ -50,7 +50,8 @@ export default function ReportSheet({
         r.notify,
         "😢 모임이 취소됐어요",
         "모임이 취소됐어요. 신청 크레딧은 돌려드렸어요.",
-        "/inbox"
+        "/inbox",
+        { pushOnly: true }
       );
     alert(
       `신고가 접수됐어요.\n${nickname}님은 차단되어 서로 보이지 않아요.` +
