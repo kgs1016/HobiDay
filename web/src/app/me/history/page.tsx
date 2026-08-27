@@ -63,8 +63,15 @@ function Card({
   r: MatchRecord;
   photos: Record<string, string>;
 }) {
+  /* 모임 정보로 들어가는 마지막 통로다. 채팅방은 끝나고 24시간,
+     신청함은 시작하고 24시간이면 사라진다. 알림도 읽고 24시간이면
+     없어진다. 확정으로 참가한 사람에게는 서버가 계속 문을 열어두므로,
+     여기서만은 언제든 다시 볼 수 있게 한다. */
   return (
-    <div className="rounded-2xl border border-line bg-surface p-4">
+    <Link
+      href={`/session?id=${r.id}`}
+      className="block rounded-2xl border border-line bg-surface p-4"
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-[14.5px] font-extrabold">{r.gym}</p>
@@ -92,7 +99,7 @@ function Card({
           함께한 분들의 프로필을 볼 수 없어요
         </p>
       )}
-    </div>
+    </Link>
   );
 }
 
