@@ -2,39 +2,37 @@
 --  차단하면 같은 모임에서도 갈라놓는다
 -- ═══════════════════════════════════════════════════════════════
 -- 차단은 "안 마주치게 해달라" 는 뜻이다. 그런데 지금은 화면에서만
--- 안 보이게 하고 자리는 그대로 뒀다. 그래서 —
+-- 안 보이게 하고 자리는 그대로 뒀다. 약속한 날 현장에서 그대로 만난다.
 --
---   · 차단한 사람이 대기 중인 모임은 목록 필터에 안 걸린다.
---     (필터가 확정만 봤다) 내가 들어간 뒤 호스트가 그 사람을 승인하면
---     같은 모임에 묶인다.
---   · 그 순간 나는 방도 상세도 못 보면서 자리만 차지한 유령이 된다.
---     나가기 버튼이 상세 화면에 있는데 그 화면이 안 열린다.
---   · 약속한 날 현장에서 그대로 만난다.
+-- 얽힌 모습에 따라 셋으로 갈린다.
 --
--- 세 가지를 정한다.
+-- ① 한쪽이 아직 대기 중이면 그 신청을 조용히 거둔다. 신청비는 돌려준다.
+--    호스트에게는 아무 말도 안 한다 — 호스트는 제3자고, 누가 누구를
+--    차단했는지 알 이유가 없다. 받은 신청 목록에서 한 줄이 사라질 뿐이다.
 --
--- ① 호스트가 승인할 때, 이미 확정된 사람과 차단 사이면 받지 않는다.
---    먼저 받은 사람이 자리를 지키고 나중 사람은 잘린다. 잘린 사람에게
---    잘못이 없으니 신청비는 돌려준다.
+-- ② 둘 다 확정이고 내가 참가자면, 내가 그 모임에서 빠진다. 신청비는
+--    그 자리에서 돌려주지 않고 신고 내용을 확인한 뒤 처리한다.
 --
--- ② 이미 둘 다 확정된 모임에서 차단하면, 차단한 사람이 그 모임에서
---    빠진다. 호스트는 나갈 수 없으니 내가 호스트면 상대를 내보내고
---    돌려준다. 참가자로서 내가 빠질 때는 그 자리에서 돌려주지 않는다 —
---    신고 내용을 확인한 뒤 처리한다(화면에서 그렇게 안내한다).
---    아직 시작 안 한 모임만 손댄다. 이미 만난 모임은 자리를 빼봐야
---    소용없고 매칭 기록만 지워진다.
+-- ③ 둘 다 확정이고 내가 호스트면, 모임을 통째로 취소한다.
+--    참가자를 콕 집어 내보내면 그 사람은 자기가 신고당한 걸 안다.
+--    호스트가 모임을 없앤 것으로 보이는 편이 낫다 — 남은 사람들에게는
+--    여느 취소와 똑같이 "매칭이 취소되었어요" 가 뜨고 전원 환불된다.
 --
--- ③ 신고는 차단과 같은 길을 탄다. 예전엔 report_user 가 blocks 에 한
---    줄만 넣어서, 신고로 들어온 차단은 모임 자리를 그대로 뒀다.
+-- 손대는 범위는 아직 시작 안 한 모임뿐이다. 이미 시작했거나 끝난
+-- 모임은 그 모임이 성사된 것이고, 취소된 모임은 이미 끝난 얘기다.
+-- 사람만 차단하고 자리는 건드리지 않는다.
 --
--- 그리고 모임방을 감추는 조건도 1:1 과 같이 한 방향으로 바꾼다.
--- 차단당한 쪽이 제3자와의 대화까지 잃을 이유는 없다.
+-- 그리고 신고가 차단과 같은 길을 타게 한다. report_user 가 blocks 에
+-- 한 줄만 넣어서, 신고로 들어온 차단은 모임 자리를 그대로 뒀다.
+--
+-- 모임방을 감추는 조건도 1:1 과 같이 한 방향으로 바꾼다. 차단당한
+-- 쪽이 거기 있던 제3자와의 대화까지 잃을 이유는 없다.
 
 create or replace function block_user(p_target uuid)
 returns json language plpgsql security definer set search_path = public as $$
 declare m matches; me profiles; i_am_a boolean;
-        sess sessions; goner uuid; give_back boolean; who profiles;
-        left_cnt int := 0;
+        sess sessions; who profiles; my_st text; your_st text;
+        left_cnt int := 0; killed_cnt int := 0; affected uuid[] := '{}';
 begin
   if auth.uid() is null then return json_build_object('error','no_auth'); end if;
   if p_target = auth.uid() then return json_build_object('error','self'); end if;
@@ -76,54 +74,71 @@ begin
             coalesce(nullif(me.nickname,''), '상대방') || '님이 나갔어요', 'system');
   end loop;
 
-  /* 같은 모임에 얽혀 있으면 갈라놓는다. 차단은 "안 마주치게 해달라" 는
-     뜻인데, 자리를 그대로 두면 약속한 날 현장에서 만나게 된다.
-
-     아직 시작 안 한 모임만 손댄다. 이미 만난 모임은 자리를 빼봐야
-     소용이 없고, 매칭 기록만 지워진다. */
+  /* 같은 모임에 얽혀 있으면 갈라놓는다. 아직 시작 안 한 모임만 —
+     이미 시작했거나 끝난 모임은 그 모임이 성사된 것이고, 취소된
+     모임은 이미 끝난 얘기다. 자리를 빼봐야 기록만 지워진다. */
   for sess in
     select s.* from sessions s
      where s.starts_at > now()
        and s.status <> 'cancelled'
        and exists (select 1 from signups g
                     where g.session_id = s.id and g.user_id = auth.uid()
-                      and g.status = 'confirmed')
+                      and g.status in ('waiting','confirmed'))
        and exists (select 1 from signups g
                     where g.session_id = s.id and g.user_id = p_target
-                      and g.status = 'confirmed')
+                      and g.status in ('waiting','confirmed'))
   loop
-    /* 호스트는 자기 모임에서 나갈 수 없다. 내가 호스트면 상대를
-       내보낸다 — 호스트가 거절한 것과 같으니 신청비도 돌려준다.
-       내가 참가자면 내가 빠진다. 자의로 나가는 것이라 신청비는 그
-       자리에서 돌려주지 않는다. 신고 내용을 확인한 뒤 처리한다. */
-    if sess.host_id = auth.uid() then
-      goner := p_target;  give_back := true;
-    else
-      goner := auth.uid(); give_back := false;
-    end if;
+    select status into my_st   from signups
+     where session_id = sess.id and user_id = auth.uid();
+    select status into your_st from signups
+     where session_id = sess.id and user_id = p_target;
 
-    update signups set status = 'cancelled'
-     where session_id = sess.id and user_id = goner;
-    if give_back then
-      perform session_fee_refund(sess.id, goner);
-    end if;
+    if my_st = 'confirmed' and your_st = 'confirmed' then
+      if sess.host_id = auth.uid() then
+        /* ③ 내 모임 — 통째로 취소한다. 참가자를 콕 집어 내보내면
+           그 사람은 자기가 신고당한 걸 안다. 호스트가 모임을 없앤
+           것으로 보이는 편이 낫다. */
+        affected   := affected || session_collapse(sess.id);
+        killed_cnt := killed_cnt + 1;
+      else
+        /* ② 내가 빠진다. 자의로 나가는 것이라 신청비는 그 자리에서
+           돌려주지 않는다 — 신고 내용을 확인한 뒤 처리한다. */
+        update signups set status = 'cancelled'
+         where session_id = sess.id and user_id = auth.uid();
 
-    if session_chat_open(sess.id) then
-      select * into who from profiles where id = goner;
-      insert into messages (session_id, sender_id, body, kind)
-      values (sess.id, goner,
-              coalesce(nullif(who.nickname,''), '참가자') || '님이 나갔어요', 'system');
-    end if;
+        if session_chat_open(sess.id) then
+          select * into who from profiles where id = auth.uid();
+          insert into messages (session_id, sender_id, body, kind)
+          values (sess.id, auth.uid(),
+                  coalesce(nullif(who.nickname,''), '참가자') || '님이 나갔어요', 'system');
+        end if;
 
-    if (select count(*) from signups
-         where session_id = sess.id and status = 'confirmed') < 2 then
-      perform session_collapse(sess.id);
-    end if;
+        if (select count(*) from signups
+             where session_id = sess.id and status = 'confirmed') < 2 then
+          affected := affected || session_collapse(sess.id);
+        end if;
+        left_cnt := left_cnt + 1;
+      end if;
 
-    left_cnt := left_cnt + 1;
+    /* ① 아직 대기 중인 신청은 조용히 거둔다. 자리를 잡은 적이 없으니
+       신청비는 돌려준다. 호스트는 받은 신청 목록에서 한 줄이 사라지는
+       것만 본다 — 누가 누구를 차단했는지 알 이유가 없다. */
+    elsif my_st = 'waiting' then
+      update signups set status = 'cut', decided_at = now()
+       where session_id = sess.id and user_id = auth.uid();
+      perform session_fee_refund(sess.id, auth.uid());
+
+    elsif your_st = 'waiting' then
+      update signups set status = 'cut', decided_at = now()
+       where session_id = sess.id and user_id = p_target;
+      perform session_fee_refund(sess.id, p_target);
+    end if;
   end loop;
 
-  return json_build_object('ok', true, 'left_sessions', left_cnt);
+  return json_build_object('ok', true,
+    'left_sessions', left_cnt,          -- 내가 빠진 모임
+    'cancelled_sessions', killed_cnt,   -- 내가 열었다가 취소한 모임
+    'notify', to_json(affected));       -- 그 취소를 알려야 할 사람들
 end; $$;
 
 revoke execute on function block_user(uuid) from public, anon;
@@ -180,10 +195,13 @@ begin
     return json_build_object('error','not_waiting');
   end if;
 
-  /* 이미 확정된 사람 중 이 신청자와 차단 사이인 사람이 있으면 받지
-     않는다. 먼저 받은 사람이 자리를 지키고, 나중 사람은 여기서 잘린다.
-     호스트 자신도 확정 행을 갖고 있어서 같은 검사에 걸린다.
-     그냥 거절과 달리 잘린 사람에게는 아무 잘못이 없으니 돌려준다. */
+  /* 안전망. 보통은 block_user 가 차단하는 그 자리에서 대기 신청을
+     거두므로 여기까지 오지 않는다. 하지만 대기자가 걸려 있는 채로
+     다른 사람이 먼저 확정되는 순서라면 여기서 처음 마주친다.
+
+     먼저 받은 사람이 자리를 지키고 나중 사람은 잘린다. 잘린 사람에게
+     잘못이 없으니 신청비는 돌려준다. 호스트에게는 차단 얘기를 하지
+     않는다 — 호스트는 제3자다 (화면 문구도 그렇게 맞췄다). */
   if exists (
     select 1 from signups x
       join blocks b on (b.blocker_id = x.user_id and b.blocked_id = p_user)

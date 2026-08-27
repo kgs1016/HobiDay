@@ -178,8 +178,9 @@ export default function Inbox() {
           : `${h.gym} 모임은 이번엔 함께하지 못하게 됐어요. 신청비는 돌려드렸어요.`,
         ok ? `/session?id=${h.session_id}` : "/inbox"
       );
-    /* 이미 확정된 사람과 차단 사이라 서버가 자동으로 잘라냈다.
-       신청자에게는 여느 거절과 똑같이 보인다 — 차단은 드러내지 않는다. */
+    /* 참가자끼리 차단한 사이라 서버가 자동으로 잘라냈다. 호스트는
+       제3자라 누가 누구를 차단했는지 알 이유가 없다 — 그냥 처리할 수
+       없는 신청으로 보인다. 신청자에게는 여느 거절과 똑같이 보인다. */
     if (r.error === "blocked_member") {
       notifyPush(
         h.user_id,
@@ -188,9 +189,7 @@ export default function Inbox() {
         "/inbox"
       );
       load();
-      return alert(
-        "이미 확정된 참가자와 차단된 사이예요.\n이 신청은 자동으로 취소하고 신청비를 돌려드렸어요."
-      );
+      return alert("받을 수 없는 신청이라 취소했어요.\n신청비는 돌려드렸어요.");
     }
     if (r.error) {
       const msg: Record<string, string> = {

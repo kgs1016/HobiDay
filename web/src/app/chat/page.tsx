@@ -838,8 +838,9 @@ function SessionThread({
         >
           <p className="text-[17px] font-extrabold">누구를 신고할까요?</p>
           <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted">
-            신고하면 차단도 함께 돼요. 서로 안 마주치도록 이 모임에서도
-            빠지게 되고, 신청비는 신고 내용을 확인한 뒤 돌려드려요.
+            신고하면 차단도 함께 돼요. 서로 안 마주치도록 아직 시작 전인
+            모임에서는 빠지게 되고, 신청비는 신고 내용을 확인한 뒤
+            돌려드려요.
           </p>
           {members === null ? (
             <p className="py-8 text-center text-[13px] text-muted">불러오는 중…</p>
