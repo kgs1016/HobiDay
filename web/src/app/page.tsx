@@ -328,15 +328,30 @@ export default function Home() {
           <p className="text-[17px] font-extrabold tracking-[2px] text-accent">
             HOBIDAY
           </p>
-          {/* 알림함 — 푸시를 놓쳐도 여기 남아 있다 */}
+          {/* 알림함 — 푸시를 놓쳐도 여기 남아 있다.
+              이모지를 쓰면 기기마다 다른 그림이 나오고 혼자 색이 튄다.
+              선만 있는 종으로 둔다. */}
           <Link
             href="/notifications"
             aria-label="알림"
-            className="relative -mr-1 px-1 py-1 text-[19px] leading-none"
+            className="relative -mr-1 px-1 py-1 text-ink"
           >
-            🔔
+            <svg
+              width="21"
+              height="21"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
             {unread > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 min-w-[17px] rounded-full bg-danger px-1 text-center text-[10px] font-bold leading-[17px] text-white">
+              <span className="absolute right-0 top-0 min-w-[16px] rounded-full bg-danger px-1 text-center text-[10px] font-bold leading-[16px] text-white">
                 {unread > 99 ? "99+" : unread}
               </span>
             )}
