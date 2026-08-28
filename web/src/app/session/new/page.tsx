@@ -9,10 +9,19 @@ import {
   capacityChipLabel,
   type GenderMode,
 } from "@/lib/capacity";
-import { AGE_FROM, AGE_TO, GYMS } from "@/lib/meetupOptions";
-import { hasSupabase, currentUser, fetchMyProfileDb, createSession } from "@/lib/supabase";
+import { AGE_FROM, AGE_TO, MOCK_GYMS } from "@/lib/meetupOptions";
+import {
+  hasSupabase,
+  currentUser,
+  fetchMyProfileDb,
+  fetchGyms,
+  createSession,
+  type Gym,
+} from "@/lib/supabase";
 import { isProfileComplete } from "@/lib/profileGate";
 import BackButton from "@/components/BackButton";
+import GymPicker from "@/components/GymPicker";
+import { ChevronDownIcon } from "@/components/icons";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -53,7 +62,25 @@ const inputCls =
 
 export default function NewSession() {
   const router = useRouter();
-  const [gym, setGym] = useState(GYMS[0]);
+  /* 암장 — gym master 에서 고른다. 마스터를 못 받는 환경(mock ·
+     마이그레이션 전 DB)에서는 예전 자유입력 + 칩으로 동작한다. */
+  const [gyms, setGyms] = useState<Gym[] | null>(null);
+  const [gym, setGym] = useState(MOCK_GYMS[0]);
+  const [gymId, setGymId] = useState<string | undefined>();
+  const [picking, setPicking] = useState(false);
+  useEffect(() => {
+    if (!hasSupabase()) return;
+    let alive = true;
+    fetchGyms().then((list) => {
+      if (alive) setGyms(list);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const masterMode = !!gyms && gyms.length > 0;
+  const selected = masterMode ? gyms!.find((g) => g.id === gymId) : undefined;
+
   const [date, setDate] = useState("");
   /* 달력에서 지난 날짜를 아예 못 고르게 한다 (서버도 과거 30분 · 90일
      초과를 거부하니 같은 범위로 맞춘다).
@@ -120,6 +147,8 @@ export default function NewSession() {
       router.push("/");
       return;
     }
+    if (masterMode && !gymId) return alert("암장을 선택해주세요");
+    if (!masterMode && !gym.trim()) return alert("암장을 입력해주세요");
     if (!date) return alert("날짜를 선택해주세요");
     if (endTime <= startTime) return alert("종료 시각이 시작보다 빨라요");
     // 서버도 막지만(지난 시각·30분 이내·90일 초과 거부) 여기서 먼저 알려주는
@@ -155,6 +184,7 @@ export default function NewSession() {
 
     const r = await createSession({
       gym,
+      gymId,
       startsAt: new Date(`${date}T${startTime}:00`).toISOString(),
       endsAt: new Date(`${date}T${endTime}:00`).toISOString(),
       capacity,
@@ -173,6 +203,7 @@ export default function NewSession() {
     if (r.error === "too_far") return alert("모임은 90일 안쪽으로만 열 수 있어요");
     if (r.error === "bad_capacity" || r.error === "bad_mode")
       return alert("정원을 다시 골라주세요");
+    if (r.error === "bad_gym") return alert("암장을 다시 선택해주세요");
     if (r.error) return alert(`등록 실패: ${r.error}`);
     alert(
       genderMode === "any"
@@ -190,22 +221,46 @@ export default function NewSession() {
       </header>
 
       <form className="flex flex-col gap-6 pb-8" onSubmit={submit}>
-        <Field label="짐">
-          {/* 서울·경기 전체를 대상으로 하므로 목록으로 못 다 담는다.
-              자주 쓰는 곳은 칩으로, 나머지는 직접 입력. */}
-          <input
-            value={gym}
-            onChange={(e) => setGym(e.target.value)}
-            placeholder="예: 더클라임 강남"
-            className={inputCls}
-          />
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {GYMS.map((g) => (
-              <Chip key={g} active={gym === g} onClick={() => setGym(g)}>
-                {g}
-              </Chip>
-            ))}
-          </div>
+        <Field label="암장">
+          {masterMode ? (
+            /* 서울·경기 200곳 — 칩으로 못 늘어놓는다. 검색 시트에서 고른다 */
+            <>
+              <button
+                type="button"
+                onClick={() => setPicking(true)}
+                className="flex w-full items-center justify-between rounded-lg border border-line bg-surface px-3.5 py-3 text-left"
+              >
+                <span
+                  className={`text-[16px] ${selected ? "text-ink" : "text-faint"}`}
+                >
+                  {selected ? selected.name : "암장을 검색해서 선택"}
+                </span>
+                <ChevronDownIcon size={16} className="shrink-0 text-faint" />
+              </button>
+              {selected && (
+                <p className="mt-1.5 text-[12px] text-faint">
+                  {selected.address}
+                </p>
+              )}
+            </>
+          ) : (
+            /* mock · 마이그레이션 전 DB 폴백 — 예전 자유입력 그대로 */
+            <>
+              <input
+                value={gym}
+                onChange={(e) => setGym(e.target.value)}
+                placeholder="예: 더클라임 강남점"
+                className={inputCls}
+              />
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {MOCK_GYMS.map((g) => (
+                  <Chip key={g} active={gym === g} onClick={() => setGym(g)}>
+                    {g}
+                  </Chip>
+                ))}
+              </div>
+            </>
+          )}
         </Field>
 
         <Field label="날짜 · 시간">
@@ -321,6 +376,18 @@ export default function NewSession() {
           {busy ? "등록 중…" : "모임 등록하기"}
         </button>
       </form>
+
+      {picking && gyms && (
+        <GymPicker
+          gyms={gyms}
+          onClose={() => setPicking(false)}
+          onSelect={(g) => {
+            setGym(g.name);
+            setGymId(g.id);
+            setPicking(false);
+          }}
+        />
+      )}
     </main>
   );
 }

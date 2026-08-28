@@ -12,7 +12,7 @@ import { HoldIllust, ShoeIllust } from "@/components/illustrations";
 import { notifyPush } from "@/lib/nativePush";
 import { MOCK_SESSIONS, MOCK_PEOPLE, type Session, type Person } from "@/lib/mock";
 import { careerLabel, level } from "@/lib/levels";
-import { GYMS } from "@/lib/meetupOptions";
+import { MOCK_GYMS } from "@/lib/meetupOptions";
 import {
   EMPTY_FILTER,
   activeFilterCount,
@@ -30,6 +30,8 @@ import {
   fetchAppFlags,
   fetchCredits,
   type AppFlags,
+  fetchGyms,
+  type Gym,
   fetchInboxCounts,
   fetchNotifications,
   fetchSentRequests,
@@ -38,6 +40,7 @@ import {
   toSession,
   type Credits,
 } from "@/lib/supabase";
+import type { GymOption } from "@/components/SessionFilterBar";
 
 export default function Home() {
   // Supabase 키가 없을 때만 목데이터로 화면을 본다 (개발 폴백).
@@ -54,6 +57,8 @@ export default function Home() {
     mockMode ? MOCK_PEOPLE : []
   );
   const [live, setLive] = useState(false);
+  // Gym Master — 짐 필터의 검색 대상. 못 받으면(mock·마이그레이션 전) 폴백
+  const [masterGyms, setMasterGyms] = useState<Gym[] | null>(null);
   // 모임 찾기 필터 — 서버를 다시 부르지 않고 받아온 목록에서 거른다
   const [filter, setFilter] = useState(EMPTY_FILTER);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
@@ -107,10 +112,12 @@ export default function Home() {
       }
 
       // 사람 찾기는 이성만 — 내 성별을 알아야 걸러서 받을 수 있다
-      const [rows, ppl] = await Promise.all([
+      const [rows, ppl, gymRows] = await Promise.all([
         fetchSessions(),
         fetchPeople(prof ? { id: user.id, gender: prof.gender } : undefined),
+        fetchGyms(),
       ]);
+      if (gymRows) setMasterGyms(gymRows);
       if (prof) setMe(prof);
       if (rows) {
         setSessions(rows.map((r) => toSession(r, prof?.homeGym, user.id)));
@@ -335,15 +342,26 @@ export default function Home() {
     );
   }
 
-  /* 필터의 짐 목록은 전체를 보여준다. 짐으로 거르는 이유는 "내가 갈 수
-     있는 곳" 을 정하는 것이라, 오늘 모임이 없다고 선택지에서 빠지면
-     오히려 이상하다. 목록에 없는 짐으로 열린 모임도 있으니(만들 때 직접
-     입력할 수 있다) 그것들을 뒤에 붙인다. */
-  const gymChoices = [
-    ...GYMS,
+  /* 필터의 짐 목록은 master 전체를 보여준다. 짐으로 거르는 이유는 "내가
+     갈 수 있는 곳" 을 정하는 것이라, 오늘 모임이 없다고 선택지에서 빠지면
+     오히려 이상하다. master 를 못 받는 환경(mock·마이그레이션 전)에서는
+     폴백 목록으로, master 에 없는 이름의 legacy 모임은 뒤에 붙인다. */
+  const baseOpts: GymOption[] = masterGyms?.length
+    ? masterGyms.map((g) => ({
+        name: g.name,
+        region: g.region,
+        city_district: g.city_district,
+        brand: g.brand,
+        aliases: g.aliases,
+      }))
+    : MOCK_GYMS.map((name) => ({ name }));
+  const knownNames = new Set(baseOpts.map((o) => o.name));
+  const gymChoices: GymOption[] = [
+    ...baseOpts,
     ...Array.from(new Set(sessions.map((s) => s.gym)))
-      .filter((g) => !GYMS.includes(g))
-      .sort(),
+      .filter((g) => !knownNames.has(g))
+      .sort()
+      .map((name) => ({ name })),
   ];
   const shown = applySessionFilter(sessions, filter);
 
@@ -463,6 +481,7 @@ export default function Home() {
                   key={s.id}
                   session={s}
                   hostPhotoUrl={s.host?.photo ? photoUrls[s.host.photo] : undefined}
+                  gymPhotoUrl={s.gymThumb}
                 />
               ))}
             </div>
@@ -573,17 +592,19 @@ export default function Home() {
                     )}
                   </div>
                 </button>
-                {/* 관심 하나로 통일 — 보내면 상대 신청함에 뜨고, 수락하면 채팅이 열린다 */}
+                {/* 관심 하나로 통일 — 보내면 상대 신청함에 뜨고, 수락하면 채팅이 열린다.
+                    목록에서는 secondary 로 물러난다 — primary CTA 는 프로필
+                    상세 시트의 "관심 보내기" 하나만 강하게 둔다. */}
                 <button
                   disabled={sentTo.has(p.id)}
                   onClick={() => {
                     setReqTarget(p);
                     setReqMsg("");
                   }}
-                  className={`shrink-0 rounded-lg px-3.5 py-2 text-[12.5px] font-semibold ${
+                  className={`shrink-0 text-[12.5px] ${
                     sentTo.has(p.id)
-                      ? "bg-surface2 text-faint"
-                      : "bg-accent text-white active:bg-accent-pressed"
+                      ? "py-2 font-medium text-faint"
+                      : "rounded-lg bg-accent-soft px-3.5 py-2 font-semibold text-accent-pressed"
                   }`}
                 >
                   {sentTo.has(p.id) ? "보냈어요" : "관심"}

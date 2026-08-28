@@ -2,13 +2,16 @@
    한쪽에만 있는 값이 생기면 "만들 수는 있는데 찾을 수는 없는 모임" 이
    된다 — 그래서 두 화면이 이 파일 하나를 본다. */
 
-/** 빠른 선택용. 여기 없는 짐은 만들 때 직접 입력한다 (서울·경기 전체 대상) */
-export const GYMS = [
-  "더클라임 B홍대",
-  "더클라임 연남",
-  "더월클라이밍 연남",
-  "홍대클라이밍",
-  "써미트클라이밍",
+/** 목데이터·폴백 전용 암장 목록.
+ *  production 의 source of truth 는 Supabase gyms 테이블(gym master)이다 —
+ *  화면은 fetchGyms() 로 마스터를 받고, Supabase 가 없거나(mock)
+ *  마스터가 아직 없을 때(마이그레이션 전 DB)만 이 목록으로 동작한다. */
+export const MOCK_GYMS = [
+  "더클라임 B홍대점",
+  "더클라임 연남점",
+  "더클라임 강남점",
+  "홍대클라이밍센터",
+  "써미트클라이밍센터",
 ];
 
 export const AGE_FROM: readonly (readonly [string, number])[] = [

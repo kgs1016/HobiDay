@@ -103,6 +103,31 @@ const inputCls =
   // iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다
   "w-full rounded-lg bg-surface2 px-3 py-2.5 text-[16px] text-ink [color-scheme:light] focus:outline-none";
 
+/* 짐 필터의 선택지 — gym master 에서 온다. master 를 못 받는 환경에서는
+   이름만 있는 항목으로도 동작한다 (legacy 모임의 자유입력 이름 포함). */
+export interface GymOption {
+  name: string;
+  region?: string | null;
+  city_district?: string | null;
+  brand?: string | null;
+  aliases?: string[] | null;
+}
+
+/** 띄어쓰기·대소문자 차이로 못 찾는 일이 없게 눌러서 비교한다 */
+const norm = (s: string) => s.toLowerCase().replace(/\s+/g, "");
+
+function gymMatches(o: GymOption, q: string) {
+  const n = norm(q);
+  if (!n) return true;
+  return [o.name, o.brand, o.region, o.city_district, ...(o.aliases ?? [])]
+    .filter(Boolean)
+    .some((v) => norm(v as string).includes(n));
+}
+
+/* 서울/경기 200곳을 한 번에 그리면 시트가 목록 그 자체가 된다 —
+   검색으로 좁히게 하고, 그 전에는 앞쪽만 보여준다 */
+const GYM_SHOWN_MAX = 60;
+
 export default function SessionFilterBar({
   value: f,
   onChange,
@@ -110,9 +135,12 @@ export default function SessionFilterBar({
 }: {
   value: SessionFilter;
   onChange: (next: SessionFilter) => void;
-  gyms: string[];
+  gyms: GymOption[];
 }) {
   const [open, setOpen] = useState<Facet | null>(null);
+  // 짐 검색 — 시트를 닫아도 남겨둔다 (다시 열어 이어서 고르는 흐름)
+  const [gymQ, setGymQ] = useState("");
+  const [gymRegion, setGymRegion] = useState<"" | "서울" | "경기">("");
 
   /* 배열형 조건은 눌렀다 다시 누르면 빠진다 */
   const toggle = <T,>(list: T[], v: T): T[] =>
@@ -212,19 +240,93 @@ export default function SessionFilterBar({
               </button>
             </div>
 
-            {open === "gym" && (
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                {gyms.map((g) => (
-                  <Opt
-                    key={g}
-                    on={f.gyms.includes(g)}
-                    onClick={() => onChange({ ...f, gyms: toggle(f.gyms, g) })}
-                  >
-                    {g}
-                  </Opt>
-                ))}
-              </div>
-            )}
+            {open === "gym" && (() => {
+              /* 고른 것은 검색과 무관하게 맨 위에 둔다 — 안 그러면 검색어를
+                 바꾸는 순간 내가 뭘 골랐는지 안 보인다 */
+              const picked = f.gyms.map(
+                (name) => gyms.find((o) => o.name === name) ?? { name }
+              );
+              const rest = gyms.filter(
+                (o) =>
+                  !f.gyms.includes(o.name) &&
+                  (!gymRegion || o.region === gymRegion) &&
+                  gymMatches(o, gymQ)
+              );
+              const shown = rest.slice(0, GYM_SHOWN_MAX);
+              const row = (o: GymOption, on: boolean) => (
+                <button
+                  key={o.name}
+                  type="button"
+                  onClick={() => onChange({ ...f, gyms: toggle(f.gyms, o.name) })}
+                  className="flex w-full items-center justify-between gap-2 border-b border-line py-2.5 text-left last:border-b-0"
+                >
+                  <span className="min-w-0">
+                    <span
+                      className={`block truncate text-[14px] ${
+                        on ? "font-semibold text-accent-pressed" : "text-ink"
+                      }`}
+                    >
+                      {o.name}
+                    </span>
+                    {(o.region || o.city_district) && (
+                      <span className="block truncate text-[11.5px] text-faint">
+                        {[o.region, o.city_district].filter(Boolean).join(" ")}
+                      </span>
+                    )}
+                  </span>
+                  {on && (
+                    <span className="shrink-0 text-[12px] font-medium text-accent-pressed">
+                      선택됨
+                    </span>
+                  )}
+                </button>
+              );
+              return (
+                <>
+                  <input
+                    value={gymQ}
+                    onChange={(e) => setGymQ(e.target.value)}
+                    placeholder="암장 이름 · 지역으로 검색"
+                    className={`mt-4 ${inputCls}`}
+                  />
+                  {/* 지역 pill 은 master 를 받아 지역 정보가 있을 때만 —
+                      폴백 목록(이름뿐)에서 켜면 전부 걸러져 빈 화면이 된다 */}
+                  {gyms.some((o) => o.region) && (
+                    <div className="mt-2 flex gap-1.5">
+                      {(["", "서울", "경기"] as const).map((r) => (
+                        <button
+                          key={r || "all"}
+                          type="button"
+                          onClick={() => setGymRegion(r)}
+                          className={`rounded-full border px-3 py-1.5 text-[13px] transition-colors ${
+                            gymRegion === r
+                              ? "border-accent bg-accent-soft font-medium text-accent-pressed"
+                              : "border-line bg-surface text-muted"
+                          }`}
+                        >
+                          {r || "전체"}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-2 max-h-[42vh] overflow-y-auto">
+                    {picked.map((o) => row(o, true))}
+                    {shown.map((o) => row(o, false))}
+                    {rest.length > GYM_SHOWN_MAX && (
+                      <p className="py-2.5 text-center text-[12px] text-faint">
+                        {rest.length - GYM_SHOWN_MAX}곳 더 있어요 — 검색으로
+                        좁혀주세요
+                      </p>
+                    )}
+                    {picked.length === 0 && rest.length === 0 && (
+                      <p className="py-6 text-center text-[12.5px] text-muted">
+                        찾는 암장이 없어요
+                      </p>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
 
             {open === "date" && (
               /* 지난 날짜는 아예 못 고른다. 골라봐야 시작한 모임은 목록에서

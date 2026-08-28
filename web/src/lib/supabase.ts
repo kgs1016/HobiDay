@@ -65,7 +65,12 @@ const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 export interface DbSession {
   id: string;
+  /* 표시용 장소명 — 서버가 coalesce(master name, legacy 문자열)로 내려준다.
+     gym_id 가 없는 옛 모임도 이 값은 항상 채워져 있다. */
   gym: string;
+  /* Gym Master 연결 — 마이그레이션 전 DB 는 이 키 자체가 없다 */
+  gym_id?: string | null;
+  gym_thumb?: string | null;
   starts_at: string;
   ends_at: string;
   capacity: number;
@@ -106,6 +111,8 @@ export function toSession(
   return {
     id: r.id,
     gym: r.gym,
+    gymId: r.gym_id ?? undefined,
+    gymThumb: r.gym_thumb ?? undefined,
     date: `${DAYS[st.getDay()]} ${st.getMonth() + 1}/${st.getDate()}`,
     start: hm(st),
     end: hm(en),
@@ -208,6 +215,9 @@ export async function fetchSessionHost(
 
 export async function createSession(p: {
   gym: string;
+  /* Gym Master 의 id — 선택. 넘기면 서버가 실재·운영 여부를 확인하고
+     gym 문자열에도 canonical name 을 담는다. */
+  gymId?: string;
   startsAt: string; // ISO
   endsAt: string;
   capacity: number;
@@ -232,9 +242,43 @@ export async function createSession(p: {
     p_after_meal: false, // 뒤풀이 기능은 접었다 — 컬럼만 남아 있다
     p_note: p.note,
     p_gender_mode: p.genderMode,
+    /* gym master 마이그레이션 전 DB 는 p_gym_id 인자를 모른다 — 값이
+       있을 때만 실어서, 옛 DB 에서도 자유입력 생성이 계속 동작하게 한다 */
+    ...(p.gymId ? { p_gym_id: p.gymId } : {}),
   });
   if (error) return { error: error.message };
   return data as { id?: string; error?: string };
+}
+
+/* ── Gym Master ── */
+
+/** 서울/경기 실사용 볼더링 암장 마스터 (gyms 테이블).
+ *  모임 만들기의 암장 선택과 모임 찾기의 짐 필터가 쓴다. */
+export interface Gym {
+  id: string;
+  name: string;
+  brand: string | null;
+  branch_name: string | null;
+  region: string; // 서울 · 경기
+  city_district: string; // 마포구 · 수원시 …
+  subdistrict: string | null;
+  address: string;
+  climbing_type: string | null;
+  aliases: string[] | null;
+  thumbnail_url: string | null;
+}
+
+/** 마스터 목록 — 마이그레이션 전 DB(함수 없음)에서는 null 을 돌려주고,
+ *  화면은 예전 자유입력 방식으로 동작한다. */
+export async function fetchGyms(): Promise<Gym[] | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc("gym_list");
+  if (error) {
+    console.error("gym_list", error);
+    return null;
+  }
+  return data as Gym[];
 }
 
 export async function joinSession(id: string) {

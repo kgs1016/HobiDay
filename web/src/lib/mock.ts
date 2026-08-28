@@ -8,7 +8,12 @@ export type SessionStatus = "open" | "confirmed" | "closed";
 
 export interface Session {
   id: string;
+  /* 표시용 장소명 — gym master 연결 후에는 canonical name 이 들어온다 */
   gym: string;
+  /* Gym Master 연결 (gyms.id). 옛 모임과 목데이터에는 없다 */
+  gymId?: string;
+  /* 암장 대표사진 — 사진 수집 전까지는 없다. 없으면 카드가 placeholder */
+  gymThumb?: string;
   date: string; // "토 8/1"
   start: string; // "15:00"
   end: string; // "17:00"
