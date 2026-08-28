@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import BackButton from "@/components/BackButton";
 import {
   currentUser,
   fetchNotifications,
@@ -31,7 +31,6 @@ function ago(iso: string) {
 }
 
 export default function Notifications() {
-  const router = useRouter();
   const [list, setList] = useState<AppNotification[] | null>(null);
   const [authed, setAuthed] = useState<boolean | null>(null);
 
@@ -50,11 +49,9 @@ export default function Notifications() {
 
   return (
     <main className="px-4 pb-10">
-      <header className="flex items-center gap-3 pt-5 pb-4">
-        <button onClick={() => router.back()} className="text-lg text-muted">
-          ←
-        </button>
-        <h1 className="text-[19px] font-extrabold tracking-tight">알림</h1>
+      <header className="flex items-center gap-2 pt-4 pb-2">
+        <BackButton />
+        <h1 className="text-[18px] font-bold tracking-tight">알림</h1>
       </header>
 
       {authed === false ? (
@@ -62,32 +59,45 @@ export default function Notifications() {
           <p className="text-[14px] text-muted">로그인하면 알림이 보여요</p>
           <Link
             href="/login"
-            className="rounded-xl bg-accent px-6 py-2.5 text-[14px] font-bold text-white"
+            className="rounded-xl bg-accent px-6 py-2.5 text-[14px] font-semibold text-white active:bg-accent-pressed"
           >
             로그인 하기
           </Link>
         </div>
       ) : list === null ? (
-        <p className="pt-14 text-center text-muted">불러오는 중…</p>
+        <p className="pt-16 text-center text-[13.5px] text-faint">불러오는 중…</p>
       ) : list.length === 0 ? (
-        <div className="mt-16 flex flex-col items-center gap-2 text-center">
-          <span className="text-4xl">🔔</span>
-          <p className="text-[15px] font-bold">새 알림이 없어요</p>
+        <div className="mt-20 flex flex-col items-center gap-2 text-center text-faint">
+          <svg
+            width="44"
+            height="44"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+          <p className="mt-1 text-[15px] font-semibold text-ink">새 알림이 없어요</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        /* 알림 하나하나를 카드로 만들지 않는다 — 행 + divider */
+        <div className="flex flex-col divide-y divide-line">
           {list.map((n) => {
-            const card = (
-              <div
-                className={`rounded-2xl border p-4 ${
-                  n.read_at
-                    ? "border-line bg-surface"
-                    : "border-accent/40 bg-accent/5"
-                }`}
-              >
+            const row = (
+              <div className="py-3.5">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-[14.5px] font-extrabold">{n.title}</p>
-                  <span className="shrink-0 text-[11.5px] text-muted">
+                  <p className="min-w-0 text-[14.5px] font-medium">
+                    {!n.read_at && (
+                      <span className="mr-1.5 inline-block h-1.5 w-1.5 -translate-y-0.5 rounded-full bg-accent" />
+                    )}
+                    {n.title}
+                  </p>
+                  <span className="shrink-0 text-[11.5px] text-faint">
                     {ago(n.created_at)}
                   </span>
                 </div>
@@ -99,11 +109,15 @@ export default function Notifications() {
               </div>
             );
             return n.url ? (
-              <Link key={n.id} href={n.url} className="block">
-                {card}
+              <Link
+                key={n.id}
+                href={n.url}
+                className="block transition-colors active:bg-surface2"
+              >
+                {row}
               </Link>
             ) : (
-              <div key={n.id}>{card}</div>
+              <div key={n.id}>{row}</div>
             );
           })}
         </div>

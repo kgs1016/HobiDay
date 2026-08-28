@@ -7,7 +7,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import BackButton from "@/components/BackButton";
+import { AvatarFallback } from "@/components/icons";
+import { HoldIllust } from "@/components/illustrations";
 import {
   currentUser,
   fetchMatchHistory,
@@ -32,7 +34,7 @@ const when = (iso: string) => {
 
 function Mate({ m, url }: { m: MatchMate; url?: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-full border border-line bg-bg py-1 pl-1 pr-3">
+    <div className="flex items-center gap-2 rounded-full bg-surface2 py-1 pl-1 pr-3">
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -41,17 +43,11 @@ function Mate({ m, url }: { m: MatchMate; url?: string }) {
           className="h-7 w-7 shrink-0 rounded-full object-cover"
         />
       ) : (
-        <span
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] ${
-            m.gender === "f" ? "bg-female/15" : "bg-male/15"
-          }`}
-        >
-          🧗
-        </span>
+        <AvatarFallback size={28} />
       )}
-      <span className="text-[12.5px] font-bold">
+      <span className="text-[12.5px] font-medium">
         {m.nickname}
-        {m.is_host && <span className="ml-1 text-muted">· 호스트</span>}
+        {m.is_host && <span className="ml-1 font-normal text-faint">· 호스트</span>}
       </span>
     </div>
   );
@@ -71,17 +67,17 @@ function Card({
   return (
     <Link
       href={`/session?id=${r.id}`}
-      className="block rounded-2xl border border-line bg-surface p-4"
+      className="block py-4 transition-colors active:bg-surface2"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-[14.5px] font-extrabold">{r.gym}</p>
+          <p className="truncate text-[14.5px] font-semibold">{r.gym}</p>
           <p className="mt-0.5 text-[12.5px] text-muted">
             {when(r.starts_at)} · {capacityLabel(r.capacity, r.gender_mode)}
           </p>
         </div>
         {r.i_am_host && (
-          <span className="shrink-0 rounded-full bg-accent/15 px-2.5 py-1 text-[11.5px] font-bold text-accent">
+          <span className="shrink-0 rounded-md bg-surface2 px-2.5 py-1 text-[11.5px] font-medium text-muted">
             내가 연 모임
           </span>
         )}
@@ -104,7 +100,6 @@ function Card({
 }
 
 export default function MatchHistory() {
-  const router = useRouter();
   const [list, setList] = useState<MatchRecord[] | null>(null);
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [photos, setPhotos] = useState<Record<string, string>>({});
@@ -135,11 +130,9 @@ export default function MatchHistory() {
 
   return (
     <main className="px-4 pb-10">
-      <header className="flex items-center gap-3 pt-5 pb-4">
-        <button onClick={() => router.back()} className="text-lg text-muted">
-          ←
-        </button>
-        <h1 className="text-[19px] font-extrabold tracking-tight">매칭 기록</h1>
+      <header className="flex items-center gap-2 pt-4 pb-2">
+        <BackButton fallback="/me" />
+        <h1 className="text-[18px] font-bold tracking-tight">매칭 기록</h1>
       </header>
 
       {authed === false ? (
@@ -147,34 +140,34 @@ export default function MatchHistory() {
           <p className="text-[14px] text-muted">로그인하면 기록이 보여요</p>
           <Link
             href="/login"
-            className="rounded-xl bg-accent px-6 py-2.5 text-[14px] font-bold text-white"
+            className="rounded-xl bg-accent px-6 py-2.5 text-[14px] font-semibold text-white active:bg-accent-pressed"
           >
             로그인 하기
           </Link>
         </div>
       ) : list === null ? (
-        <p className="pt-14 text-center text-muted">불러오는 중…</p>
+        <p className="pt-16 text-center text-[13.5px] text-faint">불러오는 중…</p>
       ) : list.length === 0 ? (
-        <div className="mt-16 flex flex-col items-center gap-2 text-center">
-          <span className="text-4xl">🧗</span>
-          <p className="text-[15px] font-bold">아직 끝난 모임이 없어요</p>
+        <div className="mt-16 flex flex-col items-center gap-1.5 text-center">
+          <HoldIllust size={64} />
+          <p className="mt-3 text-[15px] font-semibold">아직 끝난 모임이 없어요</p>
           <p className="text-[12.5px] leading-relaxed text-muted">
             성사된 모임이 끝나면 여기에 쌓여요
           </p>
           <Link
             href="/"
-            className="mt-2 rounded-xl bg-accent px-6 py-2.5 text-[14px] font-bold text-white"
+            className="mt-3 rounded-xl bg-accent px-6 py-2.5 text-[14px] font-semibold text-white active:bg-accent-pressed"
           >
             모임 보러 가기
           </Link>
         </div>
       ) : (
         <>
-          <p className="mb-3 text-[12.5px] text-muted">
-            함께한 모임 <b className="text-ink">{list.length}</b>번 · 만난 사람{" "}
-            <b className="text-ink">{metCount}</b>명
+          <p className="pt-2 text-[12.5px] text-muted">
+            함께한 모임 <b className="font-semibold text-ink">{list.length}</b>번 ·
+            만난 사람 <b className="font-semibold text-ink">{metCount}</b>명
           </p>
-          <div className="flex flex-col gap-2">
+          <div className="mt-1 flex flex-col divide-y divide-line">
             {list.map((r) => (
               <Card key={r.id} r={r} photos={photos} />
             ))}

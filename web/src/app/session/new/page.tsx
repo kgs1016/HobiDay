@@ -12,11 +12,12 @@ import {
 import { AGE_FROM, AGE_TO, GYMS } from "@/lib/meetupOptions";
 import { hasSupabase, currentUser, fetchMyProfileDb, createSession } from "@/lib/supabase";
 import { isProfileComplete } from "@/lib/profileGate";
+import BackButton from "@/components/BackButton";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-2 text-[13.5px] font-bold">{label}</p>
+      <p className="mb-2 text-[13.5px] font-semibold">{label}</p>
       {children}
     </div>
   );
@@ -35,10 +36,10 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-3.5 py-2 text-[13px] font-semibold transition-colors ${
+      className={`rounded-full border px-3.5 py-2 text-[13px] font-medium transition-colors ${
         active
-          ? "bg-accent text-white"
-          : "border border-line bg-surface text-muted"
+          ? "border-accent bg-accent text-white"
+          : "border-line bg-surface text-muted"
       }`}
     >
       {children}
@@ -48,7 +49,7 @@ function Chip({
 
 const inputCls =
   // iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다 — 16px 유지
-  "w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-[16px] text-ink [color-scheme:dark]";
+  "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-[16px] text-ink [color-scheme:light] focus:border-accent focus:outline-none";
 
 export default function NewSession() {
   const router = useRouter();
@@ -183,11 +184,9 @@ export default function NewSession() {
 
   return (
     <main className="px-4">
-      <header className="flex items-center gap-3 pt-5 pb-4">
-        <button onClick={() => router.back()} className="text-lg text-muted">
-          ←
-        </button>
-        <h1 className="text-[19px] font-extrabold tracking-tight">모임 만들기</h1>
+      <header className="flex items-center gap-2 pt-4 pb-4">
+        <BackButton />
+        <h1 className="text-[18px] font-bold tracking-tight">모임 만들기</h1>
       </header>
 
       <form className="flex flex-col gap-6 pb-8" onSubmit={submit}>
@@ -310,14 +309,14 @@ export default function NewSession() {
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="예: 초보도 환영해요, 같이 문제 풀어요"
-            className="w-full rounded-xl border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-muted/60"
+            className="w-full rounded-lg border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-faint focus:border-accent focus:outline-none"
           />
         </Field>
 
         <button
           type="submit"
           disabled={busy}
-          className="rounded-xl bg-accent py-3.5 text-[15px] font-bold text-white disabled:opacity-50"
+          className="rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
         >
           {busy ? "등록 중…" : "모임 등록하기"}
         </button>
