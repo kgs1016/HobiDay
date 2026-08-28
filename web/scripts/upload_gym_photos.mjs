@@ -1,25 +1,32 @@
 // 암장 대표사진 업로드: GYMS/photos → Supabase Storage(gym-photos) → gyms.thumbnail_url
 //
 // 사용법 (web 디렉터리에서, 마이그레이션 적용 후):
-//   $env:SUPABASE_URL = "https://<project>.supabase.co"
-//   $env:SUPABASE_SERVICE_ROLE_KEY = "<service_role key>"   # Dashboard > Settings > API
 //   node scripts/upload_gym_photos.mjs           # 확정본(GYMS/photos)만 업로드
 //   node scripts/upload_gym_photos.mjs --review  # 검토폴더(GYMS/photos_review)도 포함
+// 키는 환경변수 SUPABASE_SERVICE_ROLE_KEY 또는 web/.env.local 의 같은 이름 줄에서 읽는다.
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const url = process.env.SUPABASE_URL;
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const webRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const envFile = resolve(webRoot, ".env.local");
+const fileEnv = {};
+if (existsSync(envFile)) {
+  for (const line of readFileSync(envFile, "utf-8").split(/\r?\n/)) {
+    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+    if (m) fileEnv[m[1]] = m[2].replace(/^["']|["']$/g, "");
+  }
+}
+const url = process.env.SUPABASE_URL ?? fileEnv.SUPABASE_URL ?? fileEnv.NEXT_PUBLIC_SUPABASE_URL;
+const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? fileEnv.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !key) {
   console.error("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 환경변수가 필요합니다.");
   process.exit(1);
 }
 const includeReview = process.argv.includes("--review");
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const gymsDir = resolve(root, "GYMS");
+const gymsDir = resolve(webRoot, "..", "GYMS");
 const manifest = JSON.parse(readFileSync(resolve(gymsDir, "photos_manifest.json"), "utf-8"));
 
 const CT = { ".jpg": "image/jpeg", ".png": "image/png", ".webp": "image/webp" };
@@ -64,3 +71,9 @@ for (const item of manifest.items) {
   ok++;
 }
 console.log(`\n완료: 성공 ${ok} / 실패 ${fail} / 건너뜀 ${skipped}`);
+
+const { count, error: cntErr } = await sb
+  .from("gyms")
+  .select("id", { count: "exact", head: true })
+  .not("thumbnail_url", "is", null);
+console.log(cntErr ? `검증 실패: ${cntErr.message}` : `검증: thumbnail_url 채워진 암장 ${count}곳`);
