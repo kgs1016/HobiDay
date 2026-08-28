@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { currentUser, hasSupabase, fetchAppFlags, fetchInboxCounts } from "@/lib/supabase";
+import { HomeIcon, ChatIcon, InboxIcon, UserIcon } from "@/components/icons";
 
 const TABS = [
-  { href: "/", label: "홈", icon: "🏠" },
-  { href: "/chat", label: "채팅", icon: "💬" },
-  { href: "/inbox", label: "신청함", icon: "📥" },
-  { href: "/me", label: "내 정보", icon: "🧗" },
+  { href: "/", label: "홈", Icon: HomeIcon },
+  { href: "/chat", label: "채팅", Icon: ChatIcon },
+  { href: "/inbox", label: "신청함", Icon: InboxIcon },
+  { href: "/me", label: "내 정보", Icon: UserIcon },
 ];
 
 export default function BottomNav() {
@@ -77,7 +78,7 @@ export default function BottomNav() {
   return (
     // pb-[safe] — 홈 화면에 추가해 전체화면으로 뜰 때 아이폰 홈바에 가리지 않게
     <nav
-      className="fixed bottom-0 inset-x-0 z-20 border-t border-line bg-surface/95 backdrop-blur"
+      className="fixed bottom-0 inset-x-0 z-20 border-t border-line bg-surface"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className={`mx-auto max-w-md grid ${locked ? "grid-cols-2" : "grid-cols-4"}`}>
@@ -88,14 +89,14 @@ export default function BottomNav() {
             <Link
               key={t.href}
               href={t.href}
-              className={`flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-semibold ${
-                active ? "text-accent" : "text-muted"
+              className={`flex h-14 flex-col items-center justify-center gap-0.5 text-[11px] ${
+                active ? "font-semibold text-accent" : "font-medium text-faint"
               }`}
             >
-              <span className="relative text-lg leading-none">
-                {t.icon}
+              <span className="relative leading-none">
+                <t.Icon size={23} strokeWidth={active ? 2 : 1.75} />
                 {(badges[t.href] ?? 0) > 0 && (
-                  <span className="absolute -right-2.5 -top-1 min-w-[16px] rounded-full bg-accent px-1 text-[10px] font-extrabold leading-[16px] text-white">
+                  <span className="absolute -right-2 -top-1 min-w-[15px] rounded-full bg-danger px-1 text-center text-[9.5px] font-bold leading-[15px] text-white">
                     {badges[t.href] > 9 ? "9+" : badges[t.href]}
                   </span>
                 )}

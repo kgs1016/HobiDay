@@ -37,7 +37,7 @@ const loadOtpState = (): string | null => {
 
 const inputCls =
   // iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다 — 16px 유지
-  "w-full rounded-xl border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-muted/60";
+  "w-full rounded-lg border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-faint focus:border-accent focus:outline-none";
 
 export default function Signup() {
   const router = useRouter();
@@ -142,11 +142,10 @@ export default function Signup() {
 
   if (sentMail) {
     return (
-      <main className="px-4 pt-16 text-center">
-        <p className="text-4xl">📬</p>
-        <h1 className="mt-3 text-[20px] font-extrabold">인증번호를 보냈어요</h1>
+      <main className="px-4 pt-20 text-center">
+        <h1 className="text-[20px] font-bold">인증번호를 보냈어요</h1>
         <p className="mt-2 text-[13.5px] leading-relaxed text-muted">
-          <b className="text-ink">{email}</b> 메일함을 확인해주세요.
+          <b className="font-semibold text-ink">{email}</b> 메일함을 확인해주세요.
           <br />
           메일에 적힌 6자리 번호를 입력하면 가입이 완료돼요.
         </p>
@@ -158,12 +157,12 @@ export default function Signup() {
             autoComplete="one-time-code"
             placeholder="123456"
             // 숫자뿐이라 크게 — iOS 확대(16px 미만) 걱정도 없다
-            className="w-full rounded-xl border border-line bg-surface px-4 py-3.5 text-center text-[22px] font-extrabold tracking-[0.3em] text-ink placeholder:text-muted/40"
+            className="w-full rounded-lg border border-line bg-surface px-4 py-3.5 text-center text-[22px] font-semibold tracking-[0.3em] text-ink placeholder:text-faint focus:border-accent focus:outline-none"
           />
           <button
             type="submit"
             disabled={busy || otp.length < 6}
-            className="mt-3 w-full rounded-xl bg-accent py-3.5 text-[15px] font-bold text-white disabled:opacity-40"
+            className="mt-3 w-full rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-40"
           >
             {busy ? "확인 중…" : "인증하고 가입 완료"}
           </button>
@@ -171,7 +170,7 @@ export default function Signup() {
         <button
           onClick={resendCode}
           disabled={busy}
-          className="mt-5 text-[13px] font-semibold text-muted underline underline-offset-4 disabled:opacity-50"
+          className="mt-5 text-[13px] font-medium text-muted underline underline-offset-4 disabled:opacity-50"
         >
           인증번호 다시 받기
         </button>
@@ -179,7 +178,7 @@ export default function Signup() {
         <Link
           href="/login"
           onClick={clearOtpState}
-          className="mt-3 inline-block text-[13px] font-semibold text-muted/70"
+          className="mt-3 inline-block text-[13px] font-medium text-faint"
         >
           로그인으로 돌아가기
         </Link>
@@ -192,11 +191,11 @@ export default function Signup() {
       <div className="pt-5">
         <BackButton fallback="/" />
       </div>
-      <header className="pt-4 pb-6 text-center">
-        <p className="text-[17px] font-extrabold tracking-[2px] text-accent">
+      <header className="pt-3 pb-6 text-center">
+        <p className="text-[14px] font-bold tracking-[2px] text-accent">
           HOBIDAY
         </p>
-        <h1 className="mt-3 text-[21px] font-extrabold tracking-tight">
+        <h1 className="mt-3 text-[21px] font-bold tracking-tight">
           회원가입
         </h1>
         <p className="mt-1.5 text-[13px] text-muted">
@@ -232,13 +231,13 @@ export default function Signup() {
           className={inputCls}
         />
         {pw2.length > 0 && pw !== pw2 && (
-          <p className="text-[12px] font-semibold text-danger">
+          <p className="text-[12px] font-medium text-danger">
             비밀번호가 서로 달라요
           </p>
         )}
         <button
           disabled={busy}
-          className="mt-1 rounded-xl bg-accent py-3.5 text-[15px] font-bold text-white disabled:opacity-50"
+          className="mt-1 rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
         >
           {busy ? "처리 중…" : "가입하기"}
         </button>
@@ -246,7 +245,7 @@ export default function Signup() {
 
       {/* 애플 심사 1.2 — UGC 앱은 약관 동의가 가입 흐름에 보여야 한다.
           소셜·이메일 어느 쪽으로 가입하든 이 화면을 지나므로 여기 둔다. */}
-      <p className="mt-4 text-center text-[11.5px] leading-relaxed text-muted/80">
+      <p className="mt-4 text-center text-[11.5px] leading-relaxed text-faint">
         가입하면 하비데이의{" "}
         <Link href="/terms" className="underline underline-offset-2 text-muted">
           이용약관
@@ -260,9 +259,10 @@ export default function Signup() {
 
       <Link
         href="/login"
-        className="mt-5 block w-full text-center text-[13px] font-semibold text-muted"
+        className="mt-5 block w-full text-center text-[13px] font-medium text-muted"
       >
-        이미 계정이 있으신가요? <span className="text-accent">로그인</span>
+        이미 계정이 있으신가요?{" "}
+        <span className="font-semibold text-accent-pressed">로그인</span>
       </Link>
     </main>
   );

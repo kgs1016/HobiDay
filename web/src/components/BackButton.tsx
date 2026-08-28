@@ -5,6 +5,7 @@
    히스토리가 있으면 온 길로, 없으면(딥링크·새 세션) fallback 으로 간다. */
 
 import { useRouter } from "next/navigation";
+import { ChevronLeftIcon } from "@/components/icons";
 
 export default function BackButton({ fallback = "/" }: { fallback?: string }) {
   const router = useRouter();
@@ -15,9 +16,9 @@ export default function BackButton({ fallback = "/" }: { fallback?: string }) {
         else router.push(fallback);
       }}
       aria-label="뒤로 가기"
-      className="text-lg text-muted"
+      className="-ml-2 flex h-10 w-10 items-center justify-center text-ink"
     >
-      ←
+      <ChevronLeftIcon size={22} />
     </button>
   );
 }

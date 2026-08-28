@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "이용약관 — 하비데이" };
 
 const S = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <section className="mt-8">
-    <h2 className="text-[16px] font-extrabold">{title}</h2>
+    <h2 className="text-[16px] font-bold">{title}</h2>
     <div className="mt-2 flex flex-col gap-2 text-[13.5px] leading-relaxed text-muted">
       {children}
     </div>
@@ -26,8 +26,8 @@ export default function Terms() {
         <BackButton />
       </div>
       <header className="pt-4">
-        <p className="text-[13px] font-extrabold tracking-[2px] text-accent">HOBIDAY</p>
-        <h1 className="mt-2 text-[22px] font-extrabold tracking-tight">이용약관</h1>
+        <p className="text-[13px] font-bold tracking-[2px] text-accent">HOBIDAY</p>
+        <h1 className="mt-2 text-[22px] font-bold tracking-tight">이용약관</h1>
         <p className="mt-1 text-[12.5px] text-muted">시행일: 2026년 8월 20일</p>
       </header>
 

@@ -90,8 +90,8 @@ function Opt({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-3.5 py-2 text-[13px] font-semibold transition-colors ${
-        on ? "bg-accent text-white" : "border border-line bg-bg text-muted"
+      className={`rounded-full border px-3.5 py-2 text-[13px] font-medium transition-colors ${
+        on ? "border-accent bg-accent text-white" : "border-line bg-surface text-muted"
       }`}
     >
       {children}
@@ -101,7 +101,7 @@ function Opt({
 
 const inputCls =
   // iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다
-  "w-full rounded-xl border border-line bg-bg px-3 py-2.5 text-[16px] text-ink [color-scheme:dark]";
+  "w-full rounded-lg bg-surface2 px-3 py-2.5 text-[16px] text-ink [color-scheme:light] focus:outline-none";
 
 export default function SessionFilterBar({
   value: f,
@@ -154,9 +154,9 @@ export default function SessionFilterBar({
                 key={k}
                 type="button"
                 onClick={() => setOpen(k)}
-                className={`flex shrink-0 items-center gap-1 rounded-full border px-3.5 py-2 text-[13px] font-semibold transition-colors ${
+                className={`flex shrink-0 items-center gap-1 rounded-full border px-3 py-1.5 text-[13px] transition-colors ${
                   on
-                    ? "border-accent bg-accent/10 text-accent"
+                    ? "border-accent bg-accent-soft font-medium text-accent-pressed"
                     : "border-line bg-surface text-muted"
                 }`}
               >
@@ -167,7 +167,7 @@ export default function SessionFilterBar({
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="3"
+                  strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   aria-hidden="true"
@@ -183,7 +183,7 @@ export default function SessionFilterBar({
             <button
               type="button"
               onClick={() => onChange(EMPTY_FILTER)}
-              className="shrink-0 rounded-full border border-line bg-surface px-3.5 py-2 text-[13px] font-semibold text-muted"
+              className="shrink-0 rounded-full border border-line bg-surface px-3 py-1.5 text-[13px] text-muted"
             >
               초기화
             </button>
@@ -193,20 +193,20 @@ export default function SessionFilterBar({
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-end bg-black/60"
+          className="fixed inset-0 z-50 flex items-end bg-black/50"
           onClick={() => setOpen(null)}
         >
           <div
-            className="max-h-[85vh] w-full overflow-y-auto rounded-t-3xl border-t border-line bg-surface p-5"
+            className="mx-auto max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-surface p-5"
             style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <p className="text-[17px] font-extrabold">{TITLES[open]}</p>
+              <p className="text-[16px] font-bold">{TITLES[open]}</p>
               <button
                 type="button"
                 onClick={() => onChange({ ...f, ...clear[open] })}
-                className="text-[12.5px] font-semibold text-muted"
+                className="text-[12.5px] font-medium text-muted"
               >
                 지우기
               </button>
@@ -372,7 +372,7 @@ export default function SessionFilterBar({
             <button
               type="button"
               onClick={() => setOpen(null)}
-              className="mt-5 w-full rounded-xl bg-accent py-3.5 text-[14px] font-bold text-white"
+              className="mt-5 w-full rounded-xl bg-accent py-3.5 text-[14px] font-semibold text-white active:bg-accent-pressed"
             >
               확인
             </button>

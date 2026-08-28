@@ -8,7 +8,8 @@ import { notifyPush } from "@/lib/nativePush";
 import { level, levelRangeLabel } from "@/lib/levels";
 import { isProfileComplete } from "@/lib/profileGate";
 import { MOCK_SESSIONS, slotsLeft, type Session } from "@/lib/mock";
-import { capacityRo, totalSeats } from "@/lib/capacity";
+import { capacityLabel, capacityRo, totalSeats } from "@/lib/capacity";
+import { AvatarFallback, ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 import {
   SESSION_JOIN_COST,
   hasSupabase,
@@ -66,10 +67,14 @@ export default function SessionDetail() {
   };
 
   if (s === undefined)
-    return <main className="px-4 pt-20 text-center text-muted">불러오는 중…</main>;
+    return (
+      <main className="px-4 pt-24 text-center text-[13.5px] text-faint">
+        불러오는 중…
+      </main>
+    );
   if (s === null)
     return (
-      <main className="px-4 pt-20 text-center text-muted">
+      <main className="px-4 pt-24 text-center text-[13.5px] text-muted">
         모임을 찾을 수 없어요
       </main>
     );
@@ -305,19 +310,24 @@ export default function SessionDetail() {
   };
 
   return (
-    <main className="px-4">
-      <header className="flex items-center gap-3 pt-5 pb-4">
-        <button onClick={back} className="text-lg text-muted">
-          ←
+    <>
+    <main className="px-4 pb-32">
+      <header className="flex items-center gap-2 pt-4 pb-2">
+        <button
+          onClick={back}
+          aria-label="뒤로 가기"
+          className="-ml-2 flex h-10 w-10 items-center justify-center text-ink"
+        >
+          <ChevronLeftIcon size={22} />
         </button>
-        <h1 className="text-[19px] font-extrabold tracking-tight">모임 정보</h1>
+        <h1 className="text-[18px] font-bold tracking-tight">모임 정보</h1>
       </header>
 
       {/* 끝났는지 취소됐는지부터 말한다. 이게 없으면 아래 문구들이
           전부 "아직 갈 수 있는 모임" 처럼 읽힌다. */}
       {(dead || started) && (
         <p
-          className={`mb-3 rounded-xl px-4 py-3 text-[13px] font-bold ${
+          className={`mb-3 rounded-lg px-4 py-3 text-[13px] font-medium ${
             s.cancelled
               ? "bg-danger/10 text-danger"
               : "bg-surface2 text-muted"
@@ -331,37 +341,46 @@ export default function SessionDetail() {
         </p>
       )}
 
-      <section className="rounded-2xl border border-line bg-surface p-5">
-        <p className="text-[18px] font-extrabold tracking-tight">
-          {s.gym}
+      {/* 핵심 정보 — 카드 없이 문서처럼 */}
+      <section className="pt-2">
+        <p className="text-[20px] font-bold tracking-tight">
+          <span className="align-middle">{s.gym}</span>
           {s.isAway && (
-            <span className="ml-2 text-[12px] font-bold text-mint">🗺 원정</span>
+            <span className="ml-2 align-middle text-[12px] font-normal text-faint">
+              원정
+            </span>
           )}
         </p>
-        <p className="mt-1 text-[13.5px] text-muted">
-          {s.date} · {s.start}~{s.end}
+        <p className="mt-1 text-[14px] text-muted">
+          {s.date} · {s.start}–{s.end}
         </p>
         <div className="mt-3 flex flex-col gap-1 text-[13.5px]">
           <p>{levelRangeLabel(s.levelMin, s.levelMax)}</p>
-          {s.note && <p className="mt-1 text-ink/90">&ldquo;{s.note}&rdquo;</p>}
+          <p className="text-muted">
+            {capacityLabel(s.capacity, s.genderMode)}
+            {anyGender && " · 성별 무관"}
+          </p>
         </div>
+        {s.note && (
+          <p className="mt-3 rounded-lg bg-surface2 px-3.5 py-3 text-[13.5px] leading-relaxed">
+            &ldquo;{s.note}&rdquo;
+          </p>
+        )}
       </section>
 
       {/* 참가 현황 — 익명 */}
-      <section className="mt-4">
-        <h2 className="mb-2 text-[14px] font-bold">
+      <section className="mt-6 border-t border-line pt-5">
+        <h2 className="text-[15px] font-bold">
           참가 현황{" "}
-          <span className="font-medium text-muted">
-            ({s.maleJoined + s.femaleJoined}/{totalSeats(s.capacity, s.genderMode)})
+          <span className="font-normal text-muted">
+            {s.maleJoined + s.femaleJoined}/{totalSeats(s.capacity, s.genderMode)}
           </span>
         </h2>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="mt-3 flex flex-wrap gap-1.5">
           {badges.map((b) => (
             <span
               key={b.key}
-              className={`rounded-full px-3 py-1.5 text-[12.5px] font-bold ${
-                b.g === "m" ? "bg-male/15 text-male" : "bg-female/15 text-female"
-              }`}
+              className="rounded-lg bg-surface2 px-3 py-1.5 text-[12.5px] font-medium text-ink"
             >
               {b.g === "m" ? "남" : "여"} 확정
             </span>
@@ -370,7 +389,7 @@ export default function SessionDetail() {
             Array.from({ length: left.total }, (_, i) => (
               <span
                 key={`ea${i}`}
-                className="rounded-full border border-dashed border-line px-3 py-1.5 text-[12.5px] font-semibold text-muted"
+                className="rounded-lg border border-dashed border-line px-3 py-1.5 text-[12.5px] text-faint"
               >
                 모집중
               </span>
@@ -379,7 +398,7 @@ export default function SessionDetail() {
             Array.from({ length: Math.max(0, left.male) }, (_, i) => (
             <span
               key={`em${i}`}
-              className="rounded-full border border-dashed border-line px-3 py-1.5 text-[12.5px] font-semibold text-muted"
+              className="rounded-lg border border-dashed border-line px-3 py-1.5 text-[12.5px] text-faint"
             >
               남 모집중
             </span>
@@ -388,44 +407,43 @@ export default function SessionDetail() {
             Array.from({ length: Math.max(0, left.female) }, (_, i) => (
             <span
               key={`ef${i}`}
-              className="rounded-full border border-dashed border-line px-3 py-1.5 text-[12.5px] font-semibold text-muted"
+              className="rounded-lg border border-dashed border-line px-3 py-1.5 text-[12.5px] text-faint"
             >
               여 모집중
             </span>
           ))}
         </div>
-        <p className="mt-2 text-[12px] text-muted">
-          다른 참가자는 <b className="text-ink">확정되면</b> 서로 프로필을 볼 수
-          있어요. 모임을 연 호스트는 아래에서 지금 볼 수 있어요.
+        <p className="mt-2.5 text-[12px] leading-relaxed text-faint">
+          다른 참가자 프로필은 확정되면 서로 볼 수 있어요. 호스트는 아래에서
+          지금 볼 수 있어요.
         </p>
       </section>
 
       {/* 조기 확정 — 자리가 남아도 성비가 맞으면 그 인원으로 갈 수 있다 */}
       {s.iAmHost && !dead && canEarlyConfirm && !proposed && (
-        <section className="mt-4 rounded-2xl border border-mint/40 bg-mint/10 p-5">
-          <p className="text-[14.5px] font-extrabold">
+        <section className="mt-6 rounded-xl bg-accent-soft p-5">
+          <p className="text-[14.5px] font-bold">
             {nRo(matched)} 확정할까요?
           </p>
           <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted">
             {anyGender
               ? "자리를 더 기다리지 않고 지금 인원으로 모임을 열 수 있어요."
               : "지금 남녀 수가 맞아요. 자리를 더 기다리지 않고 이 인원으로 모임을 열 수 있어요."}{" "}
-            <b className="text-ink">참가자가 받으면</b> 확정되고 모임 채팅방이
-            열려요.
+            참가자가 받으면 확정되고 채팅방이 열려요.
           </p>
           <button
             onClick={propose}
             disabled={busy}
-            className="mt-3 w-full rounded-xl bg-mint py-3 text-[14px] font-bold text-white disabled:opacity-50"
+            className="mt-3 w-full rounded-xl bg-accent py-3 text-[14px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
           >
-            {busy ? "보내는 중…" : `🤝 ${nRo(matched)} 모임 확정하기`}
+            {busy ? "보내는 중…" : `${nRo(matched)} 확정 제안하기`}
           </button>
         </section>
       )}
 
       {s.iAmHost && !dead && proposed && (
-        <section className="mt-4 rounded-2xl border border-line bg-surface p-5">
-          <p className="text-[14.5px] font-extrabold">
+        <section className="mt-6 rounded-xl border border-line p-5">
+          <p className="text-[14.5px] font-bold">
             참가자의 답을 기다리는 중…
           </p>
           <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted">
@@ -435,7 +453,7 @@ export default function SessionDetail() {
           <button
             onClick={withdraw}
             disabled={busy}
-            className="mt-3 w-full rounded-xl border border-line py-3 text-[13.5px] font-bold text-muted disabled:opacity-50"
+            className="mt-3 w-full rounded-xl border border-line py-3 text-[13.5px] font-medium text-muted disabled:opacity-50"
           >
             제안 거두기
           </button>
@@ -443,27 +461,27 @@ export default function SessionDetail() {
       )}
 
       {iAmGuest && !dead && proposed && !s.myAck && (
-        <section className="mt-4 rounded-2xl border border-mint/40 bg-mint/10 p-5">
-          <p className="text-[14.5px] font-extrabold">
+        <section className="mt-6 rounded-xl bg-accent-soft p-5">
+          <p className="text-[14.5px] font-bold">
             호스트가 {nRo(matched)} 하자고 해요
           </p>
           <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted">
-            {capacityRo(s.capacity, s.genderMode)} 열린 모임인데, 자리를 더 기다리지 않고
-            지금 인원으로 진행하자는 제안이에요.{" "}
-            <b className="text-ink">받으면 바로 확정</b>되고 모임 채팅방이 열려요.
+            {capacityRo(s.capacity, s.genderMode)} 열린 모임인데, 자리를 더
+            기다리지 않고 지금 인원으로 진행하자는 제안이에요. 받으면 바로
+            확정되고 채팅방이 열려요.
           </p>
           <div className="mt-3 flex gap-2">
             <button
               onClick={withdraw}
               disabled={busy}
-              className="flex-1 rounded-xl border border-line py-3 text-[13.5px] font-bold text-muted disabled:opacity-50"
+              className="flex-1 rounded-xl border border-line bg-surface py-3 text-[13.5px] font-medium text-muted disabled:opacity-50"
             >
               더 기다릴래요
             </button>
             <button
               onClick={accept}
               disabled={busy}
-              className="flex-1 rounded-xl bg-mint py-3 text-[13.5px] font-bold text-white disabled:opacity-50"
+              className="flex-1 rounded-xl bg-accent py-3 text-[13.5px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
             >
               {busy ? "처리 중…" : "좋아요, 확정할게요"}
             </button>
@@ -472,18 +490,18 @@ export default function SessionDetail() {
       )}
 
       {iAmGuest && proposed && s.myAck && (
-        <p className="mt-4 rounded-2xl border border-line bg-surface px-5 py-4 text-center text-[12.5px] leading-relaxed text-muted">
+        <p className="mt-6 rounded-xl border border-line px-5 py-4 text-center text-[12.5px] leading-relaxed text-muted">
           확정에 동의했어요. 남은 참가자의 답을 기다리는 중이에요.
         </p>
       )}
 
       {/* 호스트 — 눌러서 프로필 전체 보기 */}
       {s.host && (
-        <section className="mt-4">
-          <h2 className="mb-2 text-[14px] font-bold">호스트 정보</h2>
+        <section className="mt-6 border-t border-line pt-5">
+          <h2 className="text-[15px] font-bold">호스트</h2>
           <Link
             href={`/session/host?id=${s.id}`}
-            className="flex items-center gap-3.5 rounded-2xl border border-line bg-surface p-4 active:scale-[0.99] transition-transform"
+            className="mt-3 flex items-center gap-3 rounded-xl transition-colors active:bg-surface2"
           >
             {hostPhoto ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -493,15 +511,13 @@ export default function SessionDetail() {
                 className="h-12 w-12 shrink-0 rounded-full object-cover"
               />
             ) : (
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface2 text-xl">
-                🧗
-              </span>
+              <AvatarFallback size={48} />
             )}
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[15px] font-extrabold">
+              <p className="truncate text-[15px] font-semibold">
                 {s.host.nickname}
                 {s.host.age && (
-                  <span className="ml-1.5 text-[12.5px] font-medium text-muted">
+                  <span className="ml-1.5 text-[13px] font-normal text-muted">
                     {s.host.age}
                   </span>
                 )}
@@ -515,7 +531,7 @@ export default function SessionDetail() {
                   .join(" · ")}
               </p>
             </div>
-            <span className="shrink-0 text-muted">›</span>
+            <ChevronRightIcon size={16} className="shrink-0 text-faint" />
           </Link>
         </section>
       )}
@@ -525,81 +541,34 @@ export default function SessionDetail() {
          "이 모임에 갈지" 를 정하는 정보만 남긴다. */}
 
       {s.myStatus === "confirmed" && (
-        <div className="mt-5 flex flex-col gap-2">
+        <div className="mt-6 flex flex-col gap-2">
           {/* 방은 호스트 말고 한 명이라도 확정되면 열린다 (확정 2명 이상).
              정원이 차기를 기다리지 않는다 — 시간·장소를 맞추는 게 방의
              쓸모라, 맞출 사람이 생긴 시점에 열려 있어야 한다. */}
           {s.maleJoined + s.femaleJoined >= 2 && (
             <Link
               href="/chat#session"
-              className="block rounded-xl border border-mint/50 bg-mint/10 py-3.5 text-center text-[14.5px] font-bold text-mint"
+              className="block rounded-xl border border-line py-3.5 text-center text-[14px] font-semibold text-ink"
             >
-              💬 모임 채팅 열기
+              모임 채팅 열기
             </Link>
           )}
           {!dead && (
           <Link
             href={`/room?id=${s.id}`}
-            className="block rounded-xl border border-accent/50 bg-accent/10 py-3.5 text-center text-[14.5px] font-bold text-accent"
+            className="block rounded-xl border border-line py-3.5 text-center text-[14px] font-semibold text-accent-pressed"
           >
-            🧗 모임 진행 화면 열기
+            모임 진행 화면 열기
           </Link>
           )}
         </div>
       )}
 
-      <button
-        // 내가 연 모임에는 신청할 수 없다. 시작한 모임도 마찬가지.
-        disabled={busy || joined || s.iAmHost || full || started || dead}
-        className={`mt-6 mb-8 w-full rounded-xl py-3.5 text-[15px] font-bold disabled:opacity-70 ${
-          dead || s.iAmHost
-            ? "bg-surface2 text-muted"
-            : joined
-              ? "bg-mint/15 text-mint"
-              : full || started
-                ? "bg-surface2 text-muted"
-                : "bg-accent text-white"
-        }`}
-        onClick={onJoin}
-      >
-        {/* 끝났거나 취소된 모임이면 그 말이 먼저다. 예전엔 이 분기가
-            없어서, 채팅에 "매칭이 취소되었어요" 가 떠 있는 모임을 열어도
-            "✓ 모임이 확정됐어요" 라고 했다. toSession 이 cancelled 를
-            confirmed 로 뭉개는 탓에 여기서는 구분조차 못 했다.
-
-            "확정" 이 두 가지를 뜻하는 것도 그대로다 — 내 자리가 잡혔다 ·
-            모임이 성사됐다. 성비가 안 맞으면 자리는 잡혀도 모임은 아직
-            안 열린다. */}
-        {s.cancelled
-          ? "취소된 모임이에요"
-          : missed
-            ? "이번엔 함께하지 못했어요 · 신청비는 돌려드려요"
-            : ended
-              ? "끝난 모임이에요"
-              : s.iAmHost
-              ? "내가 연 모임이에요"
-              : joined
-                ? s.myStatus !== "confirmed"
-                  ? "승인 대기 중 · 호스트가 확인하면 알려드려요"
-                  : s.status === "confirmed"
-                    ? "✓ 모임이 확정됐어요"
-                    : anyGender
-                      ? "✓ 자리 잡았어요 · 정원이 차면 확정돼요"
-                      : "✓ 자리 잡았어요 · 성비가 맞으면 확정돼요"
-                : busy
-                  ? "신청 중…"
-                  : started
-                    ? "이미 시작한 모임이에요"
-                    : full
-                      ? "자리가 다 찼어요"
-                      : `참여 신청하기 · ${SESSION_JOIN_COST}크레딧`}
-      </button>
-
       {s.iAmHost && !started && !dead ? (
         <button
           onClick={onDelete}
           disabled={busy}
-          className="mb-8 -mt-4 w-full rounded-xl border border-danger py-3 text-[13.5px] font-bold text-danger disabled:opacity-50"
+          className="mt-6 w-full py-2 text-center text-[13px] font-medium text-danger disabled:opacity-50"
         >
           모임 삭제하기
         </button>
@@ -611,11 +580,65 @@ export default function SessionDetail() {
         <button
           onClick={onLeave}
           disabled={busy}
-          className="mb-8 -mt-4 w-full py-2 text-[13px] font-semibold text-muted underline underline-offset-4 disabled:opacity-50"
+          className="mt-6 w-full py-2 text-[13px] font-medium text-muted underline underline-offset-4 disabled:opacity-50"
         >
           {s.myStatus === "confirmed" ? "모임에서 나가기" : "신청 취소하기"}
         </button>
       )}
     </main>
+
+    {/* 신청 CTA — 하단 고정. 목록이 아니라 여기서 신청한다 */}
+    <div
+      className="fixed inset-x-0 z-10"
+      style={{ bottom: "calc(3.5rem + env(safe-area-inset-bottom))" }}
+    >
+      <div className="mx-auto max-w-md border-t border-line bg-surface px-4 py-3">
+        <button
+          // 내가 연 모임에는 신청할 수 없다. 시작한 모임도 마찬가지.
+          disabled={busy || joined || s.iAmHost || full || started || dead}
+          className={`w-full rounded-xl py-3.5 text-[15px] font-semibold ${
+            dead || s.iAmHost || full || started
+              ? "bg-surface2 text-faint"
+              : joined
+                ? "bg-accent-soft text-accent-pressed"
+                : "bg-accent text-white active:bg-accent-pressed disabled:opacity-70"
+          }`}
+          onClick={onJoin}
+        >
+          {/* 끝났거나 취소된 모임이면 그 말이 먼저다. 예전엔 이 분기가
+              없어서, 채팅에 "매칭이 취소되었어요" 가 떠 있는 모임을 열어도
+              "모임이 확정됐어요" 라고 했다. toSession 이 cancelled 를
+              confirmed 로 뭉개는 탓에 여기서는 구분조차 못 했다.
+
+              "확정" 이 두 가지를 뜻하는 것도 그대로다 — 내 자리가 잡혔다 ·
+              모임이 성사됐다. 성비가 안 맞으면 자리는 잡혀도 모임은 아직
+              안 열린다. */}
+          {s.cancelled
+            ? "취소된 모임이에요"
+            : missed
+              ? "이번엔 함께하지 못했어요 · 신청비는 돌려드려요"
+              : ended
+                ? "끝난 모임이에요"
+                : s.iAmHost
+                ? "내가 연 모임이에요"
+                : joined
+                  ? s.myStatus !== "confirmed"
+                    ? "승인 대기 중 · 호스트가 확인하면 알려드려요"
+                    : s.status === "confirmed"
+                      ? "모임이 확정됐어요"
+                      : anyGender
+                        ? "자리 잡았어요 · 정원이 차면 확정돼요"
+                        : "자리 잡았어요 · 성비가 맞으면 확정돼요"
+                  : busy
+                    ? "신청 중…"
+                    : started
+                      ? "이미 시작한 모임이에요"
+                      : full
+                        ? "자리가 다 찼어요"
+                        : `참여 신청하기 · ${SESSION_JOIN_COST}크레딧`}
+        </button>
+      </div>
+    </div>
+    </>
   );
 }

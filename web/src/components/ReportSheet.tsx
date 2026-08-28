@@ -70,16 +70,17 @@ export default function ReportSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-black/60" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end bg-black/50" onClick={onClose}>
       <div
-        className="max-h-[85vh] w-full overflow-y-auto rounded-t-3xl border-t border-line bg-surface p-5"
+        className="max-h-[85vh] w-full overflow-y-auto rounded-t-2xl bg-surface p-5"
         style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-[17px] font-extrabold">{nickname}님 신고하기</p>
+        <p className="text-[17px] font-bold">{nickname}님 신고하기</p>
         <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted">
-          어떤 점이 문제였는지 알려주세요. 신고하면 <b className="text-ink">차단도
-          함께</b> 되어 서로 보이지 않게 돼요.
+          어떤 점이 문제였는지 알려주세요. 신고하면{" "}
+          <b className="font-semibold text-ink">차단도 함께</b> 되어 서로 보이지
+          않게 돼요.
         </p>
 
         <div className="mt-4 flex flex-col gap-1.5">
@@ -87,13 +88,13 @@ export default function ReportSheet({
             <button
               key={r.id}
               onClick={() => setReason(r.id)}
-              className={`rounded-xl border px-4 py-3 text-left transition-colors ${
+              className={`rounded-lg border px-4 py-3 text-left transition-colors ${
                 reason === r.id
-                  ? "border-accent bg-accent/10"
-                  : "border-line bg-bg"
+                  ? "border-accent bg-accent-soft"
+                  : "border-line bg-surface"
               }`}
             >
-              <p className="text-[14px] font-bold">{r.label}</p>
+              <p className="text-[14px] font-medium">{r.label}</p>
               {r.hint && (
                 <p className="mt-0.5 text-[12px] text-muted">{r.hint}</p>
               )}
@@ -107,21 +108,21 @@ export default function ReportSheet({
           placeholder="자세한 내용을 적어주시면 확인에 도움이 돼요 (선택)"
           rows={3}
           /* iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다 */
-          className="mt-3 w-full resize-none rounded-xl border border-line bg-bg px-3.5 py-3 text-[16px] text-ink placeholder:text-muted/60"
+          className="mt-3 w-full resize-none rounded-lg border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-faint focus:border-accent focus:outline-none"
         />
 
         <div className="mt-4 flex gap-2">
           <button
             onClick={onClose}
             disabled={busy}
-            className="flex-1 rounded-xl border border-line py-3.5 text-[14px] font-bold disabled:opacity-50"
+            className="flex-1 rounded-xl border border-line py-3.5 text-[14px] font-medium disabled:opacity-50"
           >
             취소
           </button>
           <button
             onClick={submit}
             disabled={busy || !reason}
-            className="flex-1 rounded-xl border border-danger py-3.5 text-[14px] font-bold text-danger disabled:opacity-40"
+            className="flex-1 rounded-xl border border-danger py-3.5 text-[14px] font-semibold text-danger disabled:opacity-40"
           >
             {busy ? "접수 중…" : "신고하고 차단"}
           </button>

@@ -13,8 +13,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "취미로 시작해서, 사람으로 끝나는 하루 — 볼더링 모임 매칭",
     start_url: "/",
     display: "standalone", // 주소창·탭 숨김
-    background_color: "#0f0e0d",
-    theme_color: "#0f0e0d",
+    background_color: "#ffffff",
+    theme_color: "#ffffff",
     lang: "ko",
     icons: [
       // apple-icon.tsx / icon.tsx 가 빌드 때 PNG 로 생성된다

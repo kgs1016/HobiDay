@@ -9,10 +9,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 import OAuthButtons from "@/components/OAuthButtons";
+import { ChevronLeftIcon } from "@/components/icons";
 
 const inputCls =
   // iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다 — 16px 유지
-  "w-full rounded-xl border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-muted/60";
+  "w-full rounded-lg border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-faint focus:border-accent focus:outline-none";
 
 export default function Login() {
   const router = useRouter();
@@ -64,15 +65,19 @@ export default function Login() {
       {/* 로그아웃이 replace 로 와서 히스토리가 꼬여 있을 수 있다 —
           항상 첫 화면(하비데이가 뭔가요? 가 있는)으로 보낸다 */}
       <div className="pt-5">
-        <Link href="/" aria-label="처음으로" className="text-lg text-muted">
-          ←
+        <Link
+          href="/"
+          aria-label="처음으로"
+          className="-ml-2 flex h-10 w-10 items-center justify-center text-ink"
+        >
+          <ChevronLeftIcon size={22} />
         </Link>
       </div>
-      <header className="pt-4 pb-6 text-center">
-        <p className="text-[17px] font-extrabold tracking-[2px] text-accent">
+      <header className="pt-3 pb-6 text-center">
+        <p className="text-[14px] font-bold tracking-[2px] text-accent">
           HOBIDAY
         </p>
-        <h1 className="mt-3 text-[21px] font-extrabold tracking-tight">
+        <h1 className="mt-3 text-[21px] font-bold tracking-tight">
           로그인
         </h1>
         <p className="mt-1.5 text-[13px] text-muted">
@@ -101,13 +106,13 @@ export default function Login() {
         />
         <button
           disabled={busy}
-          className="mt-1 rounded-xl bg-accent py-3.5 text-[15px] font-bold text-white disabled:opacity-50"
+          className="mt-1 rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
         >
           {busy ? "처리 중…" : "로그인"}
         </button>
         <Link
           href="/reset"
-          className="mt-1 text-center text-[12.5px] font-semibold text-muted underline underline-offset-4"
+          className="mt-1 text-center text-[12.5px] font-medium text-muted underline underline-offset-4"
         >
           비밀번호를 잊으셨나요?
         </Link>
@@ -115,7 +120,7 @@ export default function Login() {
 
       {/* 애플 심사 1.2 — UGC 앱은 약관 동의가 가입 흐름에 보여야 한다.
           소셜 로그인은 이 화면에서 바로 가입될 수 있어서 여기에도 둔다. */}
-      <p className="mt-4 text-center text-[11.5px] leading-relaxed text-muted/80">
+      <p className="mt-4 text-center text-[11.5px] leading-relaxed text-faint">
         가입하면 하비데이의{" "}
         <Link href="/terms" className="underline underline-offset-2 text-muted">
           이용약관
@@ -129,9 +134,10 @@ export default function Login() {
 
       <Link
         href="/signup"
-        className="mt-5 block w-full text-center text-[13px] font-semibold text-muted"
+        className="mt-5 block w-full text-center text-[13px] font-medium text-muted"
       >
-        계정이 없으신가요? <span className="text-accent">회원가입</span>
+        계정이 없으신가요?{" "}
+        <span className="font-semibold text-accent-pressed">회원가입</span>
       </Link>
     </main>
   );

@@ -7,6 +7,8 @@ import SessionCard from "@/components/SessionCard";
 import SessionFilterBar from "@/components/SessionFilterBar";
 import ProfileTodo from "@/components/ProfileTodo";
 import ReportSheet from "@/components/ReportSheet";
+import { AvatarFallback, PlusIcon } from "@/components/icons";
+import { HoldIllust, ShoeIllust } from "@/components/illustrations";
 import { notifyPush } from "@/lib/nativePush";
 import { MOCK_SESSIONS, MOCK_PEOPLE, type Session, type Person } from "@/lib/mock";
 import { careerLabel, level } from "@/lib/levels";
@@ -119,7 +121,7 @@ export default function Home() {
       const paths = [
         ...(ppl ?? []).map((x) => x.photo),
         ...(rows ?? []).map((r) => r.host_photo),
-        prof?.photo, // "내 프로필 (공개 중)" 카드 — 빼먹으면 내 사진만 이모지로 뜬다
+        prof?.photo, // "내 프로필 (공개 중)" 줄 — 빼먹으면 내 사진만 비어 뜬다
       ].filter(Boolean) as string[];
       if (ppl) setPeople(ppl);
       if (paths.length > 0) setPhotoUrls(await signedPhotoUrls(paths));
@@ -192,12 +194,14 @@ export default function Home() {
     return (
       <main className="px-4">
         <header className="pt-10 text-center">
-          <p className="text-[17px] font-extrabold tracking-[2px] text-accent">
+          <p className="text-[14px] font-bold tracking-[2px] text-accent">
             HOBIDAY
           </p>
-          <p className="mt-6 text-4xl">🧗</p>
-          <h1 className="mt-4 text-[21px] font-extrabold leading-snug tracking-tight">
-            가입 완료!
+          <div className="mt-7 flex justify-center">
+            <HoldIllust size={76} />
+          </div>
+          <h1 className="mt-5 text-[21px] font-bold leading-snug tracking-tight">
+            가입 완료
             {openDay && (
               <>
                 <br />
@@ -212,34 +216,38 @@ export default function Home() {
           )}
         </header>
 
-        <section className="mx-auto mt-8 max-w-sm rounded-2xl border border-mint/40 bg-mint/10 p-5 text-center">
-          <p className="text-[12.5px] font-semibold text-muted">내 크레딧</p>
-          <p className="mt-1 text-[32px] font-extrabold text-mint">
+        <section className="mx-auto mt-8 flex max-w-sm items-center justify-between rounded-xl bg-surface2 px-5 py-4">
+          <p className="text-[14px] text-muted">내 크레딧</p>
+          <p className="text-[20px] font-bold">
             {(credits?.balance ?? 0).toLocaleString()}
           </p>
-          <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
-            오픈하면 관심 {Math.floor((credits?.balance ?? 0) / REQUEST_COST)}번을
-            보낼 수 있어요
-          </p>
         </section>
+        <p className="mx-auto mt-2 max-w-sm px-1 text-[12.5px] text-faint">
+          오픈하면 관심 {Math.floor((credits?.balance ?? 0) / REQUEST_COST)}번을
+          보낼 수 있어요
+        </p>
 
-        <section className="mx-auto mt-4 max-w-sm rounded-2xl border border-line bg-surface p-5">
-          <p className="text-[13.5px] font-bold">오픈하면 이런 걸 할 수 있어요</p>
-          <div className="mt-3 flex flex-col gap-2.5 text-[12.5px] leading-relaxed text-muted">
+        <section className="mx-auto mt-6 max-w-sm rounded-xl bg-surface2 p-5">
+          <p className="text-[13.5px] font-semibold">오픈하면 할 수 있는 것</p>
+          <div className="mt-3 flex flex-col gap-2.5 text-[13px] leading-relaxed">
             <p>
-              🧗 <b className="text-ink">모임 찾기</b> — 남녀 반반으로, 또는
-              성별 상관없이 모여 함께 볼더링
+              <span className="font-medium">모임 찾기</span>
+              <span className="text-muted">
+                {" "}
+                — 남녀 반반으로, 또는 성별 상관없이 함께 볼더링
+              </span>
             </p>
             <p>
-              💌 <b className="text-ink">사람 찾기</b> — 마음에 드는 사람에게 관심
-              보내기
+              <span className="font-medium">사람 찾기</span>
+              <span className="text-muted"> — 마음에 드는 사람에게 관심 보내기</span>
             </p>
             <p>
-              🎥 <b className="text-ink">등반 영상</b> — 서로 찍어주고 크레딧 적립
+              <span className="font-medium">등반 영상</span>
+              <span className="text-muted"> — 서로 찍어주고 크레딧 적립</span>
             </p>
             <p>
-              💬 <b className="text-ink">채팅</b> — 관심을 수락하면 1:1, 모임이
-              확정되면 참가자 단체방
+              <span className="font-medium">채팅</span>
+              <span className="text-muted"> — 수락하면 1:1, 확정되면 단체방</span>
             </p>
           </div>
         </section>
@@ -247,13 +255,13 @@ export default function Home() {
         <div className="mx-auto mt-4 max-w-sm">
           <Link
             href="/profile/new"
-            className="block rounded-xl border border-line bg-surface py-3.5 text-center text-[14px] font-bold text-muted"
+            className="block rounded-xl border border-line py-3.5 text-center text-[14px] font-semibold text-ink"
           >
             내 프로필 다듬기
           </Link>
         </div>
 
-        <p className="mt-6 text-center text-[11.5px] leading-relaxed text-muted">
+        <p className="mt-6 text-center text-[12px] text-faint">
           오픈 소식은 가입하신 이메일로 알려드려요.
         </p>
       </main>
@@ -274,44 +282,43 @@ export default function Home() {
     return (
       <main className="px-4">
         <header className="pt-16 text-center">
-          <p className="text-[17px] font-extrabold tracking-[2px] text-accent">
+          <p className="text-[14px] font-bold tracking-[2px] text-accent">
             HOBIDAY
           </p>
-          <h1 className="mt-4 text-[21px] font-extrabold leading-snug tracking-tight">
+          <h1 className="mt-4 text-[22px] font-bold leading-snug tracking-tight">
             취미로 시작해서,
             <br />
             사람으로 끝나는 하루
           </h1>
         </header>
 
-        <div className="mx-auto mt-8 flex max-w-sm flex-col gap-2">
+        <div className="mx-auto mt-9 flex max-w-sm flex-col gap-2">
           <Link
             href="/login"
-            className="rounded-xl bg-accent py-3.5 text-center text-[15px] font-bold text-white"
+            className="rounded-xl bg-accent py-3.5 text-center text-[15px] font-semibold text-white active:bg-accent-pressed"
           >
             로그인 하기
           </Link>
           <Link
             href="/intro.html"
-            className="rounded-xl border border-line bg-surface py-3.5 text-center text-[14px] font-bold text-ink"
+            className="rounded-xl border border-line py-3.5 text-center text-[14px] font-medium text-ink"
           >
             하비데이가 뭔가요?
           </Link>
         </div>
 
         {preOpen && (
-          <section className="mx-auto mt-6 max-w-sm rounded-2xl border border-line bg-surface px-5 py-4 text-center">
-            <p className="text-[13px] font-bold text-mint">
-              {openDay ? `${openDay} 오픈 · ` : ""}지금은 사전 가입을 받고 있어요
+          <section className="mx-auto mt-7 max-w-sm rounded-xl bg-surface2 px-5 py-4 text-center">
+            <p className="text-[13px] font-semibold">
+              {openDay ? `${openDay} 오픈 · ` : ""}지금은 사전 가입 중이에요
             </p>
             <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted">
-              조금만 기다려 주세요. 오픈하면{" "}
-              <b className="text-ink">가입하신 이메일로</b> 알려드릴게요.
+              오픈하면 가입하신 이메일로 알려드릴게요.
             </p>
           </section>
         )}
 
-        <p className="mt-6 text-center text-[11.5px] leading-relaxed text-muted">
+        <p className="mt-6 text-center text-[12px] text-faint">
           참여자 프로필을 보호하려고 로그인 후에만 공개해요.
         </p>
       </main>
@@ -322,9 +329,8 @@ export default function Home() {
   // 여기서 목록을 그리면 빈 목록이나 목데이터가 잠깐 보인다.
   if (!ready) {
     return (
-      <main className="px-4 pt-24 text-center">
-        <p className="text-3xl">🧗</p>
-        <p className="mt-3 text-[13.5px] text-muted">불러오는 중…</p>
+      <main className="px-4 pt-28 text-center">
+        <p className="text-[13.5px] text-faint">불러오는 중…</p>
       </main>
     );
   }
@@ -343,15 +349,21 @@ export default function Home() {
 
   return (
     <main className="px-4">
-      {/* 헤더 */}
-      <header className="pt-6 pb-4">
-        <div className="flex items-center justify-between">
-          <p className="text-[17px] font-extrabold tracking-[2px] text-accent">
-            HOBIDAY
-          </p>
-          {/* 알림함 — 푸시를 놓쳐도 여기 남아 있다.
-              이모지를 쓰면 기기마다 다른 그림이 나오고 혼자 색이 튄다.
-              선만 있는 종으로 둔다. */}
+      {/* 헤더 — 로고는 작게, 오른쪽에 만들기·알림만 */}
+      <header className="flex items-center justify-between pt-5 pb-3">
+        <p className="text-[16px] font-bold tracking-[1.5px] text-accent">
+          HOBIDAY
+        </p>
+        <div className="flex items-center gap-3">
+          {/* 프로필 관리는 내 정보 탭에서 들어가면 되니 홈에서는 뺐다 */}
+          <Link
+            href="/session/new"
+            className="flex items-center gap-1 py-1 text-[13.5px] font-semibold text-accent-pressed"
+          >
+            <PlusIcon size={14} strokeWidth={2.2} />
+            모임 만들기
+          </Link>
+          {/* 알림함 — 푸시를 놓쳐도 여기 남아 있다 */}
           <Link
             href="/notifications"
             aria-label="알림"
@@ -372,36 +384,29 @@ export default function Home() {
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
             {unread > 0 && (
-              <span className="absolute right-0 top-0 min-w-[16px] rounded-full bg-danger px-1 text-center text-[10px] font-bold leading-[16px] text-white">
+              <span className="absolute right-0 top-0 min-w-[15px] rounded-full bg-danger px-1 text-center text-[9.5px] font-bold leading-[15px] text-white">
                 {unread > 99 ? "99+" : unread}
               </span>
             )}
           </Link>
         </div>
-        {/* 프로필 관리는 내 정보 탭에서 들어가면 되니 홈에서는 뺐다.
-            애초에 프로필이 없으면 RequireProfile 이 막아서 이 화면에
-            들어오지도 못한다 — 여기에 "올리기" 버튼이 있을 이유가 없었다. */}
-        <Link
-          href="/session/new"
-          className="mt-4 block rounded-xl bg-accent py-3 text-center text-[14px] font-bold text-white"
-        >
-          + 모임 만들기
-        </Link>
       </header>
 
-      {/* 탭 */}
-      <div className="flex border-b border-line">
+      {/* 탭 — 텍스트만, 밑줄은 글자 폭만큼 */}
+      <div className="flex gap-5 border-b border-line">
         {(
           [
-            ["session", "모임 찾기"],
-            ["people", "사람 찾기"],
+            ["session", "모임"],
+            ["people", "사람"],
           ] as const
         ).map(([key, label]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`flex-1 pb-2.5 pt-1 text-[15px] font-bold ${
-              tab === key ? "border-b-2 border-accent text-ink" : "text-muted"
+            className={`-mb-px border-b-2 pb-2.5 pt-1 text-[15.5px] ${
+              tab === key
+                ? "border-ink font-bold text-ink"
+                : "border-transparent font-medium text-faint"
             }`}
           >
             {label}
@@ -416,178 +421,158 @@ export default function Home() {
             onChange={setFilter}
             gyms={gymChoices}
           />
-          <div className="flex flex-col gap-3 pt-3 pb-6">
-            {!live && hasSupabase() === false && (
-              <p className="rounded-xl border border-dashed border-line px-4 py-2.5 text-center text-[11.5px] text-muted">
-                미리보기 데이터예요 · Supabase 연결 후 실제 모임이 표시됩니다
+
+          {!live && hasSupabase() === false && (
+            <p className="mt-3 rounded-lg bg-surface2 px-4 py-2.5 text-center text-[11.5px] text-faint">
+              미리보기 데이터예요 · Supabase 연결 후 실제 모임이 표시됩니다
+            </p>
+          )}
+
+          {/* 빈 화면이 두 가지다. 열린 모임이 없는 것과, 있는데 내가
+              건 조건에 안 걸리는 것 — 할 일이 다르니 말도 다르게 한다. */}
+          {sessions.length === 0 ? (
+            <div className="flex flex-col items-center py-16 text-center">
+              <HoldIllust size={68} />
+              <p className="mt-4 text-[15px] font-semibold">
+                아직 열린 모임이 없어요
               </p>
-            )}
-            {/* 빈 화면이 두 가지다. 열린 모임이 없는 것과, 있는데 내가
-                건 조건에 안 걸리는 것 — 할 일이 다르니 말도 다르게 한다. */}
-            {sessions.length === 0 ? (
-              <div className="py-14 text-center">
-                <p className="text-3xl">🧗</p>
-                <p className="mt-2 text-[14px] font-bold">아직 열린 모임이 없어요</p>
-                <p className="mt-1 text-[12.5px] text-muted">
-                  첫 모임을 직접 열어보세요!
-                </p>
-              </div>
-            ) : shown.length === 0 ? (
-              <div className="py-14 text-center">
-                <p className="text-3xl">🔍</p>
-                <p className="mt-2 text-[14px] font-bold">조건에 맞는 모임이 없어요</p>
-                <button
-                  onClick={() => setFilter(EMPTY_FILTER)}
-                  className="mt-3 rounded-xl border border-line px-4 py-2 text-[13px] font-bold text-muted"
-                >
-                  필터 초기화
-                </button>
-              </div>
-            ) : (
-              shown.map((s) => (
+              <p className="mt-1 text-[13px] text-muted">
+                첫 모임을 직접 열어보세요.
+              </p>
+              <Link
+                href="/session/new"
+                className="mt-4 rounded-lg bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-white active:bg-accent-pressed"
+              >
+                모임 만들기
+              </Link>
+            </div>
+          ) : shown.length === 0 ? (
+            <div className="py-16 text-center">
+              <p className="text-[14px] font-medium">조건에 맞는 모임이 없어요</p>
+              <button
+                onClick={() => setFilter(EMPTY_FILTER)}
+                className="mt-3 text-[13px] font-medium text-accent-pressed"
+              >
+                필터 초기화
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col divide-y divide-line pb-6">
+              {shown.map((s) => (
                 <SessionCard
                   key={s.id}
                   session={s}
                   hostPhotoUrl={s.host?.photo ? photoUrls[s.host.photo] : undefined}
                 />
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </>
       ) : (
-        <div className="flex flex-col gap-3 py-4 pb-6">
-          {/* 내 프로필 (공개 중) */}
+        <div className="pb-6">
+          {/* 내 프로필 (공개 중) — 목록 위의 한 줄 */}
           {me ? (
-            <div className="rounded-2xl border border-mint/40 bg-mint/5 p-4">
-              <div className="flex items-center gap-3.5">
-                {me.photo && photoUrls[me.photo] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={photoUrls[me.photo]}
-                    alt="내 프로필 사진"
-                    className="h-14 w-14 shrink-0 rounded-full object-cover"
-                  />
-                ) : (
-                  <div
-                    className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xl ${
-                      me.gender === "f" ? "bg-female/15" : "bg-male/15"
-                    }`}
-                  >
-                    🧗
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="font-extrabold text-[15px]">
-                    {me.nickname}
-                    <span className="ml-1.5 rounded-full bg-mint/15 px-2 py-0.5 text-[10.5px] font-bold text-mint align-middle">
-                      공개 중
-                    </span>
-                  </p>
-                  <p className="mt-0.5 text-[12.5px] text-muted">
-                    {[
-                      me.age,
-                      me.area,
-                      `L${me.level} ${level(me.level).name}`,
-                      me.homeGym,
-                      me.mbti,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                  {me.intro && (
-                    <p className="mt-1 text-[12.5px] text-ink/85">
-                      &ldquo;{me.intro}&rdquo;
-                    </p>
-                  )}
-                </div>
-                <Link
-                  href="/profile/new"
-                  className="shrink-0 rounded-lg border border-line px-3 py-1.5 text-[12px] font-bold text-muted"
-                >
-                  관리
-                </Link>
+            <div className="flex items-center gap-3.5 border-b border-line py-4">
+              {me.photo && photoUrls[me.photo] ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={photoUrls[me.photo]}
+                  alt="내 프로필 사진"
+                  className="h-12 w-12 shrink-0 rounded-full object-cover"
+                />
+              ) : (
+                <AvatarFallback size={48} />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-[14.5px] font-semibold">
+                  {me.nickname}
+                  <span className="ml-1.5 align-middle text-[11px] font-medium text-accent-pressed">
+                    공개 중
+                  </span>
+                </p>
+                <p className="mt-0.5 truncate text-[12.5px] text-muted">
+                  {[
+                    me.age,
+                    me.area,
+                    `L${me.level}`,
+                    careerLabel(me.careerId) && `클라이밍 ${careerLabel(me.careerId)}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
               </div>
+              <Link
+                href="/profile/new"
+                className="shrink-0 text-[13px] font-medium text-muted"
+              >
+                관리
+              </Link>
             </div>
           ) : (
             <Link
               href="/profile/new"
-              className="rounded-xl border border-dashed border-line bg-surface2 px-4 py-3.5 text-center text-[13px] font-semibold text-muted"
+              className="mt-3 block rounded-lg bg-surface2 px-4 py-3.5 text-center text-[13px] font-medium text-muted"
             >
-              + 내 프로필을 올리면 여기에 공개돼요
+              내 프로필을 올리면 여기에 공개돼요
             </Link>
           )}
 
-          {me && <ProfileTodo profile={me} />}
+          {me && (
+            <div className="pt-3">
+              <ProfileTodo profile={me} />
+            </div>
+          )}
 
           {/* 이성만 걸러 오므로 빈 경우가 생긴다. 아무것도 안 그리면
               고장난 것처럼 보인다 — 왜 비었는지 말해준다. */}
           {people.length === 0 && (
-            <div className="py-12 text-center">
-              <p className="text-3xl">🧗</p>
-              <p className="mt-2 text-[14px] font-bold">
+            <div className="flex flex-col items-center py-14 text-center">
+              <ShoeIllust size={68} />
+              <p className="mt-4 text-[15px] font-semibold">
                 아직 볼 수 있는 프로필이 없어요
               </p>
-              <p className="mt-1 text-[12.5px] leading-relaxed text-muted">
-                프로필을 공개한 이성 회원이 생기면
-                <br />
-                여기에 바로 보여요
+              <p className="mt-1 text-[13px] leading-relaxed text-muted">
+                프로필을 공개한 이성 회원이 생기면 바로 보여요.
               </p>
             </div>
           )}
 
-          {people.map((p) => (
-            <div
-              key={p.id}
-              className="flex items-center gap-3.5 rounded-2xl border border-line bg-surface p-4"
-            >
-              {/* 사진·정보를 누르면 상세 — 관심을 보내기 전에 크게 본다 */}
-              <button
-                onClick={() => setDetail(p)}
-                className="flex min-w-0 flex-1 items-center gap-3.5 text-left"
-              >
-                {p.photo && photoUrls[p.photo] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={photoUrls[p.photo]}
-                    alt={p.nickname}
-                    className="h-14 w-14 shrink-0 rounded-full object-cover"
-                  />
-                ) : (
-                  <div
-                    className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xl ${
-                      p.gender === "f" ? "bg-female/15" : "bg-male/15"
-                    }`}
-                  >
-                    🧗
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="font-extrabold text-[15px]">
-                    {p.nickname}
-                    <span className="ml-1.5 text-[12.5px] font-medium text-muted">
-                      {[p.age, p.height && `${p.height}cm`, p.area]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  </p>
-                  <p className="mt-0.5 truncate text-[12.5px] text-muted">
-                    {[
-                      `L${p.level} ${level(p.level).name}`,
-                      careerLabel(p.careerId) && `구력 ${careerLabel(p.careerId)}`,
-                      p.homeGym,
-                      p.mbti,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                  {p.intro && (
-                    <p className="mt-1 truncate text-[12.5px] text-ink/85">
-                      &ldquo;{p.intro}&rdquo;
-                    </p>
+          <div className="flex flex-col divide-y divide-line">
+            {people.map((p) => (
+              <div key={p.id} className="flex items-center gap-4 py-4">
+                {/* 사진·정보를 누르면 상세 — 관심을 보내기 전에 크게 본다.
+                    신고는 상세 시트에서 한다. */}
+                <button
+                  onClick={() => setDetail(p)}
+                  className="flex min-w-0 flex-1 items-center gap-4 text-left"
+                >
+                  {p.photo && photoUrls[p.photo] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={photoUrls[p.photo]}
+                      alt={p.nickname}
+                      className="h-[72px] w-[72px] shrink-0 rounded-full object-cover"
+                    />
+                  ) : (
+                    <AvatarFallback size={72} />
                   )}
-                </div>
-              </button>
-              <div className="flex shrink-0 flex-col items-stretch gap-1">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[15.5px] font-semibold">
+                      {p.nickname}
+                      <span className="ml-1.5 text-[13.5px] font-normal text-muted">
+                        {p.age}
+                      </span>
+                    </p>
+                    <p className="mt-0.5 truncate text-[13px] text-muted">
+                      {[p.area, `L${p.level}`].filter(Boolean).join(" · ")}
+                    </p>
+                    {careerLabel(p.careerId) && (
+                      <p className="mt-0.5 text-[12.5px] text-faint">
+                        클라이밍 {careerLabel(p.careerId)}
+                      </p>
+                    )}
+                  </div>
+                </button>
                 {/* 관심 하나로 통일 — 보내면 상대 신청함에 뜨고, 수락하면 채팅이 열린다 */}
                 <button
                   disabled={sentTo.has(p.id)}
@@ -595,36 +580,29 @@ export default function Home() {
                     setReqTarget(p);
                     setReqMsg("");
                   }}
-                  className={`rounded-lg px-3 py-2 text-[12px] font-bold ${
+                  className={`shrink-0 rounded-lg px-3.5 py-2 text-[12.5px] font-semibold ${
                     sentTo.has(p.id)
-                      ? "border border-line text-muted"
-                      : "bg-accent text-white"
+                      ? "bg-surface2 text-faint"
+                      : "bg-accent text-white active:bg-accent-pressed"
                   }`}
                 >
                   {sentTo.has(p.id) ? "보냈어요" : "관심"}
                 </button>
-                <button
-                  onClick={() => setReportTarget(p)}
-                  aria-label={`${p.nickname}님 신고하기`}
-                  className="py-1 text-[11px] font-semibold text-muted/70"
-                >
-                  신고
-                </button>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 
-      {/* 프로필 상세 — 목록 카드는 한 줄 요약뿐이라, 관심을 정하기 전에
+      {/* 프로필 상세 — 목록은 한 줄 요약뿐이라, 관심을 정하기 전에
           큰 사진과 전체 소개를 볼 자리가 필요하다 */}
       {detail && (
         <div
-          className="fixed inset-0 z-30 flex items-end bg-black/60"
+          className="fixed inset-0 z-30 flex items-end bg-black/50"
           onClick={() => setDetail(null)}
         >
           <div
-            className="mx-auto max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-line bg-surface p-5"
+            className="mx-auto max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-surface p-5"
             style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -633,21 +611,17 @@ export default function Home() {
               <img
                 src={photoUrls[detail.photo]}
                 alt={detail.nickname}
-                className="aspect-square w-full rounded-2xl object-cover"
+                className="aspect-square w-full rounded-xl object-cover"
               />
             ) : (
-              <div
-                className={`flex aspect-square w-full items-center justify-center rounded-2xl text-6xl ${
-                  detail.gender === "f" ? "bg-female/15" : "bg-male/15"
-                }`}
-              >
-                🧗
+              <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-surface2">
+                <ShoeIllust size={88} />
               </div>
             )}
 
-            <p className="mt-4 text-[19px] font-extrabold">
+            <p className="mt-4 text-[19px] font-bold">
               {detail.nickname}
-              <span className="ml-2 text-[13px] font-medium text-muted">
+              <span className="ml-2 text-[13.5px] font-normal text-muted">
                 {[detail.age, detail.height && `${detail.height}cm`, detail.area]
                   .filter(Boolean)
                   .join(" · ")}
@@ -665,7 +639,7 @@ export default function Home() {
                 .join(" · ")}
             </p>
             {detail.intro && (
-              <p className="mt-3 rounded-r-lg border-l-[3px] border-accent bg-surface2 px-3 py-2.5 text-[13.5px] leading-relaxed">
+              <p className="mt-3 rounded-lg bg-surface2 px-3.5 py-3 text-[13.5px] leading-relaxed">
                 &ldquo;{detail.intro}&rdquo;
               </p>
             )}
@@ -676,7 +650,7 @@ export default function Home() {
                   setReportTarget(detail);
                   setDetail(null);
                 }}
-                className="rounded-xl border border-line px-4 py-3.5 text-[13px] font-bold text-muted"
+                className="rounded-xl border border-line px-4 py-3.5 text-[13px] font-medium text-muted"
               >
                 신고
               </button>
@@ -687,10 +661,10 @@ export default function Home() {
                   setReqMsg("");
                   setDetail(null);
                 }}
-                className={`flex-1 rounded-xl py-3.5 text-[14px] font-bold ${
+                className={`flex-1 rounded-xl py-3.5 text-[14.5px] font-semibold ${
                   sentTo.has(detail.id)
-                    ? "border border-line text-muted"
-                    : "bg-accent text-white"
+                    ? "bg-surface2 text-faint"
+                    : "bg-accent text-white active:bg-accent-pressed"
                 }`}
               >
                 {sentTo.has(detail.id)
@@ -705,24 +679,24 @@ export default function Home() {
       {/* 관심 보내기 시트 — 한 줄 메시지를 붙이면 받는 쪽이 맥락을 보고 판단한다 */}
       {reqTarget && (
         <div
-          className="fixed inset-0 z-30 flex items-end bg-black/60"
+          className="fixed inset-0 z-30 flex items-end bg-black/50"
           onClick={() => setReqTarget(null)}
         >
           <div
-            className="mx-auto w-full max-w-md rounded-t-2xl border-t border-line bg-surface p-5 pb-8"
+            className="mx-auto w-full max-w-md rounded-t-2xl bg-surface p-5 pb-8"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-[16px] font-extrabold">
+            <p className="text-[16.5px] font-bold">
               {reqTarget.nickname}님에게 관심 보내기
             </p>
-            <p className="mt-1 text-[12.5px] leading-relaxed text-muted">
-              한 줄 남기면 수락될 가능성이 높아요. 비워도 됩니다.
+            <p className="mt-1 text-[12.5px] text-muted">
+              한 줄 남기면 수락될 가능성이 높아요.
             </p>
             {/* 보내고 나서 알면 늦다 — 누르기 전에 다 말해준다 */}
-            <ul className="mt-2.5 flex flex-col gap-1 rounded-xl bg-surface2 px-3.5 py-3 text-[11.5px] leading-relaxed text-muted">
+            <ul className="mt-2.5 flex flex-col gap-1 rounded-lg bg-surface2 px-3.5 py-3 text-[11.5px] leading-relaxed text-muted">
               <li>
-                · <b className="text-ink">보내면 크레딧이 바로 쓰여요.</b> 수락
-                여부와 상관없이 돌려드리지 않아요
+                · <b className="font-semibold text-ink">보내면 크레딧이 바로 쓰여요.</b>{" "}
+                수락 여부와 상관없이 돌려드리지 않아요
               </li>
               <li>
                 · 상대가 거절하거나 보낸 지 7일이 지나면 보낸 관심에서
@@ -734,26 +708,26 @@ export default function Home() {
               onChange={(e) => setReqMsg(e.target.value.slice(0, 200))}
               rows={3}
               placeholder={`예: 같은 ${reqTarget.homeGym} 다니네요! 주말에 같이 타요`}
-              className="mt-3 w-full resize-none rounded-xl border border-line bg-surface2 px-3.5 py-3 text-[16px] text-ink placeholder:text-muted/60"
+              className="mt-3 w-full resize-none rounded-lg bg-surface2 px-3.5 py-3 text-[16px] text-ink placeholder:text-faint focus:outline-none"
             />
-            <p className="mt-1 text-right text-[11.5px] text-muted">
+            <p className="mt-1 text-right text-[11.5px] text-faint">
               {reqMsg.length}/200
             </p>
             <button
               disabled={reqBusy}
               onClick={sendReq}
-              className="mt-2 w-full rounded-xl bg-accent py-3.5 text-[15px] font-bold text-white disabled:opacity-50"
+              className="mt-2 w-full rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
             >
-              {reqBusy ? "보내는 중…" : `관심 보내기 (${REQUEST_COST}크레딧)`}
+              {reqBusy ? "보내는 중…" : `관심 보내기 · ${REQUEST_COST}크레딧`}
             </button>
             {credits && (
-              <p className="mt-1.5 text-center text-[11.5px] text-muted">
+              <p className="mt-1.5 text-center text-[11.5px] text-faint">
                 보내면 {Math.max(0, credits.balance - REQUEST_COST)}크레딧 남아요
               </p>
             )}
             <button
               onClick={() => setReqTarget(null)}
-              className="mt-2 w-full py-2 text-[13px] font-semibold text-muted"
+              className="mt-2 w-full py-2 text-[13px] font-medium text-muted"
             >
               취소
             </button>

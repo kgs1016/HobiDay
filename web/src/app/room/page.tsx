@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useQueryId, useQueryParam } from "@/lib/queryId";
 import { careerLabel, level } from "@/lib/levels";
 import { DEMO_ID, buildDemoRoom } from "@/lib/roomDemo";
+import { AvatarFallback, ChevronLeftIcon, PlayIcon } from "@/components/icons";
+import { HoldIllust } from "@/components/illustrations";
 import {
   VIDEO_MAX_BYTES,
   addSessionVideo,
@@ -87,12 +89,12 @@ export default function Room() {
 
   if (err)
     return (
-      <main className="px-4 pt-24 text-center">
-        <p className="text-3xl">🧗</p>
-        <p className="mt-3 text-[15px] font-bold">{ERRORS[err] ?? err}</p>
+      <main className="flex flex-col items-center px-4 pt-24 text-center">
+        <HoldIllust size={64} />
+        <p className="mt-4 text-[15px] font-semibold">{ERRORS[err] ?? err}</p>
         <button
           onClick={() => router.push("/")}
-          className="mt-6 rounded-xl bg-accent px-6 py-2.5 text-[14px] font-bold text-white"
+          className="mt-6 rounded-xl bg-accent px-6 py-2.5 text-[14px] font-semibold text-white active:bg-accent-pressed"
         >
           홈으로
         </button>
@@ -100,7 +102,11 @@ export default function Room() {
     );
 
   if (!room)
-    return <main className="px-4 pt-20 text-center text-muted">불러오는 중…</main>;
+    return (
+      <main className="px-4 pt-24 text-center text-[13.5px] text-faint">
+        불러오는 중…
+      </main>
+    );
 
   const others = room.people.filter((p) => !p.is_me);
 
@@ -150,32 +156,37 @@ export default function Room() {
 
   return (
     <main className="px-4 pb-10">
-      <header className="flex items-center gap-3 pt-5 pb-4">
-        <button onClick={back} className="text-lg text-muted">
-          ←
+      <header className="flex items-center gap-2 pt-4 pb-2">
+        <button
+          onClick={back}
+          aria-label="뒤로 가기"
+          className="-ml-2 flex h-10 w-10 items-center justify-center text-ink"
+        >
+          <ChevronLeftIcon size={22} />
         </button>
         <div className="min-w-0">
-          <h1 className="truncate text-[19px] font-extrabold tracking-tight">
+          <h1 className="truncate text-[18px] font-bold tracking-tight">
             {room.session.gym}
           </h1>
           <p className="text-[12px] text-muted">
-            {hhmm(room.session.starts_at)}~{hhmm(room.session.ends_at)} ·{" "}
+            {hhmm(room.session.starts_at)}–{hhmm(room.session.ends_at)} ·{" "}
             {capacityLabel(room.matched, room.session.gender_mode)}
           </p>
         </div>
       </header>
 
       {isDemo && (
-        <p className="mb-3 rounded-xl border border-dashed border-accent/50 bg-accent/10 px-4 py-2.5 text-[12px] leading-relaxed text-accent">
-          <b>데모 화면입니다.</b> 저장되지 않고, 실제 참가자가 아니에요.
+        <p className="mb-3 rounded-lg bg-accent-soft px-4 py-2.5 text-[12px] leading-relaxed text-muted">
+          <b className="font-semibold text-ink">데모 화면입니다.</b> 저장되지
+          않고, 실제 참가자가 아니에요.
         </p>
       )}
 
       {/* 참가자 — 확정된 사람끼리는 프로필을 서로 본다 */}
-      <section className="rounded-2xl border border-line bg-surface p-4">
-        <h2 className="text-[14px] font-bold">
-          🧗 함께하는 사람{" "}
-          <span className="font-medium text-muted">{others.length}명</span>
+      <section className="pt-3">
+        <h2 className="text-[15px] font-bold">
+          함께하는 사람{" "}
+          <span className="font-normal text-muted">{others.length}명</span>
         </h2>
 
         {others.length === 0 ? (
@@ -187,40 +198,37 @@ export default function Room() {
             여기에 보여요.
           </p>
         ) : (
-          <div className="mt-3 flex flex-col gap-2.5">
+          <div className="mt-3 flex flex-col gap-3">
             {others.map((p) => (
               <PersonRow key={p.id} p={p} photo={p.photo ? photoUrls[p.photo] : undefined} />
             ))}
           </div>
         )}
 
-        <p className="mt-3 text-[11.5px] leading-relaxed text-muted">
+        <p className="mt-3 text-[11.5px] leading-relaxed text-faint">
           모임 목록에서는 서로 안 보이지만, 확정된 참가자끼리는 프로필이 열려요.
         </p>
       </section>
 
       {/* 워밍업 */}
-      <section className="mt-3 rounded-2xl border border-line bg-surface p-4">
-        <h2 className="text-[14px] font-bold">👋 시작 전 워밍업</h2>
+      <section className="mt-6 border-t border-line pt-5">
+        <h2 className="text-[15px] font-bold">시작 전 워밍업</h2>
         <div className="mt-3 flex flex-col gap-2.5">
           {WARMUP.map(([t, d]) => (
-            <div key={t} className="flex gap-2.5">
-              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-              <div>
-                <p className="text-[13.5px] font-bold">{t}</p>
-                <p className="text-[12.5px] text-muted">{d}</p>
-              </div>
+            <div key={t}>
+              <p className="text-[13.5px] font-medium">{t}</p>
+              <p className="text-[12.5px] text-muted">{d}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* 영상 인증 */}
-      <section className="mt-3 rounded-2xl border border-line bg-surface p-4">
-        <h2 className="text-[14px] font-bold">🎥 오늘의 등반 인증</h2>
+      <section className="mt-6 border-t border-line pt-5">
+        <h2 className="text-[15px] font-bold">오늘의 등반 인증</h2>
         <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted">
-          완등한 문제를 자유롭게 올려주세요. <b className="text-ink">완등 못 해도 괜찮아요</b> —
-          서로 찍어주는 게 진짜예요. 영상은 <b className="text-ink">나만</b> 볼 수 있어요.
+          완등하지 못해도 괜찮아요. 서로 찍어주는 게 진짜예요. 영상은 나만 볼
+          수 있어요.
         </p>
 
         {room.videos.length > 0 && (
@@ -232,9 +240,10 @@ export default function Room() {
               >
                 <button
                   onClick={() => onPlay(v.video_url)}
-                  className="flex-1 text-left text-[13px] font-bold text-mint"
+                  className="flex flex-1 items-center gap-1.5 text-left text-[13px] font-medium text-accent-pressed"
                 >
-                  ▶ 영상 {room.videos.length - i}
+                  <PlayIcon size={14} />
+                  영상 {room.videos.length - i}
                 </button>
                 <button
                   onClick={() => onDelete(v.id)}
@@ -248,11 +257,13 @@ export default function Room() {
         )}
 
         <label
-          className={`mt-3 block w-full cursor-pointer rounded-lg py-2.5 text-center text-[13px] font-bold ${
-            uploading ? "bg-surface2 text-muted" : "bg-accent text-white"
+          className={`mt-3 block w-full cursor-pointer rounded-xl py-3 text-center text-[13.5px] font-semibold ${
+            uploading
+              ? "bg-surface2 text-faint"
+              : "bg-accent text-white active:bg-accent-pressed"
           }`}
         >
-          {uploading ? "올리는 중…" : "🎥 등반 영상 올리기"}
+          {uploading ? "올리는 중…" : "등반 영상 올리기"}
           <input
             type="file"
             accept="video/*"
@@ -265,7 +276,7 @@ export default function Room() {
             }}
           />
         </label>
-        <p className="mt-2 text-[11.5px] text-muted">
+        <p className="mt-2 text-[11.5px] text-faint">
           크레딧은 모임당 한 번 적립돼요 · 최대 50MB
         </p>
       </section>
@@ -289,18 +300,12 @@ function PersonRow({ p, photo }: { p: RoomPerson; photo?: string }) {
           className="h-12 w-12 shrink-0 rounded-full object-cover"
         />
       ) : (
-        <div
-          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-lg ${
-            p.gender === "f" ? "bg-female/15" : "bg-male/15"
-          }`}
-        >
-          🧗
-        </div>
+        <AvatarFallback size={48} />
       )}
       <div className="min-w-0 flex-1">
-        <p className="text-[14.5px] font-extrabold">
+        <p className="text-[14.5px] font-semibold">
           {p.nickname}
-          <span className="ml-1.5 text-[12px] font-medium text-muted">
+          <span className="ml-1.5 text-[12px] font-normal text-muted">
             {[p.age, p.height && `${p.height}cm`, p.area].filter(Boolean).join(" · ")}
           </span>
         </p>
@@ -315,7 +320,7 @@ function PersonRow({ p, photo }: { p: RoomPerson; photo?: string }) {
             .join(" · ")}
         </p>
         {p.intro && (
-          <p className="mt-0.5 truncate text-[12.5px] text-ink/85">
+          <p className="mt-0.5 truncate text-[12.5px] text-faint">
             &ldquo;{p.intro}&rdquo;
           </p>
         )}

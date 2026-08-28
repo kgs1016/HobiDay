@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import BackButton from "@/components/BackButton";
 import {
   currentUser,
   fetchMyBlocks,
@@ -43,23 +44,21 @@ export default function Safety() {
 
   return (
     <main className="px-4">
-      <header className="flex items-center gap-3 pt-5 pb-4">
-        <button onClick={() => router.back()} className="text-lg text-muted">
-          ←
-        </button>
-        <h1 className="text-[19px] font-extrabold tracking-tight">안전 설정</h1>
+      <header className="flex items-center gap-2 pt-4 pb-4">
+        <BackButton fallback="/me" />
+        <h1 className="text-[18px] font-bold tracking-tight">안전 설정</h1>
       </header>
 
-      <section className="rounded-2xl border border-line bg-surface p-5">
-        <p className="text-[14px] font-extrabold">차단한 사람</p>
+      <section>
+        <p className="text-[15px] font-bold">차단한 사람</p>
         <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted">
           차단하면 사람 찾기·채팅·관심·모임 어디에서도 서로 보이지 않아요.
-          상대에게는 차단 사실이 알려지지 않아요.
+          상대에게는 알려지지 않아요.
         </p>
       </section>
 
       {blocks === null ? (
-        <p className="pt-10 text-center text-muted">불러오는 중…</p>
+        <p className="pt-12 text-center text-[13.5px] text-faint">불러오는 중…</p>
       ) : blocks.length === 0 ? (
         <p className="px-6 pt-12 text-center text-[13px] leading-relaxed text-muted">
           차단한 사람이 없어요.
@@ -67,14 +66,11 @@ export default function Safety() {
           불편한 일이 있으면 프로필이나 채팅에서 신고해주세요.
         </p>
       ) : (
-        <div className="mt-3 flex flex-col gap-2">
+        <div className="mt-4 flex flex-col divide-y divide-line">
           {blocks.map((b) => (
-            <div
-              key={b.blocked_id}
-              className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4"
-            >
+            <div key={b.blocked_id} className="flex items-center gap-3 py-3.5">
               <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-extrabold">{b.nickname}</p>
+                <p className="text-[15px] font-semibold">{b.nickname}</p>
                 <p className="mt-0.5 truncate text-[12.5px] text-muted">
                   {b.age} · {b.home_gym}
                 </p>
@@ -82,7 +78,7 @@ export default function Safety() {
               <button
                 onClick={() => unblock(b)}
                 disabled={busy === b.blocked_id}
-                className="shrink-0 rounded-lg border border-line px-3 py-2 text-[12px] font-bold text-muted disabled:opacity-50"
+                className="shrink-0 rounded-lg border border-line px-3 py-2 text-[12px] font-medium text-muted disabled:opacity-50"
               >
                 {busy === b.blocked_id ? "해제 중…" : "차단 해제"}
               </button>
@@ -91,10 +87,8 @@ export default function Safety() {
         </div>
       )}
 
-      <p className="mt-8 px-2 text-center text-[11.5px] leading-relaxed text-muted">
+      <p className="mt-8 px-2 text-center text-[11.5px] leading-relaxed text-faint">
         신고가 접수되면 24시간 안에 확인하고 조치해요.
-        <br />
-        급한 일은 앱 안내의 문의처로 알려주세요.
       </p>
     </main>
   );

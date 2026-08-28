@@ -1,21 +1,22 @@
 @import "tailwindcss";
 
-/* HOBIDAY 브랜드 토큰 — 랜딩페이지와 동일한 다크 팔레트 */
+/* HOBIDAY 디자인 토큰 — 흰 캔버스 + 하늘색 단일 accent.
+   화면 전체는 순수한 흰색이고, 회색(surface2)은 입력창·자리표시·
+   아주 약한 그룹 구분에만 쓴다. accent 는 주요 행동(CTA·선택 상태·
+   핵심 링크)에만 아껴 쓴다. 성별·기능별로 색을 나누지 않는다. */
 @theme {
-  --color-bg: #0f0e0d;
-  --color-surface: #1a1917;
-  --color-surface2: #242220;
-  --color-line: #33302c;
-  --color-ink: #f5f2ee;
-  --color-muted: #a09a92;
-  --color-accent: #ff5a45;
-  --color-accent-soft: #ff8a75;
-  --color-mint: #7fd8be;
-  --color-male: #6f9fe8;
-  --color-female: #e87fac;
-  /* 되돌릴 수 없는 동작(탈퇴 등). accent 와 비슷해 보이면 안 되므로
-     주황기를 빼고 채도를 낮췄다 — 주 CTA 로 오인하지 않게. */
-  --color-danger: #d9534f;
+  --color-bg: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface2: #f7f8fa;
+  --color-line: #eceff2;
+  --color-ink: #191f28;
+  --color-muted: #6b7684;
+  --color-faint: #8b95a1;
+  --color-accent: #5ba7f7;
+  --color-accent-pressed: #4696e8;
+  --color-accent-soft: #eef6ff;
+  /* 되돌릴 수 없는 동작(탈퇴·신고 등) 전용 */
+  --color-danger: #e5484d;
 }
 
 html {

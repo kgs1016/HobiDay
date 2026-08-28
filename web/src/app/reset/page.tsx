@@ -16,7 +16,7 @@ import BackButton from "@/components/BackButton";
 
 const inputCls =
   // iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다 — 16px 유지
-  "w-full rounded-xl border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-muted/60";
+  "w-full rounded-lg border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-faint focus:border-accent focus:outline-none";
 
 type Step = "email" | "otp" | "password";
 
@@ -95,11 +95,11 @@ export default function Reset() {
       <div className="pt-5">
         <BackButton fallback="/login" />
       </div>
-      <header className="pt-4 pb-6 text-center">
-        <p className="text-[17px] font-extrabold tracking-[2px] text-accent">
+      <header className="pt-3 pb-6 text-center">
+        <p className="text-[14px] font-bold tracking-[2px] text-accent">
           HOBIDAY
         </p>
-        <h1 className="mt-3 text-[21px] font-extrabold tracking-tight">
+        <h1 className="mt-3 text-[21px] font-bold tracking-tight">
           비밀번호 재설정
         </h1>
         <p className="mt-1.5 text-[13px] text-muted">
@@ -121,7 +121,7 @@ export default function Reset() {
           />
           <button
             disabled={busy}
-            className="mt-1 rounded-xl bg-accent py-3.5 text-[15px] font-bold text-white disabled:opacity-50"
+            className="mt-1 rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
           >
             {busy ? "보내는 중…" : "인증번호 받기"}
           </button>
@@ -136,7 +136,7 @@ export default function Reset() {
       {step === "otp" && (
         <form onSubmit={verifyCode} className="mx-auto max-w-[280px]">
           <p className="mb-3 text-center text-[13px] text-muted">
-            <b className="text-ink">{email}</b> 메일함을 확인해주세요
+            <b className="font-semibold text-ink">{email}</b> 메일함을 확인해주세요
           </p>
           <input
             value={otp}
@@ -144,19 +144,19 @@ export default function Reset() {
             inputMode="numeric"
             autoComplete="one-time-code"
             placeholder="123456"
-            className="w-full rounded-xl border border-line bg-surface px-4 py-3.5 text-center text-[22px] font-extrabold tracking-[0.3em] text-ink placeholder:text-muted/40"
+            className="w-full rounded-lg border border-line bg-surface px-4 py-3.5 text-center text-[22px] font-semibold tracking-[0.3em] text-ink placeholder:text-faint focus:border-accent focus:outline-none"
           />
           <button
             type="submit"
             disabled={busy || otp.length < 6}
-            className="mt-3 w-full rounded-xl bg-accent py-3.5 text-[15px] font-bold text-white disabled:opacity-40"
+            className="mt-3 w-full rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-40"
           >
             {busy ? "확인 중…" : "확인"}
           </button>
           <button
             type="button"
             onClick={() => setStep("email")}
-            className="mt-4 w-full text-center text-[13px] font-semibold text-muted"
+            className="mt-4 w-full text-center text-[13px] font-medium text-muted"
           >
             메일이 안 왔나요? 다시 보내기
           </button>
@@ -182,13 +182,13 @@ export default function Reset() {
             className={inputCls}
           />
           {pw2.length > 0 && pw !== pw2 && (
-            <p className="text-[12px] font-semibold text-danger">
+            <p className="text-[12px] font-medium text-danger">
               비밀번호가 서로 달라요
             </p>
           )}
           <button
             disabled={busy}
-            className="mt-1 rounded-xl bg-accent py-3.5 text-[15px] font-bold text-white disabled:opacity-50"
+            className="mt-1 rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
           >
             {busy ? "변경 중…" : "비밀번호 바꾸기"}
           </button>
@@ -197,7 +197,7 @@ export default function Reset() {
 
       <Link
         href="/login"
-        className="mt-6 block w-full text-center text-[13px] font-semibold text-muted"
+        className="mt-6 block w-full text-center text-[13px] font-medium text-muted"
       >
         로그인으로 돌아가기
       </Link>
