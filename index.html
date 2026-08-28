@@ -12,17 +12,19 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
   /* ⚙️ 신청 폼 링크는 아래 <script>의 APPLY_URL 한 곳만 바꾸면 됩니다 */
+  /* 앱(web/src/app/globals.css)과 같은 토큰 — 흰 캔버스 + 하늘색 단일 accent.
+     앱 안에서 이 페이지를 열기 때문에 톤이 갈리면 다른 서비스처럼 보인다. */
   :root{
-    --bg:#0f0e0d;
-    --surface:#1a1917;
-    --surface2:#242220;
-    --line:#33302c;
-    --text:#f5f2ee;
-    --muted:#a09a92;
-    --accent:#ff5a45;       /* 클라이밍 홀드 레드 */
-    --accent-soft:#ff8a75;
-    --mint:#7fd8be;         /* 초크/세이지 포인트 */
-    --radius:16px;
+    --bg:#ffffff;
+    --surface:#ffffff;
+    --surface2:#f7f8fa;
+    --line:#eceff2;
+    --text:#191f28;
+    --muted:#6b7684;
+    --accent:#5ba7f7;
+    --accent-soft:#4696e8;  /* 눌림/강조 — 밝은 배경에선 더 진한 쪽이 맞다 */
+    --mint:#5ba7f7;         /* 색을 나누지 않는다 — accent 하나로 */
+    --radius:12px;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
@@ -67,7 +69,7 @@
     display:block;width:100%;text-align:center;text-decoration:none;
     background:var(--accent);color:#fff;font-size:17px;font-weight:700;
     padding:17px 0;border-radius:14px;letter-spacing:-.2px;
-    box-shadow:0 6px 24px rgba(255,90,69,.35);
+    box-shadow:0 4px 16px rgba(91,167,247,.28);
     transition:transform .15s ease, box-shadow .15s ease;
   }
   .cta:active{transform:scale(.98)}
@@ -144,8 +146,8 @@
   .ui-sub{font-size:12.5px;color:var(--muted);display:block}
   .ui-row{display:flex;gap:6px;margin-top:8px}
   .pill{font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px}
-  .pill.m{background:rgba(111,159,232,.16);color:#6f9fe8}
-  .pill.f{background:rgba(232,127,172,.16);color:#e87fac}
+  .pill.m{background:#eef6ff;color:#4696e8}
+  .pill.f{background:#eef6ff;color:#4696e8}
   .pill-note{align-self:center;font-size:12px;font-weight:600;color:var(--muted)}
   .ui-face{
     width:44px;height:44px;border-radius:50%;background:var(--surface2);
@@ -180,7 +182,7 @@
     display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:10px;
     font-size:14px;margin-bottom:8px;background:var(--surface2);
   }
-  .match-row.hit{border:1px solid rgba(255,90,69,.45);background:rgba(255,90,69,.08)}
+  .match-row.hit{border:1px solid #5ba7f7;background:#eef6ff}
   .match-row .tag{flex-shrink:0;font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;margin-top:1px}
   .hit .tag{background:var(--accent);color:#fff}
   .mid .tag{background:var(--surface);color:var(--mint);border:1px solid var(--line)}
@@ -192,7 +194,7 @@
   .quote small{display:block;color:var(--muted);font-size:12px;margin-bottom:2px}
   .seed{
     margin-top:14px;padding:12px 14px;border-radius:10px;font-size:14px;
-    background:rgba(127,216,190,.08);border:1px solid rgba(127,216,190,.3);color:var(--text);
+    background:#eef6ff;border:1px solid #d6e9ff;color:var(--text);
   }
   .seed small{display:block;color:var(--mint);font-size:12px;font-weight:700;margin-bottom:2px}
 
@@ -333,7 +335,7 @@
         <li><span>관심 및 모임 신청</span><b>10 크레딧</b></li>
       </ul>
       <p class="cost-note">
-        선착순은 <b style="color:#f5f2ee">성별로 각각 30명</b>이에요.
+        선착순은 <b style="color:#191f28">성별로 각각 30명</b>이에요.
       </p>
     </div>
   </section>
@@ -365,7 +367,7 @@
     <p class="eyebrow">JOIN</p>
     <h2>같은 벽 앞에서 만나요</h2>
     <p class="desc">
-      <b style="color:#f5f2ee">8월 31일</b>에 모임이 열려요.
+      <b style="color:#191f28">8월 31일</b>에 모임이 열려요.
     </p>
     <a class="cta" href="#" data-apply>지금 사전 가입하기</a>
     <p class="cta-note">가입 1분 · 카카오 · 구글 · 이메일로 시작</p>

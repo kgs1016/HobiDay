@@ -19,15 +19,15 @@ export default function AppleIcon() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "#5ba7f7",
-          color: "#ffffff",
+          background: "#ffffff",
+          color: "#5ba7f7",
           fontSize: 74,
           fontWeight: 800,
           letterSpacing: 2,
         }}
       >
         <div>H</div>
-        <div style={{ fontSize: 20, color: "#eef6ff", letterSpacing: 3 }}>
+        <div style={{ fontSize: 20, color: "#8b95a1", letterSpacing: 3 }}>
           HOBIDAY
         </div>
       </div>
