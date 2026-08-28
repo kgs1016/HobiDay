@@ -2,6 +2,7 @@
    .env.local 에 키가 없으면 null → 화면은 목데이터로 동작(개발 폴백). */
 
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
+import type { GenderMode } from "./capacity";
 import type { CareerId, LevelId } from "./levels";
 import type { Session } from "./mock";
 import type { MyProfile } from "./myProfile";
@@ -67,12 +68,12 @@ export interface DbSession {
   gym: string;
   starts_at: string;
   ends_at: string;
-  capacity: 1 | 2;
+  capacity: number;
+  gender_mode: GenderMode;
   level_min: LevelId;
   level_max: LevelId;
   age_min: number;
   age_max: number;
-  intensity: "chill" | "hard";
   note: string | null;
   status: string;
   m_confirmed: number;
@@ -97,7 +98,7 @@ export function toSession(
   /* 내 user id — 호스트 판별용. session_list 가 i_am_host 를 안 내려주는
      (마이그레이션 이전) DB 에서도 host_id 로 판단할 수 있게 받아둔다. */
   myId?: string
-): Session & { myStatus: string | null } {
+): Session & { myStatus: string | null; cancelled: boolean } {
   const st = new Date(r.starts_at);
   const en = new Date(r.ends_at);
   const hm = (d: Date) =>
@@ -108,16 +109,24 @@ export function toSession(
     date: `${DAYS[st.getDay()]} ${st.getMonth() + 1}/${st.getDate()}`,
     start: hm(st),
     end: hm(en),
+    startsAt: r.starts_at,
+    endsAt: r.ends_at,
     capacity: r.capacity,
+    /* 컬럼이 없던 시절의 DB 를 만나면 성비 모임으로 읽는다 —
+       그때는 전부 성비 모임이었다 */
+    genderMode: r.gender_mode ?? "balanced",
     levelMin: r.level_min,
     levelMax: r.level_max,
     ageMin: r.age_min,
     ageMax: r.age_max,
-    intensity: r.intensity,
     note: r.note ?? undefined,
     maleJoined: Number(r.m_confirmed),
     femaleJoined: Number(r.f_confirmed),
     status: r.status === "open" ? "open" : "confirmed",
+    /* Session 의 status 에는 'cancelled' 가 없다(목데이터와 공유하는
+       타입이다). 취소를 눌러 담은 자리 — 이게 없으면 취소된 모임이
+       확정된 모임처럼 보인다. */
+    cancelled: r.status === "cancelled",
     isAway: myHomeGym ? r.gym !== myHomeGym : false,
     myStatus: r.my_status,
     iAmHost: r.i_am_host ?? (!!myId && r.host_id === myId),
@@ -147,6 +156,21 @@ export async function fetchSessions(): Promise<DbSession[] | null> {
     return null;
   }
   return data as DbSession[];
+}
+
+/** 모임 한 건. 목록과 같은 모양이지만 조건이 다르다 — 관계자(호스트·
+ *  신청자)는 시작했든 끝났든 취소됐든 언제나 열 수 있다. 참가 취소와
+ *  모임 삭제(=환불) 버튼이 상세에만 있어서, 여기가 막히면 낸 크레딧을
+ *  돌려받을 길이 없어진다. */
+export async function fetchSession(id: string): Promise<DbSession | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc("session_detail", { p_session: id });
+  if (error) {
+    console.error("session_detail", error);
+    return null;
+  }
+  return (data as DbSession | null) ?? null;
 }
 
 /** 모임을 연 사람이 프로필에 적은 것들. 프로필 id 가 아니라 모임 id 로 받는다 */
@@ -186,12 +210,12 @@ export async function createSession(p: {
   gym: string;
   startsAt: string; // ISO
   endsAt: string;
-  capacity: 1 | 2;
+  capacity: number;
+  genderMode: GenderMode;
   levelMin: LevelId;
   levelMax: LevelId;
   ageMin: number;
   ageMax: number;
-  intensity: "chill" | "hard";
   note: string;
 }): Promise<{ id?: string; error?: string }> {
   const sb = getSupabase();
@@ -205,9 +229,9 @@ export async function createSession(p: {
     p_level_max: p.levelMax,
     p_age_min: p.ageMin,
     p_age_max: p.ageMax,
-    p_intensity: p.intensity,
     p_after_meal: false, // 뒤풀이 기능은 접었다 — 컬럼만 남아 있다
     p_note: p.note,
+    p_gender_mode: p.genderMode,
   });
   if (error) return { error: error.message };
   return data as { id?: string; error?: string };
@@ -235,6 +259,7 @@ export interface MyHostedSession {
   starts_at: string;
   ends_at: string;
   capacity: number;
+  gender_mode: GenderMode;
   status: "open" | "confirmed" | "cancelled" | "done";
   m_confirmed: number;
   f_confirmed: number;
@@ -252,6 +277,40 @@ export async function fetchMyHostedSessions(): Promise<MyHostedSession[] | null>
   return data as MyHostedSession[];
 }
 
+/** 매칭 기록 — 성사돼서 이미 끝난 모임만. 호스트로 연 것도, 참가자로
+ *  간 것도 함께 온다 (호스트도 확정 signups 행을 갖기 때문). */
+export interface MatchMate {
+  id: string;
+  nickname: string;
+  gender: "m" | "f";
+  level: number;
+  photo: string | null;
+  is_host: boolean;
+}
+
+export interface MatchRecord {
+  id: string;
+  gym: string;
+  starts_at: string;
+  ends_at: string;
+  capacity: number;
+  i_am_host: boolean;
+  gender_mode: GenderMode;
+  members: number;
+  people: MatchMate[];
+}
+
+export async function fetchMatchHistory(): Promise<MatchRecord[] | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc("my_match_history");
+  if (error) {
+    console.error("my_match_history", error);
+    return null;
+  }
+  return data as MatchRecord[];
+}
+
 /** 호스트가 모임을 삭제(취소 표시)한다. 신청비는 서버가 전원 반환.
  *  notify = 알림 보낼 참가자 id 목록 (클라이언트가 push 를 부탁한다) */
 export async function deleteSession(id: string) {
@@ -262,13 +321,20 @@ export async function deleteSession(id: string) {
   return data as { ok?: boolean; notify?: string[]; error?: string };
 }
 
-/** 참가자가 모임에서 빠진다. 대기 중이면 신청비 반환, 확정 후엔 반환 없음. */
+/** 참가자가 모임에서 빠진다. 대기 중이면 신청비 반환, 확정 후엔 반환 없음.
+ *  cancelled — 내가 빠지면서 확정이 1명이 돼 모임 자체가 취소됐다.
+ *  notify    — 그때 남아 있던 사람들 (신청비는 서버가 이미 돌려줬다) */
 export async function cancelSignup(id: string) {
   const sb = getSupabase();
   if (!sb) return { error: "no_client" };
   const { data, error } = await sb.rpc("session_cancel", { p_session: id });
   if (error) return { error: error.message };
-  return data as { ok?: boolean; error?: string };
+  return data as {
+    ok?: boolean;
+    cancelled?: boolean;
+    notify?: string[];
+    error?: string;
+  };
 }
 
 /* ── 조기 확정 ──
@@ -301,6 +367,7 @@ export async function acceptConfirm(id: string) {
     ok?: boolean;
     confirmed?: boolean;
     capacity?: number;
+    gender_mode?: GenderMode;
     waiting?: number;
     /** 확정된 순간 알릴 사람들 (나 제외, 호스트 포함) */
     notify?: string[];
@@ -317,7 +384,8 @@ export interface MySignup {
   gym: string;
   starts_at: string;
   ends_at: string;
-  capacity: 1 | 2;
+  capacity: number;
+  gender_mode: GenderMode;
   session_status: string;
   my_status: "waiting" | "confirmed" | "cut";
   host_nickname: string | null;
@@ -329,7 +397,8 @@ export interface HostedRequest {
   session_id: string;
   gym: string;
   starts_at: string;
-  capacity: 1 | 2;
+  capacity: number;
+  gender_mode: GenderMode;
   created_at: string;
   user_id: string;
   nickname: string;
@@ -344,6 +413,8 @@ export interface HostedRequest {
   intro: string | null;
   photo: string | null;
   same_gender_confirmed: number;
+  /** 성별 무관 모임은 성별로 세면 안 된다 — 자리 판단은 이걸로 */
+  confirmed_total: number;
 }
 
 /** 호스트가 걸어둔 조기 확정 제안 */
@@ -351,7 +422,8 @@ export interface ConfirmProposal {
   session_id: string;
   gym: string;
   starts_at: string;
-  capacity: 1 | 2;
+  capacity: number;
+  gender_mode: GenderMode;
   early_confirm_at: string;
   host_nickname: string | null;
   host_photo: string | null;
@@ -390,10 +462,13 @@ export async function approveSignup(sessionId: string, userId: string) {
     p_user: userId,
   });
   if (error) return { error: error.message };
-  // notify — 방이 열렸을 때 이미 확정돼 있던 사람들 (호스트·방금 승인된 사람 제외)
+  /* chat_opened — 이번 승인으로 확정이 2명이 돼서 방이 막 열렸다
+     confirmed   — 이번 승인으로 정원이 다 찼다 (둘은 이제 다른 사건)
+     notify      — 알릴 사람 (호스트·방금 승인된 사람 제외) */
   return data as {
     ok?: boolean;
     chat_opened?: boolean;
+    confirmed?: boolean;
     notify?: string[];
     error?: string;
   };
@@ -487,12 +562,13 @@ export interface Room {
     gym: string;
     starts_at: string;
     ends_at: string;
-    capacity: 1 | 2;
-    intensity: "chill" | "hard";
+    capacity: number;
+    gender_mode: GenderMode;
     note: string | null;
   };
   me: { id: string; gender: "m" | "f"; level: LevelId };
-  /** 성비 기준 확정 인원 — n:n 의 n */
+  /** 지금 확정된 인원. 성비 모임은 짝이 맞는 수(n:n 의 n),
+      성별 무관 모임은 그냥 머릿수다. */
   matched: number;
   people: RoomPerson[];
   videos: RoomVideo[];
@@ -624,6 +700,8 @@ export interface Chat {
   level: LevelId;
   home_gym: string;
   photo: string | null;
+  /** 상대가 나갔다 — 방은 남지만 더 보낼 수는 없다 */
+  partner_left?: boolean;
   last_body: string | null;
   last_at: string;
   unread: number;
@@ -631,6 +709,8 @@ export interface Chat {
 
 export interface ChatMessage {
   id: number;
+  /** system = "○○님이 나갔어요" 같은 안내. 말풍선이 아니라 가운데 한 줄 */
+  kind?: "user" | "system";
   sender_id: string;
   body: string;
   created_at: string;
@@ -978,7 +1058,12 @@ export interface SessionChat {
   session_id: string;
   gym: string;
   starts_at: string;
-  capacity: 1 | 2;
+  /** 방이 닫히는 기준 — 끝나거나 취소되고 24시간 뒤 */
+  ends_at: string;
+  status: "open" | "confirmed" | "cancelled" | "done";
+  cancelled_at: string | null;
+  capacity: number;
+  gender_mode: GenderMode;
   members: number;
   last_body: string | null;
   last_at: string;
@@ -1087,6 +1172,34 @@ export type ReportReason = (typeof REPORT_REASONS)[number]["id"];
 export type ReportContext = "profile" | "chat" | "session";
 
 /** 신고하면 차단까지 함께 걸린다 (서버에서 처리) */
+/* ── 알림함 ──
+   푸시는 놓치면 끝이라, 같은 소식을 DB 에도 쌓아둔다. 종 아이콘. */
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  body: string;
+  url: string | null;
+  created_at: string;
+  read_at: string | null;
+}
+
+export async function fetchNotifications() {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc("my_notifications");
+  if (error) return null;
+  return data as { unread: number; items: AppNotification[] };
+}
+
+/** 알림함을 열면 다 읽은 것으로 친다. 읽고 24시간 뒤에 사라진다. */
+export async function markNotificationsRead() {
+  const sb = getSupabase();
+  if (!sb) return 0;
+  const { data, error } = await sb.rpc("notifications_read");
+  return error ? 0 : (data as number);
+}
+
 export async function reportUser(
   targetId: string,
   reason: ReportReason,
@@ -1104,7 +1217,16 @@ export async function reportUser(
     p_ref: refId ?? null,
   });
   if (error) return { error: error.message };
-  return data as { ok?: boolean; error?: string };
+  /* left_sessions      — 신고와 함께 내가 빠진 모임 수
+     cancelled_sessions — 내가 열었다가 취소된 모임 수
+     notify             — 그 취소를 알려야 할 사람들 */
+  return data as {
+    ok?: boolean;
+    left_sessions?: number;
+    cancelled_sessions?: number;
+    notify?: string[];
+    error?: string;
+  };
 }
 
 export async function blockUser(targetId: string) {

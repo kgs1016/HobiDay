@@ -2,8 +2,8 @@
    실제 스키마는 PRODUCT.md의 데이터 모델 스케치를 따른다. */
 
 import type { CareerId, LevelId } from "./levels";
+import type { GenderMode } from "@/lib/capacity";
 
-export type Intensity = "chill" | "hard";
 export type SessionStatus = "open" | "confirmed" | "closed";
 
 export interface Session {
@@ -12,12 +12,18 @@ export interface Session {
   date: string; // "토 8/1"
   start: string; // "15:00"
   end: string; // "17:00"
-  capacity: 1 | 2; // n:n (1 = 1:1, 2 = 2:2)
+  /* 원본 ISO. date/start 는 사람이 읽는 값이라 비교에 못 쓴다.
+     "이미 시작했나" 같은 판단은 이걸로 한다. 목데이터에는 없다. */
+  startsAt?: string;
+  endsAt?: string;
+  /* 뜻이 genderMode 를 따라간다 — 반반이면 성별당 인원(1 = 1:1, 2 = 2:2),
+     무관이면 총 인원(2 · 3 · 4명). lib/capacity.ts 참고. */
+  capacity: number;
+  genderMode?: GenderMode;
   levelMin: LevelId;
   levelMax: LevelId;
   ageMin: number; // 25 = 20대 중후반 시작점
   ageMax: number;
-  intensity: Intensity;
   note?: string;
   maleJoined: number;
   femaleJoined: number;
@@ -71,8 +77,7 @@ export const MOCK_SESSIONS: Session[] = [
     levelMax: 3,
     ageMin: 27,
     ageMax: 33,
-    intensity: "chill",
-    note: "가볍게 타고 맛있는 거 먹어요",
+    note: "끝나고 저녁 같이 먹어요",
     maleJoined: 2,
     femaleJoined: 1,
     status: "open",
@@ -89,7 +94,6 @@ export const MOCK_SESSIONS: Session[] = [
     levelMax: 2,
     ageMin: 24,
     ageMax: 29,
-    intensity: "chill",
     note: "볼더링 처음이어도 환영! 같이 워밍업부터",
     maleJoined: 1,
     femaleJoined: 1,
@@ -107,7 +111,6 @@ export const MOCK_SESSIONS: Session[] = [
     levelMax: 4,
     ageMin: 28,
     ageMax: 36,
-    intensity: "hard",
     maleJoined: 2,
     femaleJoined: 2,
     status: "confirmed",
@@ -125,12 +128,29 @@ export const MOCK_SESSIONS: Session[] = [
     levelMax: 3,
     ageMin: 25,
     ageMax: 32,
-    intensity: "chill",
     note: "퇴근하고 한 판!",
     maleJoined: 0,
     femaleJoined: 1,
     status: "open",
     host: { id: "p4", nickname: "민지", age: 26, area: "연희동", level: 4 },
+  },
+  {
+    id: "s5",
+    gym: "더월클라이밍 연남",
+    date: "목 8/6",
+    start: "10:00",
+    end: "12:00",
+    capacity: 3,
+    genderMode: "any",
+    levelMin: 1,
+    levelMax: 2,
+    ageMin: 24,
+    ageMax: 33,
+    note: "성별 상관없이 셋이서 가볍게",
+    maleJoined: 2,
+    femaleJoined: 0,
+    status: "open",
+    host: { id: "p2", nickname: "지훈", age: 29, area: "망원동", level: 2 },
   },
 ];
 
@@ -142,8 +162,14 @@ export const MOCK_PEOPLE: Person[] = [
 ];
 
 export function slotsLeft(s: Session) {
+  const joined = s.maleJoined + s.femaleJoined;
+  /* 성별 무관 모임에는 "남 자리 / 여 자리" 라는 게 없다. 총 자리만 센다 —
+     성별로 나눠 보여주면 없는 규칙을 있는 것처럼 말하게 된다. */
+  if (s.genderMode === "any")
+    return { male: 0, female: 0, total: Math.max(0, s.capacity - joined) };
   return {
     male: s.capacity - s.maleJoined,
     female: s.capacity - s.femaleJoined,
+    total: Math.max(0, s.capacity * 2 - joined),
   };
 }

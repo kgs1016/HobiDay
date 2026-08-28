@@ -69,21 +69,38 @@ export async function unregisterPush(): Promise<void> {
   await getSupabase()?.rpc("push_token_delete", { p_token: token });
 }
 
-/** 상대에게 알림을 보내달라고 서버에 부탁한다.
- *  실패해도 조용히 넘어간다 — 메시지 전송 자체를 막으면 안 된다. */
+/** 상대에게 알림을 알린다 — 푸시로 한 번, 알림함에 한 번.
+ *
+ *  둘을 같이 두는 이유: 푸시는 놓치면 끝이고 웹에서는 아예 안 온다.
+ *  알림함에 남겨두면 종 아이콘을 눌러 나중에 볼 수 있다.
+ *
+ *  실패해도 조용히 넘어간다 — 메시지 전송 자체를 막으면 안 된다.
+ *  둘 중 하나가 죽어도 다른 하나는 살아야 해서 따로 감싼다. */
 export async function notifyPush(
   to: string | string[],
   title: string,
   body: string,
-  url?: string
+  url?: string,
+  /** 서버가 이미 알림함에 남긴 소식이면 푸시만 쏜다 (모임 취소 등).
+   *  안 그러면 알림함에 같은 줄이 두 번 쌓인다. */
+  opts?: { pushOnly?: boolean }
 ): Promise<void> {
   const sb = getSupabase();
   if (!sb) return;
-  try {
-    await sb.functions.invoke("push", {
-      body: { to: Array.isArray(to) ? to : [to], title, body, url },
-    });
-  } catch {
-    /* 알림 실패는 본 동작에 영향 없음 */
-  }
+  const list = Array.isArray(to) ? to : [to];
+  const jobs: Promise<unknown>[] = [
+    sb.functions.invoke("push", { body: { to: list, title, body, url } }),
+  ];
+  if (!opts?.pushOnly)
+    jobs.push(
+      Promise.resolve(
+        sb.rpc("notify_send", {
+          p_to: list,
+          p_title: title,
+          p_body: body,
+          p_url: url ?? null,
+        })
+      )
+    );
+  await Promise.allSettled(jobs);
 }

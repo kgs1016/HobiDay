@@ -3,38 +3,20 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LEVELS, type LevelId } from "@/lib/levels";
+import {
+  CAPACITY_CHOICES,
+  GENDER_MODES,
+  capacityChipLabel,
+  type GenderMode,
+} from "@/lib/capacity";
+import { AGE_FROM, AGE_TO, GYMS } from "@/lib/meetupOptions";
 import { hasSupabase, currentUser, fetchMyProfileDb, createSession } from "@/lib/supabase";
 import { isProfileComplete } from "@/lib/profileGate";
-import BackButton from "@/components/BackButton";
-
-/** 빠른 선택용. 여기 없는 짐은 직접 입력한다 (서울·경기 전체 대상). */
-const GYMS = [
-  "더클라임 B홍대",
-  "더클라임 연남",
-  "더월클라이밍 연남",
-  "홍대클라이밍",
-  "써미트클라이밍",
-];
-
-const AGE_FROM = [
-  ["20대 초반부터", 20],
-  ["20대 중반부터", 24],
-  ["20대 후반부터", 27],
-  ["30대 초반부터", 30],
-  ["30대 중반부터", 34],
-] as const;
-
-const AGE_TO = [
-  ["20대 후반까지", 29],
-  ["30대 초반까지", 33],
-  ["30대 중반까지", 36],
-  ["30대 후반까지", 39],
-] as const;
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-2 text-[13.5px] font-semibold">{label}</p>
+      <p className="mb-2 text-[13.5px] font-bold">{label}</p>
       {children}
     </div>
   );
@@ -53,10 +35,10 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full border px-3.5 py-2 text-[13px] font-medium transition-colors ${
+      className={`rounded-full px-3.5 py-2 text-[13px] font-semibold transition-colors ${
         active
-          ? "border-accent bg-accent text-white"
-          : "border-line bg-surface text-muted"
+          ? "bg-accent text-white"
+          : "border border-line bg-surface text-muted"
       }`}
     >
       {children}
@@ -66,7 +48,7 @@ function Chip({
 
 const inputCls =
   // iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다 — 16px 유지
-  "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-[16px] text-ink [color-scheme:light] focus:border-accent focus:outline-none";
+  "w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-[16px] text-ink [color-scheme:dark]";
 
 export default function NewSession() {
   const router = useRouter();
@@ -90,14 +72,24 @@ export default function NewSession() {
   }, []);
   const [startTime, setStartTime] = useState("15:00");
   const [endTime, setEndTime] = useState("17:00");
-  const [capacity, setCapacity] = useState<1 | 2>(2);
+  /* 성비를 먼저 고르고 정원을 고른다 — 정원의 뜻이 성비에 따라 달라진다.
+     반반이면 성별당 인원(2 = 2:2), 무관이면 총 인원(4 = 4명). */
+  const [genderMode, setGenderMode] = useState<GenderMode>("balanced");
+  const [capacity, setCapacity] = useState(2);
   const [levelMin, setLevelMin] = useState<LevelId>(2);
   const [levelMax, setLevelMax] = useState<LevelId>(3);
   const [ageMin, setAgeMin] = useState<number>(27);
   const [ageMax, setAgeMax] = useState<number>(33);
-  const [intensity, setIntensity] = useState<"chill" | "hard">("chill");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+
+  /* 모드를 바꾸면 정원도 그 모드에서 고를 수 있는 값으로 옮겨준다.
+     그냥 두면 "무관인데 정원 1(혼자 하는 모임)" 이 만들어져 서버가
+     거절한다. 2 는 양쪽 모드에 다 있어서 안전한 착지점이다. */
+  const pickMode = (m: GenderMode) => {
+    setGenderMode(m);
+    if (!CAPACITY_CHOICES[m].includes(capacity)) setCapacity(2);
+  };
 
   const toggleLevel = (id: LevelId) => {
     // 인접 1단계까지만 허용 — 클릭한 레벨을 포함해 범위 재계산
@@ -165,11 +157,11 @@ export default function NewSession() {
       startsAt: new Date(`${date}T${startTime}:00`).toISOString(),
       endsAt: new Date(`${date}T${endTime}:00`).toISOString(),
       capacity,
+      genderMode,
       levelMin,
       levelMax,
       ageMin,
       ageMax,
-      intensity,
       note,
     });
     setBusy(false);
@@ -178,16 +170,24 @@ export default function NewSession() {
       return alert("모임 시간이 너무 임박했어요. 지금부터 30분 뒤부터 열 수 있어요");
     if (r.error === "past") return alert("이미 지난 시각이에요. 시간을 다시 골라주세요");
     if (r.error === "too_far") return alert("모임은 90일 안쪽으로만 열 수 있어요");
+    if (r.error === "bad_capacity" || r.error === "bad_mode")
+      return alert("정원을 다시 골라주세요");
     if (r.error) return alert(`등록 실패: ${r.error}`);
-    alert("모임을 열었어요! 성비가 맞으면 확정돼요.");
+    alert(
+      genderMode === "any"
+        ? "모임을 열었어요! 정원이 차면 확정돼요."
+        : "모임을 열었어요! 성비가 맞으면 확정돼요."
+    );
     router.push("/");
   };
 
   return (
     <main className="px-4">
-      <header className="flex items-center gap-2 pt-4 pb-4">
-        <BackButton />
-        <h1 className="text-[18px] font-bold tracking-tight">모임 만들기</h1>
+      <header className="flex items-center gap-3 pt-5 pb-4">
+        <button onClick={() => router.back()} className="text-lg text-muted">
+          ←
+        </button>
+        <h1 className="text-[19px] font-extrabold tracking-tight">모임 만들기</h1>
       </header>
 
       <form className="flex flex-col gap-6 pb-8" onSubmit={submit}>
@@ -235,20 +235,28 @@ export default function NewSession() {
           <p className="mt-1.5 text-[12px] text-muted">1.5~2시간을 권장해요</p>
         </Field>
 
+        <Field label="성비">
+          <div className="flex gap-1.5">
+            {GENDER_MODES.map((m) => (
+              <Chip
+                key={m.id}
+                active={genderMode === m.id}
+                onClick={() => pickMode(m.id)}
+              >
+                {m.label}
+              </Chip>
+            ))}
+          </div>
+        </Field>
+
         <Field label="정원">
           <div className="flex gap-1.5">
-            <Chip active={capacity === 1} onClick={() => setCapacity(1)}>
-              1:1 (2명)
-            </Chip>
-            <Chip active={capacity === 2} onClick={() => setCapacity(2)}>
-              2:2 (4명)
-            </Chip>
+            {CAPACITY_CHOICES[genderMode].map((c) => (
+              <Chip key={c} active={capacity === c} onClick={() => setCapacity(c)}>
+                {capacityChipLabel(c, genderMode)}
+              </Chip>
+            ))}
           </div>
-          <p className="mt-1.5 text-[12px] leading-relaxed text-muted">
-            {capacity === 1
-              ? "남 1 · 여 1. 단둘이 등반해요."
-              : "남 2 · 여 2. 2명만 모이면 1:1로 진행돼요 — 성비가 적은 쪽에 맞춰져요."}
-          </p>
         </Field>
 
         <Field label="레벨 범위 (인접 1단계까지)">
@@ -297,30 +305,19 @@ export default function NewSession() {
           </div>
         </Field>
 
-        <Field label="운동 분위기">
-          <div className="flex gap-1.5">
-            <Chip active={intensity === "chill"} onClick={() => setIntensity("chill")}>
-              가볍게 즐겨요
-            </Chip>
-            <Chip active={intensity === "hard"} onClick={() => setIntensity("hard")}>
-              집중해서 운동해요
-            </Chip>
-          </div>
-        </Field>
-
         <Field label="한마디 (선택)">
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="예: 가볍게 타면서 문제 같이 풀어요"
-            className="w-full rounded-lg border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+            placeholder="예: 초보도 환영해요, 같이 문제 풀어요"
+            className="w-full rounded-xl border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-muted/60"
           />
         </Field>
 
         <button
           type="submit"
           disabled={busy}
-          className="rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
+          className="rounded-xl bg-accent py-3.5 text-[15px] font-bold text-white disabled:opacity-50"
         >
           {busy ? "등록 중…" : "모임 등록하기"}
         </button>

@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useQueryParam } from "@/lib/queryId";
 import { level } from "@/lib/levels";
 import ReportSheet from "@/components/ReportSheet";
-import { AvatarFallback, ChevronLeftIcon, UserIcon } from "@/components/icons";
-import { CarabinerIllust } from "@/components/illustrations";
 import { notifyPush } from "@/lib/nativePush";
 import {
   currentUser,
@@ -27,6 +27,7 @@ import {
   type SessionChat,
   type SessionChatMessage,
 } from "@/lib/supabase";
+import { capacityLabel } from "@/lib/capacity";
 
 const when = (iso: string) => {
   const d = new Date(iso);
@@ -45,11 +46,25 @@ const origin = (c: Chat) =>
 
 const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
-/** 모임방 부제 — "토 8/31 · 15:00 · 2:2" */
+/* 방은 모임이 끝나거나 취소되고 24시간 뒤에 사라진다
+   (session_chat_open 이 닫는다). 남은 시간을 초읽기로 보여주진 않는다 —
+   알아서 좋을 게 없고, 1분마다 다시 그릴 이유도 없다. */
+function endedNotice(c: SessionChat): string | null {
+  if (c.status === "cancelled")
+    return "매칭이 취소되었어요. 24시간 뒤에 채팅방이 사라져요.";
+  return new Date(c.ends_at).getTime() < Date.now()
+    ? "모임이 종료되었어요. 24시간 뒤에 채팅방이 사라져요."
+    : null;
+}
+
+/** 모임방 부제 — "토 8/31 · 15:00 · 2:2" (성별 무관 모임은 "4명") */
 const sessionSub = (c: SessionChat) => {
   const d = new Date(c.starts_at);
   const hm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-  return `${DAYS[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()} · ${hm} · ${c.capacity}:${c.capacity}`;
+  return `${DAYS[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()} · ${hm} · ${capacityLabel(
+    c.capacity,
+    c.gender_mode
+  )}`;
 };
 
 type Tab = "request" | "session";
@@ -85,6 +100,23 @@ export default function ChatPage() {
     })();
   }, [load]);
 
+  /* 진행 화면에서 ← 로 돌아오면 보던 방이 그대로 열려 있어야 한다.
+     방을 여는 건 화면 전환이 아니라 이 페이지의 상태라, 브라우저
+     뒤로가기만으로는 목록으로 떨어진다. 그래서 주소로 받아 다시 연다. */
+  const roomParam = useQueryParam("room");
+  useEffect(() => {
+    if (!roomParam || !rooms) return;
+    const r = rooms.find((x) => x.session_id === roomParam);
+    if (r) {
+      setTab("session");
+      openSession(r);
+    }
+    // 한 번 열고 나면 주소에서 지운다 — 목록으로 나갔다가 다시
+    // 들어올 때 또 열려버리는 걸 막는다
+    window.history.replaceState(null, "", "/chat#session");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomParam, rooms]);
+
   /** 방을 열면 읽음으로 표시한다 (목록의 배지가 바로 사라지게 낙관적 갱신) */
   const openThread = async (c: Chat) => {
     setOpen(c);
@@ -111,13 +143,13 @@ export default function ChatPage() {
     return (
       <main className="px-4">
         <header className="pt-6 pb-4">
-          <h1 className="text-[20px] font-bold tracking-tight">채팅</h1>
+          <h1 className="text-[19px] font-extrabold tracking-tight">채팅</h1>
         </header>
         <div className="mt-14 flex flex-col items-center gap-3 text-center">
           <p className="text-[14px] text-muted">로그인하면 대화가 보여요</p>
           <Link
             href="/login"
-            className="rounded-xl bg-accent px-6 py-2.5 text-[14px] font-semibold text-white active:bg-accent-pressed"
+            className="rounded-xl bg-accent px-6 py-2.5 text-[14px] font-bold text-white"
           >
             로그인 하기
           </Link>
@@ -152,7 +184,7 @@ export default function ChatPage() {
   return (
     <main className="px-4">
       <header className="pt-6 pb-3">
-        <h1 className="text-[20px] font-bold tracking-tight">채팅</h1>
+        <h1 className="text-[19px] font-extrabold tracking-tight">채팅</h1>
       </header>
 
       {/* 관심으로 열린 1:1 과 모임 단체방은 성격이 달라서 탭으로 나눈다 */}
@@ -166,15 +198,13 @@ export default function ChatPage() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 pb-2.5 pt-1.5 text-[15px] ${
-              tab === key
-                ? "border-ink font-semibold text-ink"
-                : "border-transparent font-medium text-faint"
+            className={`flex flex-1 items-center justify-center gap-1.5 pb-2.5 pt-1 text-[15px] font-bold ${
+              tab === key ? "border-b-2 border-accent text-ink" : "text-muted"
             }`}
           >
             {label}
             {badge > 0 && (
-              <span className="min-w-[16px] rounded-full bg-danger px-1 text-[10px] font-bold leading-[16px] text-white">
+              <span className="min-w-[17px] rounded-full bg-accent px-1 text-[10.5px] font-extrabold leading-[17px] text-white">
                 {badge > 9 ? "9+" : badge}
               </span>
             )}
@@ -183,46 +213,54 @@ export default function ChatPage() {
       </div>
 
       {loading ? (
-        <p className="pt-16 text-center text-[13.5px] text-faint">불러오는 중…</p>
+        <p className="pt-14 text-center text-muted">불러오는 중…</p>
       ) : tab === "session" ? (
         rooms.length === 0 ? (
-          <div className="mt-16 flex flex-col items-center gap-1.5 text-center">
-            <CarabinerIllust size={64} />
-            <p className="mt-3 text-[15px] font-semibold">아직 확정된 모임이 없어요</p>
+          <div className="mt-16 flex flex-col items-center gap-2 text-center">
+            <span className="text-4xl">🧗</span>
+            <p className="text-[15px] font-bold">아직 열린 모임 채팅이 없어요</p>
             <p className="text-[13px] leading-relaxed text-muted">
-              모임 정원이 다 차면 참가자 전원이 한 방에 모여요.
+              호스트가 신청을 받아주면
+              <br />
+              그때부터 참가자끼리 여기서 이야기해요
             </p>
           </div>
         ) : (
-          <div className="flex flex-col divide-y divide-line pb-6">
+          <div className="flex flex-col gap-2 py-3 pb-6">
             {rooms.map((c) => (
               <button
                 key={c.session_id}
                 onClick={() => openSession(c)}
-                className="flex items-center gap-3.5 py-3.5 text-left transition-colors active:bg-surface2"
+                className="flex items-center gap-3.5 rounded-2xl border border-line bg-surface p-4 text-left"
               >
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface2 text-faint">
-                  <UserIcon size={22} />
-                </span>
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-mint/15 text-xl">
+                  🧗
+                </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[15px] font-semibold">
+                  <p className="truncate text-[15px] font-extrabold">
                     {c.gym}
-                    <span className="ml-1.5 text-[12px] font-normal text-muted">
+                    <span className="ml-1.5 text-[12px] font-medium text-muted">
                       {c.members}명
                     </span>
                   </p>
                   <p
-                    className={`mt-0.5 truncate text-[13px] ${
-                      c.unread > 0 ? "font-medium text-ink" : "text-muted"
+                    className={`mt-0.5 truncate text-[12.5px] ${
+                      c.unread > 0 ? "font-semibold text-ink" : "text-muted"
                     }`}
                   >
                     {c.last_body ?? sessionSub(c)}
                   </p>
+                  {/* 곧 사라질 방이라는 걸 목록에서도 알린다 */}
+                  {endedNotice(c) && (
+                    <p className="mt-0.5 truncate text-[11.5px] text-muted">
+                      {endedNotice(c)}
+                    </p>
+                  )}
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <span className="text-[11.5px] text-faint">{when(c.last_at)}</span>
+                  <span className="text-[11.5px] text-muted">{when(c.last_at)}</span>
                   {c.unread > 0 && (
-                    <span className="min-w-[17px] rounded-full bg-danger px-1.5 text-center text-[10.5px] font-bold leading-[17px] text-white">
+                    <span className="min-w-[18px] rounded-full bg-accent px-1.5 text-center text-[11px] font-extrabold leading-[18px] text-white">
                       {c.unread > 99 ? "99+" : c.unread}
                     </span>
                   )}
@@ -232,20 +270,22 @@ export default function ChatPage() {
           </div>
         )
       ) : chats.length === 0 ? (
-        <div className="mt-16 flex flex-col items-center gap-1.5 text-center">
-          <CarabinerIllust size={64} />
-          <p className="mt-3 text-[15px] font-semibold">아직 연결된 상대가 없어요</p>
+        <div className="mt-16 flex flex-col items-center gap-2 text-center">
+          <span className="text-4xl">💌</span>
+          <p className="text-[15px] font-bold">아직 연결된 상대가 없어요</p>
           <p className="text-[13px] leading-relaxed text-muted">
-            보낸 관심을 상대가 수락하면 여기서 대화가 시작돼요.
+            보낸 관심을 상대가 수락하면
+            <br />
+            여기서 대화가 시작돼요
           </p>
         </div>
       ) : (
-        <div className="flex flex-col divide-y divide-line pb-6">
+        <div className="flex flex-col gap-2 py-3 pb-6">
           {chats.map((c) => (
             <button
               key={c.match_id}
               onClick={() => openThread(c)}
-              className="flex items-center gap-3.5 py-3.5 text-left transition-colors active:bg-surface2"
+              className="flex items-center gap-3.5 rounded-2xl border border-line bg-surface p-4 text-left"
             >
               {c.photo && photoUrls[c.photo] ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -255,27 +295,29 @@ export default function ChatPage() {
                   className="h-12 w-12 shrink-0 rounded-full object-cover"
                 />
               ) : (
-                <AvatarFallback size={48} />
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent/15 text-xl">
+                  🧗
+                </div>
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-semibold">
+                <p className="text-[15px] font-extrabold">
                   {c.nickname}
-                  <span className="ml-1.5 text-[12px] font-normal text-muted">
+                  <span className="ml-1.5 text-[12px] font-medium text-muted">
                     {c.age} · L{c.level} {level(c.level).name}
                   </span>
                 </p>
                 <p
-                  className={`mt-0.5 truncate text-[13px] ${
-                    c.unread > 0 ? "font-medium text-ink" : "text-muted"
+                  className={`mt-0.5 truncate text-[12.5px] ${
+                    c.unread > 0 ? "font-semibold text-ink" : "text-muted"
                   }`}
                 >
                   {c.last_body ?? origin(c)}
                 </p>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1">
-                <span className="text-[11.5px] text-faint">{when(c.last_at)}</span>
+                <span className="text-[11.5px] text-muted">{when(c.last_at)}</span>
                 {c.unread > 0 && (
-                  <span className="min-w-[17px] rounded-full bg-danger px-1.5 text-center text-[10.5px] font-bold leading-[17px] text-white">
+                  <span className="min-w-[18px] rounded-full bg-accent px-1.5 text-center text-[11px] font-extrabold leading-[18px] text-white">
                     {c.unread > 99 ? "99+" : c.unread}
                   </span>
                 )}
@@ -321,6 +363,8 @@ function ChatFrame({
   title,
   sub,
   action,
+  onTitle,
+  closedNote,
   onSend,
   children,
 }: {
@@ -329,6 +373,10 @@ function ChatFrame({
   sub: string;
   /** 헤더 오른쪽 — 1:1 방은 신고 버튼이 붙는다 */
   action?: React.ReactNode;
+  /** 채워져 있으면 입력창 대신 이 안내를 둔다 (상대가 나간 방) */
+  closedNote?: string | null;
+  /** 제목을 누를 때 — 1:1 은 상대 프로필, 모임방은 진행 화면 */
+  onTitle?: () => void;
   onSend: (body: string) => Promise<void>;
   children: React.ReactNode;
 }) {
@@ -356,47 +404,67 @@ function ChatFrame({
       }}
     >
       <header
-        className="flex shrink-0 items-center gap-2 border-b border-line pb-3"
+        className="flex shrink-0 items-center gap-3 pb-3"
         style={{
           paddingTop: keyboardOpen
             ? "0.75rem"
             : "calc(1.25rem + env(safe-area-inset-top))",
         }}
       >
-        <button
-          onClick={onBack}
-          aria-label="뒤로 가기"
-          className="-ml-2 flex h-10 w-10 items-center justify-center text-ink"
-        >
-          <ChevronLeftIcon size={22} />
+        <button onClick={onBack} className="text-lg text-muted">
+          ←
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-[16px] font-bold tracking-tight">
-            {title}
-          </h1>
-          <p className="truncate text-[11.5px] text-faint">{sub}</p>
+          {onTitle ? (
+            /* 누를 수 있다는 걸 알려야 해서 ›  를 붙인다 */
+            <button
+              onClick={onTitle}
+              className="flex max-w-full items-center gap-1 text-left"
+            >
+              <div className="min-w-0">
+                <h1 className="truncate text-[17px] font-extrabold tracking-tight">
+                  {title}
+                </h1>
+                <p className="truncate text-[11.5px] text-muted">{sub}</p>
+              </div>
+              <span className="shrink-0 text-[15px] text-muted">›</span>
+            </button>
+          ) : (
+            <>
+              <h1 className="truncate text-[17px] font-extrabold tracking-tight">
+                {title}
+              </h1>
+              <p className="truncate text-[11.5px] text-muted">{sub}</p>
+            </>
+          )}
         </div>
         {action}
       </header>
 
       {/* min-h-0 이 없으면 flex 아이템이 내용만큼 커져서 스크롤이 안 걸린다 */}
-      <div className="min-h-0 flex-1 overflow-y-auto py-3">{children}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto pb-3">{children}</div>
 
+      {closedNote ? (
+        <p className="shrink-0 bg-bg py-4 text-center text-[12.5px] leading-relaxed text-muted">
+          {closedNote}
+        </p>
+      ) : (
       <form onSubmit={submit} className="flex shrink-0 gap-2 bg-bg py-3">
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="메시지 보내기"
           maxLength={1000}
-          className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+          className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-muted/60"
         />
         <button
           disabled={busy || !text.trim()}
-          className="shrink-0 rounded-xl bg-accent px-4 text-[14px] font-semibold text-white active:bg-accent-pressed disabled:opacity-40"
+          className="shrink-0 rounded-xl bg-accent px-4 text-[14px] font-bold text-white disabled:opacity-40"
         >
           전송
         </button>
       </form>
+      )}
     </div>
   );
 }
@@ -415,7 +483,7 @@ function Bubble({
 }) {
   const bubble = (
     <div
-      className={`max-w-full rounded-[18px] px-3.5 py-2.5 text-[14px] leading-relaxed ${
+      className={`max-w-full rounded-2xl px-3.5 py-2.5 text-[14px] leading-relaxed ${
         m.mine
           ? "rounded-br-md bg-accent text-white"
           : "rounded-bl-md bg-surface2 text-ink"
@@ -424,13 +492,21 @@ function Bubble({
       {m.body}
       <span
         className={`ml-2 align-bottom text-[10.5px] ${
-          m.mine ? "text-white/70" : "text-faint"
+          m.mine ? "text-white/70" : "text-muted"
         }`}
       >
         {when(m.created_at)}
       </span>
     </div>
   );
+
+  // "○○님이 나갔어요" 같은 안내 — 누구 말도 아니라 가운데에 둔다
+  if (m.kind === "system")
+    return (
+      <p className="my-2 self-center rounded-full bg-surface2 px-3.5 py-1.5 text-center text-[12px] text-muted">
+        {m.body}
+      </p>
+    );
 
   if (m.mine) return <div className="max-w-[78%] self-end">{bubble}</div>;
 
@@ -447,14 +523,79 @@ function Bubble({
           className="mt-4 h-7 w-7 shrink-0 rounded-full object-cover"
         />
       ) : (
-        <AvatarFallback size={28} className="mt-4" />
+        <span className="mt-4 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface2 text-[13px]">
+          🧗
+        </span>
       )}
       <div className="min-w-0">
-        <p className="mb-0.5 text-[11.5px] font-medium text-muted">
+        <p className="mb-0.5 text-[11.5px] font-semibold text-muted">
           {name}
-          {isHost && <span className="ml-1 text-faint">· 호스트</span>}
+          {isHost && <span className="ml-1 text-mint">· 호스트</span>}
         </p>
         {bubble}
+      </div>
+    </div>
+  );
+}
+
+/* 1:1 방에서 제목을 누르면 뜨는 상대 프로필.
+   목록(my_chats)이 이미 내려주는 값만 쓴다 — 프로필 전체를 다시
+   불러오면 방을 열 때마다 요청이 하나 더 붙는데, 여기서 궁금한 건
+   "얼굴이랑 대충 누구였지" 정도다. */
+function PartnerSheet({ chat, onClose }: { chat: Chat; onClose: () => void }) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!chat.photo) return;
+    (async () => setUrl((await signedPhotoUrls([chat.photo!]))[chat.photo!] ?? null))();
+  }, [chat.photo]);
+
+  const lv = level(chat.level);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end bg-black/60"
+      onClick={onClose}
+    >
+      {/* 크기·비율은 사람 찾기의 프로필 시트(app/page.tsx)와 맞춘다 */}
+      <div
+        className="mx-auto max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-line bg-surface p-5"
+        style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={url}
+            alt={chat.nickname}
+            className="aspect-square w-full rounded-2xl object-cover"
+          />
+        ) : (
+          <div className="flex aspect-square w-full items-center justify-center rounded-2xl bg-surface2 text-6xl">
+            🧗
+          </div>
+        )}
+
+        <p className="mt-4 text-[19px] font-extrabold">
+          {chat.nickname}
+          <span className="ml-2 text-[13px] font-medium text-muted">
+            {chat.age}
+          </span>
+        </p>
+        <p className="mt-1 text-[13px] text-muted">
+          L{chat.level} {lv.name} ({lv.colors})
+          {chat.home_gym && ` · ${chat.home_gym}`}
+        </p>
+        <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
+          {origin(chat)}
+        </p>
+
+        <button
+          onClick={onClose}
+          className="mt-5 w-full rounded-xl border border-line py-3.5 text-[14px] font-bold"
+        >
+          닫기
+        </button>
       </div>
     </div>
   );
@@ -463,6 +604,7 @@ function Bubble({
 function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
   const [msgs, setMsgs] = useState<ChatMessage[] | null>(null);
   const [reporting, setReporting] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
@@ -487,7 +629,9 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
   const send = async (body: string) => {
     const r = await sendChat(chat.match_id, body);
     if (r.error) {
-      if (r.error === "closed") return alert("상대가 대화방을 나갔어요.");
+      // closed = 내가 나간 방 · left = 상대가 나간 방 (차단당한 경우 포함)
+      if (r.error === "closed" || r.error === "left")
+        return alert("상대가 대화방을 나갔어요.");
       return alert(`전송 실패: ${r.error}`);
     }
     // 실패해도 조용히 — 알림이 전송을 막으면 안 된다
@@ -498,7 +642,9 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
   const leave = async () => {
     if (
       !confirm(
-        "이 대화방에서 나갈까요?\n방이 상대방에게서도 사라지고, 다시 열 수 없어요."
+        "이 대화방에서 나갈까요?\n" +
+          "내 목록에서만 사라져요. 상대에게는 내가 나갔다고 표시되고,\n" +
+          "상대까지 나가면 대화가 완전히 지워져요."
       )
     )
       return;
@@ -513,19 +659,25 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
         onBack={onBack}
         title={chat.nickname}
         sub={`${origin(chat)} · L${chat.level} ${level(chat.level).name}`}
+        onTitle={() => setShowProfile(true)}
+        closedNote={
+          chat.partner_left
+            ? "상대가 대화방을 나갔어요. 더 이상 메시지를 보낼 수 없어요."
+            : null
+        }
         action={
           <div className="flex shrink-0 items-center">
             <button
               onClick={leave}
               aria-label="대화방 나가기"
-              className="px-2 py-1 text-[12px] font-medium text-faint"
+              className="px-2 py-1 text-[12px] font-semibold text-muted/70"
             >
               나가기
             </button>
             <button
               onClick={() => setReporting(true)}
               aria-label="신고하기"
-              className="px-2 py-1 text-[12px] font-medium text-faint"
+              className="px-2 py-1 text-[12px] font-semibold text-muted/70"
             >
               신고
             </button>
@@ -534,12 +686,12 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
         onSend={send}
       >
         {msgs === null ? (
-          <p className="pt-10 text-center text-[13.5px] text-faint">불러오는 중…</p>
+          <p className="pt-10 text-center text-muted">불러오는 중…</p>
         ) : msgs.length === 0 ? (
           <p className="px-6 pt-10 text-center text-[13px] leading-relaxed text-muted">
             관심을 수락해서 열린 방이에요.
             <br />
-            먼저 말을 걸어보세요.
+            먼저 말을 걸어보세요 🧗
           </p>
         ) : (
           <div className="flex flex-col gap-2">
@@ -550,6 +702,10 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
           </div>
         )}
       </ChatFrame>
+
+      {showProfile && (
+        <PartnerSheet chat={chat} onClose={() => setShowProfile(false)} />
+      )}
 
       {reporting && (
         <ReportSheet
@@ -613,6 +769,10 @@ function SessionThread({
     load();
   };
 
+  const router = useRouter();
+
+  const ended = endedNotice(room);
+
   const openPicker = async () => {
     setPicking(true);
     if (members === null) {
@@ -627,11 +787,12 @@ function SessionThread({
       onBack={onBack}
       title={room.gym}
       sub={`${sessionSub(room)} · ${room.members}명`}
+      onTitle={() => router.push(`/session?id=${room.session_id}&from=chat`)}
       action={
         <button
           onClick={openPicker}
           aria-label="신고하기"
-          className="shrink-0 px-2 py-1 text-[12px] font-medium text-faint"
+          className="shrink-0 px-2 py-1 text-[12px] font-semibold text-muted/70"
         >
           신고
         </button>
@@ -639,12 +800,12 @@ function SessionThread({
       onSend={send}
     >
       {msgs === null ? (
-        <p className="pt-10 text-center text-[13.5px] text-faint">불러오는 중…</p>
-      ) : msgs.length === 0 ? (
+        <p className="pt-10 text-center text-muted">불러오는 중…</p>
+      ) : msgs.length === 0 && !ended ? (
         <p className="px-6 pt-10 text-center text-[13px] leading-relaxed text-muted">
-          정원이 다 차서 열린 방이에요.
+          같이 갈 사람이 정해져서 열린 방이에요.
           <br />
-          만날 시간과 장소를 여기서 맞춰보세요.
+          만날 시간과 장소를 여기서 맞춰보세요 🧗
         </p>
       ) : (
         <div className="flex flex-col gap-2">
@@ -657,6 +818,12 @@ function SessionThread({
               isHost={m.sender_is_host}
             />
           ))}
+          {/* 시스템 안내 — 말풍선이 아니라 가운데 한 줄로 둔다 */}
+          {ended && (
+            <p className="my-2 self-center rounded-full bg-surface2 px-3.5 py-1.5 text-center text-[12px] text-muted">
+              {ended}
+            </p>
+          )}
           <div ref={bottom} />
         </div>
       )}
@@ -665,20 +832,22 @@ function SessionThread({
     {/* 누구를 신고할지 고르는 시트 */}
     {picking && (
       <div
-        className="fixed inset-0 z-50 flex items-end bg-black/50"
+        className="fixed inset-0 z-50 flex items-end bg-black/60"
         onClick={() => setPicking(false)}
       >
         <div
-          className="max-h-[70vh] w-full overflow-y-auto rounded-t-2xl bg-surface p-5"
+          className="max-h-[70vh] w-full overflow-y-auto rounded-t-3xl border-t border-line bg-surface p-5"
           style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
           onClick={(e) => e.stopPropagation()}
         >
-          <p className="text-[17px] font-bold">누구를 신고할까요?</p>
+          <p className="text-[17px] font-extrabold">누구를 신고할까요?</p>
           <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted">
-            신고하면 차단도 함께 되어, 이 모임과 채팅방이 내 화면에서 사라져요.
+            신고하면 차단도 함께 돼요. 서로 안 마주치도록 아직 시작 전인
+            모임에서는 빠지게 되고, 신청비는 신고 내용을 확인한 뒤
+            돌려드려요.
           </p>
           {members === null ? (
-            <p className="py-8 text-center text-[13px] text-faint">불러오는 중…</p>
+            <p className="py-8 text-center text-[13px] text-muted">불러오는 중…</p>
           ) : members.length === 0 ? (
             <p className="py-8 text-center text-[13px] text-muted">
               신고할 수 있는 참가자가 없어요
@@ -692,7 +861,7 @@ function SessionThread({
                     setPicking(false);
                     setTarget(p);
                   }}
-                  className="rounded-lg border border-line bg-surface px-4 py-3 text-left text-[14px] font-medium"
+                  className="rounded-xl border border-line bg-bg px-4 py-3 text-left text-[14px] font-bold"
                 >
                   {p.nickname}
                 </button>
@@ -701,7 +870,7 @@ function SessionThread({
           )}
           <button
             onClick={() => setPicking(false)}
-            className="mt-4 w-full rounded-xl border border-line py-3.5 text-[14px] font-medium"
+            className="mt-4 w-full rounded-xl border border-line py-3.5 text-[14px] font-bold"
           >
             취소
           </button>
