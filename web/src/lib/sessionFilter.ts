@@ -3,9 +3,10 @@
    성비 · 정원 · 레벨 · 나이대. 조건을 새로 만들지 않고 그대로 뒤집은
    것이라, 여는 쪽과 찾는 쪽이 같은 말을 쓴다.
 
-   시간 · 레벨 · 나이대는 칸을 고르는 게 아니라 범위를 잡는다. 모임 자체가
-   범위로 열리기 때문에("L2~L3", "20대 후반~30대 초반") 한 칸만 고르게
-   하면 걸치는 모임을 놓친다.
+   날짜 · 시간 · 레벨 · 나이대는 칸을 고르는 게 아니라 범위를 잡는다.
+   찾는 사람은 "이번 주말 아무 때나" 처럼 폭으로 생각하고, 모임 자체도
+   범위로 열린다("L2~L3", "20대 후반~30대 초반") — 한 칸만 고르게 하면
+   걸치는 모임을 놓친다.
 
    서버를 다시 부르지 않고 이미 받아온 목록에서 거른다. 목록은 시작 전
    모임만 담고 있어서(session_list) 양이 적고, 조건을 바꿀 때마다 왕복하면
@@ -17,8 +18,9 @@ import { totalSeats, type GenderMode } from "./capacity";
 
 export interface SessionFilter {
   gyms: string[];
-  /** "YYYY-MM-DD" · 빈 문자열이면 전체 */
-  date: string;
+  /** 모임 날짜 범위 "YYYY-MM-DD" · 빈 문자열이면 그쪽은 열려 있음 */
+  dateFrom: string;
+  dateTo: string;
   /** 시작 시각 범위 "HH:MM" · 빈 문자열이면 열려 있음 */
   timeFrom: string;
   timeTo: string;
@@ -33,7 +35,8 @@ export interface SessionFilter {
 
 export const EMPTY_FILTER: SessionFilter = {
   gyms: [],
-  date: "",
+  dateFrom: "",
+  dateTo: "",
   timeFrom: "",
   timeTo: "",
   genderMode: null,
@@ -70,10 +73,10 @@ export function withGenderMode(
 export function activeFilterCount(f: SessionFilter) {
   return (
     (f.gyms.length ? 1 : 0) +
-    (f.date ? 1 : 0) +
+    (f.dateFrom || f.dateTo ? 1 : 0) +
     (f.timeFrom || f.timeTo ? 1 : 0) +
-    (f.genderMode ? 1 : 0) +
-    (f.seats.length ? 1 : 0) +
+    // 성비와 정원은 버튼 하나라 한 몫으로 센다
+    (f.genderMode || f.seats.length ? 1 : 0) +
     (f.levelMin ? 1 : 0) +
     (f.ageFrom || f.ageTo ? 1 : 0)
   );
@@ -91,8 +94,13 @@ export function applySessionFilter(list: Session[], f: SessionFilter) {
     if (f.gyms.length && !f.gyms.includes(s.gym)) return false;
 
     /* 날짜는 원본 ISO 로만 판단한다. 카드의 "토 8/1" 은 연도가 없어서
-       내년 모임과 구분이 안 된다. 목데이터에는 ISO 가 없으니 그냥 통과. */
-    if (f.date && s.startsAt && ymd(new Date(s.startsAt)) !== f.date) return false;
+       내년 모임과 구분이 안 된다. 목데이터에는 ISO 가 없으니 그냥 통과.
+       "YYYY-MM-DD" 는 자리수가 고정이라 문자열 비교가 곧 날짜 비교다. */
+    if ((f.dateFrom || f.dateTo) && s.startsAt) {
+      const d = ymd(new Date(s.startsAt));
+      if (f.dateFrom && d < f.dateFrom) return false;
+      if (f.dateTo && d > f.dateTo) return false;
+    }
 
     /* "HH:MM" 은 0으로 채워져 있어서 문자열 비교가 곧 시각 비교다 */
     if (f.timeFrom && s.start < f.timeFrom) return false;

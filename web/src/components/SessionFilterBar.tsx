@@ -21,14 +21,16 @@ import {
   type SessionFilter,
 } from "@/lib/sessionFilter";
 
-type Facet = "gym" | "date" | "time" | "gender" | "seats" | "level" | "age";
+/* 성비와 정원은 한 버튼이다. 정원의 선택지가 성비를 따라가므로 따로
+   두면 "성비를 먼저 골라야 한다" 를 말로 설명해야 한다 — 한 화면에
+   위아래로 놓으면 순서가 그냥 보인다. */
+type Facet = "gym" | "date" | "time" | "crew" | "level" | "age";
 
 const TITLES: Record<Facet, string> = {
   gym: "짐",
   date: "날짜",
   time: "시간",
-  gender: "성비",
-  seats: "정원",
+  crew: "성비 · 정원",
   level: "레벨",
   age: "나이대",
 };
@@ -43,24 +45,34 @@ function chipLabel(f: SessionFilter, k: Facet): string {
           ? f.gyms[0]
           : `짐 ${f.gyms.length}`;
     case "date": {
-      if (!f.date) return "날짜";
-      const [, m, d] = f.date.split("-");
-      return `${Number(m)}/${Number(d)}`;
+      if (!f.dateFrom && !f.dateTo) return "날짜";
+      const md = (v: string) => {
+        const [, m, d] = v.split("-");
+        return `${Number(m)}/${Number(d)}`;
+      };
+      if (f.dateFrom && f.dateTo)
+        return f.dateFrom === f.dateTo
+          ? md(f.dateFrom)
+          : `${md(f.dateFrom)}~${md(f.dateTo)}`;
+      return f.dateFrom ? `${md(f.dateFrom)}~` : `~${md(f.dateTo)}`;
     }
     case "time":
       if (!f.timeFrom && !f.timeTo) return "시간";
       if (f.timeFrom && f.timeTo) return `${f.timeFrom}~${f.timeTo}`;
       return f.timeFrom ? `${f.timeFrom}~` : `~${f.timeTo}`;
-    case "gender":
-      return f.genderMode
+    case "crew": {
+      const mode = f.genderMode
         ? GENDER_MODES.find((m) => m.id === f.genderMode)!.label
-        : "성비";
-    case "seats": {
-      if (f.seats.length === 0) return "정원";
+        : "";
       const opts = seatChoices(f.genderMode);
-      return f.seats.length === 1
-        ? opts.find((o) => o.seats === f.seats[0])!.label
-        : `정원 ${f.seats.length}`;
+      const seats =
+        f.seats.length === 0
+          ? ""
+          : f.seats.length === 1
+            ? opts.find((o) => o.seats === f.seats[0])!.label
+            : `정원 ${f.seats.length}`;
+      if (mode && seats) return `${mode} · ${seats}`;
+      return mode || seats || "성비 · 정원";
     }
     case "level":
       if (!f.levelMin || !f.levelMax) return "레벨";
@@ -161,10 +173,9 @@ export default function SessionFilterBar({
 
   const clear: Record<Facet, Partial<SessionFilter>> = {
     gym: { gyms: [] },
-    date: { date: "" },
+    date: { dateFrom: "", dateTo: "" },
     time: { timeFrom: "", timeTo: "" },
-    gender: { genderMode: null, seats: [] },
-    seats: { seats: [] },
+    crew: { genderMode: null, seats: [] },
     level: { levelMin: null, levelMax: null },
     age: { ageFrom: null, ageTo: null },
   };
@@ -333,14 +344,40 @@ export default function SessionFilterBar({
 
             {open === "date" && (
               /* 지난 날짜는 아예 못 고른다. 골라봐야 시작한 모임은 목록에서
-                 내려가 결과가 언제나 0이다. */
-              <input
-                type="date"
-                value={f.date}
-                min={today}
-                onChange={(e) => onChange({ ...f, date: e.target.value })}
-                className={`mt-4 block ${inputCls}`}
-              />
+                 내려가 결과가 언제나 0이다.
+                 뒤 날짜가 앞보다 이르면 결과가 조용히 0이 되므로, 그렇게
+                 고르는 순간 반대쪽을 같이 옮겨준다. */
+              /* 날짜 칸 둘은 한 줄에 안 들어간다 (시각 칸보다 넓다).
+                 억지로 눌러 담으면 달력 아이콘이 잘리므로 위아래로 놓는다. */
+              <div className="mt-4 flex flex-col gap-2">
+                <label className="flex items-center gap-2.5">
+                  <span className="w-7 shrink-0 text-[12.5px] text-muted">부터</span>
+                  <input
+                    type="date"
+                    value={f.dateFrom}
+                    min={today}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      onChange({
+                        ...f,
+                        dateFrom: v,
+                        dateTo: f.dateTo && v && f.dateTo < v ? v : f.dateTo,
+                      });
+                    }}
+                    className={inputCls}
+                  />
+                </label>
+                <label className="flex items-center gap-2.5">
+                  <span className="w-7 shrink-0 text-[12.5px] text-muted">까지</span>
+                  <input
+                    type="date"
+                    value={f.dateTo}
+                    min={f.dateFrom || today}
+                    onChange={(e) => onChange({ ...f, dateTo: e.target.value })}
+                    className={inputCls}
+                  />
+                </label>
+              </div>
             )}
 
             {open === "time" && (
@@ -352,51 +389,68 @@ export default function SessionFilterBar({
                   <input
                     type="time"
                     value={f.timeFrom}
-                    onChange={(e) => onChange({ ...f, timeFrom: e.target.value })}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      onChange({
+                        ...f,
+                        timeFrom: v,
+                        timeTo: f.timeTo && v && f.timeTo < v ? v : f.timeTo,
+                      });
+                    }}
                     className={inputCls}
                   />
                   <span className="text-[13px] text-muted">~</span>
                   <input
                     type="time"
                     value={f.timeTo}
-                    onChange={(e) => onChange({ ...f, timeTo: e.target.value })}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      onChange({
+                        ...f,
+                        timeTo: v,
+                        timeFrom: f.timeFrom && v && v < f.timeFrom ? v : f.timeFrom,
+                      });
+                    }}
                     className={inputCls}
                   />
                 </div>
               </>
             )}
 
-            {open === "gender" && (
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                {GENDER_MODES.map((m) => (
-                  <Opt
-                    key={m.id}
-                    on={f.genderMode === m.id}
-                    onClick={() =>
-                      onChange(
-                        withGenderMode(f, f.genderMode === m.id ? null : m.id)
-                      )
-                    }
-                  >
-                    {m.label}
-                  </Opt>
-                ))}
-              </div>
-            )}
+            {open === "crew" && (
+              <>
+                <p className="mt-4 text-[12px] font-medium text-muted">성비</p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {GENDER_MODES.map((m) => (
+                    <Opt
+                      key={m.id}
+                      on={f.genderMode === m.id}
+                      onClick={() =>
+                        onChange(
+                          withGenderMode(f, f.genderMode === m.id ? null : m.id)
+                        )
+                      }
+                    >
+                      {m.label}
+                    </Opt>
+                  ))}
+                </div>
 
-            {open === "seats" && (
-              /* 선택지가 성비를 따라간다. 반반이면 홀수가 아예 안 나온다 */
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                {seatOpts.map((o) => (
-                  <Opt
-                    key={o.seats}
-                    on={f.seats.includes(o.seats)}
-                    onClick={() => onChange({ ...f, seats: toggle(f.seats, o.seats) })}
-                  >
-                    {o.label}
-                  </Opt>
-                ))}
-              </div>
+                {/* 선택지가 위에서 고른 성비를 따라간다. 반반이면 홀수가
+                    아예 안 나온다 — 3명을 고를 수 있으면 결과가 언제나 0이다 */}
+                <p className="mt-4 text-[12px] font-medium text-muted">정원</p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {seatOpts.map((o) => (
+                    <Opt
+                      key={o.seats}
+                      on={f.seats.includes(o.seats)}
+                      onClick={() => onChange({ ...f, seats: toggle(f.seats, o.seats) })}
+                    >
+                      {o.label}
+                    </Opt>
+                  ))}
+                </div>
+              </>
             )}
 
             {open === "level" && (
