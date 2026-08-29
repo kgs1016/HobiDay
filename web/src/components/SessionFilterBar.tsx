@@ -181,6 +181,11 @@ export default function SessionFilterBar({
   };
 
   const today = ymd(new Date());
+  /* min 은 달력에서 지난 날을 흐리게만 만든다 — 칸에 직접 쳐 넣으면
+     그대로 들어온다. 브라우저마다 다르게 굴어서 값이 들어오는 자리에서
+     한 번 더 막는다. 지난 날짜는 골라봐야 결과가 언제나 0이다 (시작한
+     모임은 목록에서 내려간다). */
+  const notPast = (v: string) => (v && v < today ? today : v);
   const seatOpts = seatChoices(f.genderMode);
 
   return (
@@ -343,12 +348,10 @@ export default function SessionFilterBar({
             })()}
 
             {open === "date" && (
-              /* 지난 날짜는 아예 못 고른다. 골라봐야 시작한 모임은 목록에서
-                 내려가 결과가 언제나 0이다.
-                 뒤 날짜가 앞보다 이르면 결과가 조용히 0이 되므로, 그렇게
-                 고르는 순간 반대쪽을 같이 옮겨준다. */
-              /* 날짜 칸 둘은 한 줄에 안 들어간다 (시각 칸보다 넓다).
-                 억지로 눌러 담으면 달력 아이콘이 잘리므로 위아래로 놓는다. */
+              /* 뒤 날짜가 앞보다 이르면 결과가 조용히 0이 되므로, 그렇게
+                 고르는 순간 반대쪽을 같이 옮겨준다.
+                 날짜 칸 둘은 한 줄에 안 들어간다 (시각 칸보다 넓다). 억지로
+                 눌러 담으면 달력 아이콘이 잘리므로 위아래로 놓는다. */
               <div className="mt-4 flex flex-col gap-2">
                 <label className="flex items-center gap-2.5">
                   <span className="w-7 shrink-0 text-[12.5px] text-muted">부터</span>
@@ -357,7 +360,7 @@ export default function SessionFilterBar({
                     value={f.dateFrom}
                     min={today}
                     onChange={(e) => {
-                      const v = e.target.value;
+                      const v = notPast(e.target.value);
                       onChange({
                         ...f,
                         dateFrom: v,
@@ -373,7 +376,14 @@ export default function SessionFilterBar({
                     type="date"
                     value={f.dateTo}
                     min={f.dateFrom || today}
-                    onChange={(e) => onChange({ ...f, dateTo: e.target.value })}
+                    onChange={(e) => {
+                      // 시작일보다 이른 종료일도 같은 이유로 막는다
+                      const v = notPast(e.target.value);
+                      onChange({
+                        ...f,
+                        dateTo: f.dateFrom && v && v < f.dateFrom ? f.dateFrom : v,
+                      });
+                    }}
                     className={inputCls}
                   />
                 </label>
