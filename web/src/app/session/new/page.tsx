@@ -87,22 +87,32 @@ export default function NewSession() {
   const selected = masterMode ? gyms!.find((g) => g.id === gymId) : undefined;
 
   const [date, setDate] = useState("");
-  /* 달력에서 지난 날짜를 아예 못 고르게 한다 (서버도 과거 30분 · 90일
-     초과를 거부하니 같은 범위로 맞춘다).
-     빌드 시점이 아니라 브라우저에서 계산해야 하므로 useEffect 로 넣는다 —
-     프리렌더된 값이 박히면 하루만 지나도 어제 날짜가 min 이 된다. */
-  const [range, setRange] = useState({ min: "", max: "" });
+
+  /* 지금 시각. 렌더 중에 new Date() 를 부르면 프리렌더된 값이 박혀서
+     하루만 지나도 어제가 기준이 된다. 브라우저에서 읽고, 30초마다
+     새로 본다 — 화면을 켜둔 채로 시작 시각이 지나가면 그 순간부터
+     등록 버튼이 잠겨야 한다.
+     0 = 아직 안 읽음 (이때는 시각 규칙을 재지 않는다). */
+  const [now, setNow] = useState(0);
   useEffect(() => {
+    setNow(Date.now());
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+
+  /* 달력에서 지난 날짜·90일 밖을 아예 못 고르게 한다 (서버도 같은 범위를
+     거부한다). now 를 따라가니 자정을 넘겨도 어제가 남지 않는다. */
+  const range = (() => {
+    if (!now) return { min: "", max: "" };
     const ymd = (d: Date) =>
       // toISOString 은 UTC 라 한국 오전 9시 이전에 하루가 밀린다
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
         d.getDate()
       ).padStart(2, "0")}`;
-    const now = new Date();
     const in90 = new Date(now);
     in90.setDate(in90.getDate() + 90);
-    setRange({ min: ymd(now), max: ymd(in90) });
-  }, []);
+    return { min: ymd(new Date(now)), max: ymd(in90) };
+  })();
   const [startTime, setStartTime] = useState("15:00");
   const [endTime, setEndTime] = useState("17:00");
   /* 성비를 먼저 고르고 정원을 고른다 — 정원의 뜻이 성비에 따라 달라진다.
@@ -123,6 +133,28 @@ export default function NewSession() {
     setGenderMode(m);
     if (!CAPACITY_CHOICES[m].includes(capacity)) setCapacity(2);
   };
+
+  /* 못 만드는 이유. 있으면 등록 버튼을 잠그고 그 자리에 이유를 적는다.
+     예전에는 버튼이 멀쩡해 보이다가 누른 뒤에야 alert 로 알려줬다 —
+     달력이 지난 날짜를 흐리게 해도 칸에 직접 쳐 넣으면 들어오고,
+     "오늘 + 방금 지난 시각" 은 달력만으로는 못 막는다.
+
+     여기서 조용히 고쳐주지는 않는다. 연도를 잘못 친 것(2025 ↔ 2026)일
+     수도 있어서, 값을 바꿔치기하면 무엇이 틀렸는지 영영 모른다. */
+  const blocked = (() => {
+    if (masterMode && !gymId) return "암장을 골라주세요";
+    if (!masterMode && !gym.trim()) return "암장을 입력해주세요";
+    if (!date) return "날짜를 골라주세요";
+    if (endTime <= startTime) return "종료 시각이 시작보다 빨라요";
+    if (!now) return null; // 시각을 아직 못 읽었다 — 서버가 마지막으로 막는다
+    const startsAt = new Date(`${date}T${startTime}:00`).getTime();
+    if (startsAt < now) return "이미 지난 시각이에요";
+    if (startsAt < now + 30 * 60 * 1000)
+      return "모임 시간이 너무 임박했어요 · 지금부터 30분 뒤부터 열 수 있어요";
+    if (startsAt > now + 90 * 24 * 60 * 60 * 1000)
+      return "모임은 90일 안쪽으로만 열 수 있어요";
+    return null;
+  })();
 
   const toggleLevel = (id: LevelId) => {
     // 인접 1단계까지만 허용 — 클릭한 레벨을 포함해 범위 재계산
@@ -379,13 +411,18 @@ export default function NewSession() {
           />
         </Field>
 
-        <button
-          type="submit"
-          disabled={busy}
-          className="rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
-        >
-          {busy ? "등록 중…" : "모임 등록하기"}
-        </button>
+        <div>
+          <button
+            type="submit"
+            disabled={busy || !!blocked}
+            className="w-full rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
+          >
+            {busy ? "등록 중…" : "모임 등록하기"}
+          </button>
+          {blocked && (
+            <p className="mt-2 text-center text-[12.5px] text-muted">{blocked}</p>
+          )}
+        </div>
       </form>
 
       {picking && gyms && (
