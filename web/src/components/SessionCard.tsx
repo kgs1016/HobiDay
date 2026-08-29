@@ -2,17 +2,7 @@ import Link from "next/link";
 import { slotsLeft, type Session } from "@/lib/mock";
 import { totalSeats } from "@/lib/capacity";
 import { AvatarFallback, PhotoIcon } from "@/components/icons";
-
-function ageLabel(min: number, max: number) {
-  const band = (n: number) => {
-    const decade = Math.floor(n / 10) * 10;
-    const pos = n % 10 <= 3 ? "초반" : n % 10 <= 6 ? "중반" : "후반";
-    return `${decade}대 ${pos}`;
-  };
-  const a = band(min);
-  const b = band(max);
-  return a === b ? a : `${a}~${b}`;
-}
+import { ageRangeLabel } from "@/lib/meetupOptions";
 
 /* 목록의 한 줄 — 떠 있는 카드가 아니라 feed 의 항목이다.
    테두리·그림자·둥근 컨테이너 없이 사진과 여백, 얇은 divider(부모의
@@ -115,7 +105,7 @@ export default function SessionCard({
           {s.levelMin === s.levelMax
             ? `L${s.levelMin}`
             : `L${s.levelMin}–L${s.levelMax}`}{" "}
-          · {ageLabel(s.ageMin, s.ageMax)}
+          · {ageRangeLabel(s.ageMin, s.ageMax)}
           {s.genderMode === "any" && " · 성별 무관"}
         </p>
 

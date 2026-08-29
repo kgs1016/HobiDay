@@ -14,24 +14,51 @@ export const MOCK_GYMS = [
   "써미트클라이밍센터",
 ];
 
-export const AGE_FROM: readonly (readonly [string, number])[] = [
-  ["20대 초반부터", 20],
-  ["20대 중반부터", 24],
-  ["20대 후반부터", 27],
-  ["30대 초반부터", 30],
-  ["30대 중반부터", 34],
+/* 나이 눈금 하나로 "부터" 와 "까지" 를 모두 만든다.
+   예전에는 두 목록을 따로 적어놔서 시작 칸은 20대 초반부터인데 끝 칸은
+   20대 후반부터였다 — 같은 사다리인데 칸이 달랐다. */
+export const AGE_BANDS: readonly { label: string; from: number; to: number }[] = [
+  { label: "20대 초반", from: 20, to: 23 },
+  { label: "20대 중반", from: 24, to: 26 },
+  { label: "20대 후반", from: 27, to: 29 },
+  { label: "30대 초반", from: 30, to: 33 },
+  { label: "30대 중반", from: 34, to: 36 },
+  { label: "30대 후반", from: 37, to: 39 },
+  { label: "40대 초반", from: 40, to: 43 },
+  { label: "40대 중반", from: 44, to: 46 },
+  { label: "40대 후반", from: 47, to: 49 },
 ];
 
-export const AGE_TO: readonly (readonly [string, number])[] = [
-  ["20대 후반까지", 29],
-  ["30대 초반까지", 33],
-  ["30대 중반까지", 36],
-  ["30대 후반까지", 39],
-];
+/** 시작 칸 — 눈금 전부 */
+export const AGE_FROM: readonly (readonly [string, number])[] = AGE_BANDS.map(
+  (b) => [`${b.label}부터`, b.from] as const
+);
 
-/** 26 → "20대 중반". 필터 버튼에 고른 범위를 적을 때 쓴다 */
+/** 끝 칸 — 고른 시작보다 이른 칸은 뺀다.
+ *  "20대 후반부터 ~ 20대 초반까지" 같은 뒤집힌 범위를 애초에 못 만든다. */
+export function ageToOptions(from: number): readonly (readonly [string, number])[] {
+  return AGE_BANDS.filter((b) => b.to >= from).map(
+    (b) => [`${b.label}까지`, b.to] as const
+  );
+}
+
+/** 시작을 뒤로 옮겼을 때 끝이 그보다 앞이면 끌어올린다 */
+export function clampAgeTo(from: number, to: number) {
+  const first = ageToOptions(from)[0][1];
+  return to >= first ? to : first;
+}
+
+/** 26 → "20대 중반". 카드와 필터 버튼이 같은 말을 쓰게 하는 자리다 */
 export function ageBandLabel(n: number) {
   const decade = Math.floor(n / 10) * 10;
   const pos = n % 10 <= 3 ? "초반" : n % 10 <= 6 ? "중반" : "후반";
   return `${decade}대 ${pos}`;
+}
+
+/** "20대 후반~30대 초반" · 같은 칸이면 하나만.
+ *  좁은 카드와 넓은 시트가 붙임표만 다르게 쓴다. */
+export function ageRangeLabel(min: number, max: number, sep = "~") {
+  const a = ageBandLabel(min);
+  const b = ageBandLabel(max);
+  return a === b ? a : `${a}${sep}${b}`;
 }

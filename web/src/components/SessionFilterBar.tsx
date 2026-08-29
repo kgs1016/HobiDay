@@ -11,7 +11,13 @@
 import { useState } from "react";
 import { LEVELS, type LevelId } from "@/lib/levels";
 import { GENDER_MODES } from "@/lib/capacity";
-import { AGE_FROM, AGE_TO, ageBandLabel } from "@/lib/meetupOptions";
+import {
+  AGE_BANDS,
+  AGE_FROM,
+  ageRangeLabel,
+  ageToOptions,
+  clampAgeTo,
+} from "@/lib/meetupOptions";
 import {
   EMPTY_FILTER,
   activeFilterCount,
@@ -79,12 +85,10 @@ function chipLabel(f: SessionFilter, k: Facet): string {
       return f.levelMin === f.levelMax
         ? `L${f.levelMin}`
         : `L${f.levelMin}~L${f.levelMax}`;
-    case "age": {
-      if (f.ageFrom == null || f.ageTo == null) return "나이대";
-      const a = ageBandLabel(f.ageFrom);
-      const b = ageBandLabel(f.ageTo);
-      return a === b ? a : `${a}~${b}`;
-    }
+    case "age":
+      return f.ageFrom == null || f.ageTo == null
+        ? "나이대"
+        : ageRangeLabel(f.ageFrom, f.ageTo);
   }
 }
 
@@ -181,6 +185,7 @@ export default function SessionFilterBar({
   };
 
   const today = ymd(new Date());
+  const lastAge = AGE_BANDS[AGE_BANDS.length - 1].to;
   /* min 은 달력에서 지난 날을 흐리게만 만든다 — 칸에 직접 쳐 넣으면
      그대로 들어온다. 브라우저마다 다르게 굴어서 값이 들어오는 자리에서
      한 번 더 막는다. 지난 날짜는 골라봐야 결과가 언제나 0이다 (시작한
@@ -493,14 +498,18 @@ export default function SessionFilterBar({
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <select
                   value={f.ageFrom ?? ""}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    if (!e.target.value)
+                      return onChange({ ...f, ageFrom: null, ageTo: null });
+                    const v = Number(e.target.value);
                     onChange({
                       ...f,
-                      ageFrom: e.target.value ? Number(e.target.value) : null,
-                      // 한쪽만 고르면 걸러지지 않는다 — 반대쪽을 끝까지 채운다
-                      ageTo: f.ageTo ?? AGE_TO[AGE_TO.length - 1][1],
-                    })
-                  }
+                      ageFrom: v,
+                      /* 한쪽만 고르면 걸러지지 않으니 반대쪽을 채워두고,
+                         이미 고른 끝이 시작보다 앞이면 끌어올린다 */
+                      ageTo: clampAgeTo(v, f.ageTo ?? lastAge),
+                    });
+                  }}
                   className={`w-full ${inputCls}`}
                 >
                   <option value="">나이 무관</option>
@@ -512,17 +521,20 @@ export default function SessionFilterBar({
                 </select>
                 <select
                   value={f.ageTo ?? ""}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    if (!e.target.value)
+                      return onChange({ ...f, ageFrom: null, ageTo: null });
                     onChange({
                       ...f,
-                      ageTo: e.target.value ? Number(e.target.value) : null,
+                      ageTo: Number(e.target.value),
                       ageFrom: f.ageFrom ?? AGE_FROM[0][1],
-                    })
-                  }
+                    });
+                  }}
                   className={`w-full ${inputCls}`}
                 >
                   <option value="">나이 무관</option>
-                  {AGE_TO.map(([label, v]) => (
+                  {/* 끝 칸은 시작 칸을 따라간다 — 뒤집힌 범위를 못 만든다 */}
+                  {ageToOptions(f.ageFrom ?? AGE_FROM[0][1]).map(([label, v]) => (
                     <option key={v} value={v}>
                       {label}
                     </option>

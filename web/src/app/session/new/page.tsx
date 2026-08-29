@@ -9,7 +9,12 @@ import {
   capacityChipLabel,
   type GenderMode,
 } from "@/lib/capacity";
-import { AGE_FROM, AGE_TO, MOCK_GYMS } from "@/lib/meetupOptions";
+import {
+  AGE_FROM,
+  MOCK_GYMS,
+  ageToOptions,
+  clampAgeTo,
+} from "@/lib/meetupOptions";
 import {
   hasSupabase,
   currentUser,
@@ -336,7 +341,13 @@ export default function NewSession() {
           <div className="grid grid-cols-2 gap-2">
             <select
               value={ageMin}
-              onChange={(e) => setAgeMin(Number(e.target.value))}
+              onChange={(e) => {
+                /* 끝 칸은 시작 칸을 따라간다. 시작을 뒤로 옮겼는데 끝이
+                   그대로면 "40대 초반부터 ~ 20대 후반까지" 가 된다. */
+                const v = Number(e.target.value);
+                setAgeMin(v);
+                setAgeMax(clampAgeTo(v, ageMax));
+              }}
               className={inputCls}
             >
               {AGE_FROM.map(([label, v]) => (
@@ -350,7 +361,7 @@ export default function NewSession() {
               onChange={(e) => setAgeMax(Number(e.target.value))}
               className={inputCls}
             >
-              {AGE_TO.map(([label, v]) => (
+              {ageToOptions(ageMin).map(([label, v]) => (
                 <option key={v} value={v}>
                   {label}
                 </option>
