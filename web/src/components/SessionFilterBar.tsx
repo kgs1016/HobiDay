@@ -99,9 +99,12 @@ function Opt({
   );
 }
 
+/* 폭은 여기서 주지 않는다. 날짜·시각 입력은 브라우저가 내용에 맞춰
+   잡아주는데, w-full 을 걸면 "2026-08-29" 한 줄을 담으려고 칸이 화면 끝까지
+   늘어난다. 칸을 다 써야 하는 쪽(짐 검색창, 나이대 두 칸)만 붙여 쓴다.
+   (iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다 — 16px 유지) */
 const inputCls =
-  // iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다
-  "w-full rounded-lg bg-surface2 px-3 py-2.5 text-[16px] text-ink [color-scheme:light] focus:outline-none";
+  "rounded-lg bg-surface2 px-3 py-2.5 text-[16px] text-ink [color-scheme:light] focus:outline-none";
 
 /* 짐 필터의 선택지 — gym master 에서 온다. master 를 못 받는 환경에서는
    이름만 있는 항목으로도 동작한다 (legacy 모임의 자유입력 이름 포함). */
@@ -287,7 +290,7 @@ export default function SessionFilterBar({
                     value={gymQ}
                     onChange={(e) => setGymQ(e.target.value)}
                     placeholder="암장 이름 · 지역으로 검색"
-                    className={`mt-4 ${inputCls}`}
+                    className={`mt-4 w-full ${inputCls}`}
                   />
                   {/* 지역 pill 은 master 를 받아 지역 정보가 있을 때만 —
                       폴백 목록(이름뿐)에서 켜면 전부 걸러져 빈 화면이 된다 */}
@@ -336,7 +339,7 @@ export default function SessionFilterBar({
                 value={f.date}
                 min={today}
                 onChange={(e) => onChange({ ...f, date: e.target.value })}
-                className={`mt-4 ${inputCls}`}
+                className={`mt-4 block ${inputCls}`}
               />
             )}
 
@@ -345,7 +348,7 @@ export default function SessionFilterBar({
                 <p className="mt-4 text-[12.5px] text-muted">
                   모임이 <b className="text-ink">시작하는</b> 시각 기준이에요.
                 </p>
-                <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                <div className="mt-2 flex items-center gap-2">
                   <input
                     type="time"
                     value={f.timeFrom}
@@ -382,25 +385,18 @@ export default function SessionFilterBar({
             )}
 
             {open === "seats" && (
-              <>
-                {/* 선택지가 성비를 따라간다. 반반이면 홀수가 아예 안 나온다 */}
-                <div className="mt-4 flex flex-wrap gap-1.5">
-                  {seatOpts.map((o) => (
-                    <Opt
-                      key={o.seats}
-                      on={f.seats.includes(o.seats)}
-                      onClick={() => onChange({ ...f, seats: toggle(f.seats, o.seats) })}
-                    >
-                      {o.label}
-                    </Opt>
-                  ))}
-                </div>
-                {!f.genderMode && (
-                  <p className="mt-2.5 text-[12px] leading-relaxed text-muted">
-                    성비를 먼저 고르면 그 방식의 정원만 보여드려요.
-                  </p>
-                )}
-              </>
+              /* 선택지가 성비를 따라간다. 반반이면 홀수가 아예 안 나온다 */
+              <div className="mt-4 flex flex-wrap gap-1.5">
+                {seatOpts.map((o) => (
+                  <Opt
+                    key={o.seats}
+                    on={f.seats.includes(o.seats)}
+                    onClick={() => onChange({ ...f, seats: toggle(f.seats, o.seats) })}
+                  >
+                    {o.label}
+                  </Opt>
+                ))}
+              </div>
             )}
 
             {open === "level" && (
@@ -441,7 +437,7 @@ export default function SessionFilterBar({
                       ageTo: f.ageTo ?? AGE_TO[AGE_TO.length - 1][1],
                     })
                   }
-                  className={inputCls}
+                  className={`w-full ${inputCls}`}
                 >
                   <option value="">나이 무관</option>
                   {AGE_FROM.map(([label, v]) => (
@@ -459,7 +455,7 @@ export default function SessionFilterBar({
                       ageFrom: f.ageFrom ?? AGE_FROM[0][1],
                     })
                   }
-                  className={inputCls}
+                  className={`w-full ${inputCls}`}
                 >
                   <option value="">나이 무관</option>
                   {AGE_TO.map(([label, v]) => (
