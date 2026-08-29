@@ -7,7 +7,7 @@ import { useQueryId, useQueryParam } from "@/lib/queryId";
 import { notifyPush } from "@/lib/nativePush";
 import { level, levelRangeLabel } from "@/lib/levels";
 import { isProfileComplete } from "@/lib/profileGate";
-import { MOCK_SESSIONS, slotsLeft, type Session } from "@/lib/mock";
+import { MOCK_PEOPLE, MOCK_SESSIONS, slotsLeft, type Session } from "@/lib/mock";
 import { capacityLabel, capacityRo, totalSeats } from "@/lib/capacity";
 import { AvatarFallback, ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 import {
@@ -18,37 +18,67 @@ import {
   currentUser,
   deleteSession,
   fetchSession,
+  fetchSessionMembers,
   fetchMyProfileDb,
   joinSession,
   proposeConfirm,
   signedPhotoUrls,
   toSession,
   withdrawConfirm,
+  type SessionMember,
 } from "@/lib/supabase";
 
 type S = Session & { myStatus?: string | null; cancelled?: boolean };
+
+/* 목데이터 폴백 — Supabase 키가 없을 때 화면만 확인한다.
+   목데이터에는 신청 테이블이 없어서, 확정 인원수만큼 사람을 빌려 세운다. */
+function mockMembers(s: Session): SessionMember[] {
+  const host = MOCK_PEOPLE.find((p) => p.id === s.host?.id);
+  const rest = MOCK_PEOPLE.filter((p) => p.id !== host?.id).slice(
+    0,
+    Math.max(0, s.maleJoined + s.femaleJoined - (host ? 1 : 0))
+  );
+  return [...(host ? [host] : []), ...rest].map((p) => ({
+    id: p.id,
+    nickname: p.nickname,
+    photo: null,
+    gender: p.gender,
+    age: p.age,
+    area: p.area,
+    level: p.level,
+    is_host: p.id === host?.id,
+  }));
+}
 
 export default function SessionDetail() {
   const id = useQueryId();
   const from = useQueryParam("from");
   const router = useRouter();
   const [s, setS] = useState<S | null | undefined>(undefined);
-  const [hostPhoto, setHostPhoto] = useState<string | null>(null);
+  const [members, setMembers] = useState<SessionMember[]>([]);
+  const [photos, setPhotos] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
     if (!id) return setS(null);
     if (!hasSupabase()) {
-      setS(MOCK_SESSIONS.find((x) => x.id === id) ?? null);
+      const m = MOCK_SESSIONS.find((x) => x.id === id) ?? null;
+      setS(m);
+      setMembers(m ? mockMembers(m) : []);
       return;
     }
     // 목록에서 찾지 않고 단건으로 받는다. 목록은 "지금 신청할 수 있는
     // 모임" 만 담아서, 시작했거나 취소된 모임은 여기 없다.
-    const [row, user] = await Promise.all([fetchSession(id), currentUser()]);
+    const [row, user, mem] = await Promise.all([
+      fetchSession(id),
+      currentUser(),
+      fetchSessionMembers(id),
+    ]);
     setS(row ? toSession(row, undefined, user?.id) : null);
-    if (row?.host_photo) {
-      setHostPhoto((await signedPhotoUrls([row.host_photo]))[row.host_photo] ?? null);
-    }
+    setMembers(mem);
+    // 얼굴은 비공개 버킷에 있다 — 명단만큼 서명 URL 을 한 번에 받는다
+    const paths = mem.map((m) => m.photo).filter(Boolean) as string[];
+    if (paths.length) setPhotos(await signedPhotoUrls(paths));
   };
 
   useEffect(() => {
@@ -82,6 +112,14 @@ export default function SessionDetail() {
   const left = slotsLeft(s);
   const full = left.total <= 0;
   const anyGender = s.genderMode === "any";
+  /* 아직 안 찬 자리. 이름 아래에 같은 줄 모양으로 이어 붙인다 —
+     "몇 자리 남았나" 를 숫자로 따로 읽게 하지 않는다. */
+  const emptySeats = anyGender
+    ? Array.from({ length: Math.max(0, left.total) }, () => "모집중")
+    : [
+        ...Array.from({ length: Math.max(0, left.male) }, () => "남 모집중"),
+        ...Array.from({ length: Math.max(0, left.female) }, () => "여 모집중"),
+      ];
   /* 조기 확정·확정 안내에 쓰는 "2:2로" / "3명으로". 성별 무관 모임에서
      "2:2" 라고 하면 없는 규칙을 말하게 된다. */
   const nRo = (n: number) => capacityRo(n, s.genderMode);
@@ -179,11 +217,6 @@ export default function SessionDetail() {
     );
     load();
   };
-
-  const badges = [
-    ...Array.from({ length: s.maleJoined }, (_, i) => ({ g: "m", key: `m${i}` })),
-    ...Array.from({ length: s.femaleJoined }, (_, i) => ({ g: "f", key: `f${i}` })),
-  ];
 
   /* 호스트: 모임 삭제. 신청비는 서버가 전원 반환하고, 알림은 여기서 부탁한다 */
   const onDelete = async () => {
@@ -368,55 +401,67 @@ export default function SessionDetail() {
         )}
       </section>
 
-      {/* 참가 현황 — 익명 */}
+      {/* 참여자 — 호스트도 이 명단 안에 있고 이름 옆에 표시가 붙는다.
+          예전에는 "남 확정 · 여 모집중" 익명 칸과 맨 아래 호스트 상자로
+          나뉘어 있었다. 같은 것을 두 번 그리는 셈이라 하나로 합쳤다. */}
       <section className="mt-6 border-t border-line pt-5">
         <h2 className="text-[15px] font-bold">
-          참가 현황{" "}
+          참여자{" "}
           <span className="font-normal text-muted">
             {s.maleJoined + s.femaleJoined}/{totalSeats(s.capacity, s.genderMode)}
           </span>
         </h2>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {badges.map((b) => (
-            <span
-              key={b.key}
-              className="rounded-lg bg-surface2 px-3 py-1.5 text-[12.5px] font-medium text-ink"
+
+        <div className="mt-3 flex flex-col">
+          {members.map((m) => (
+            <Link
+              key={m.id}
+              href={`/session/host?id=${s.id}&u=${m.id}`}
+              className="flex items-center gap-3 rounded-xl py-2 transition-colors active:bg-surface2"
             >
-              {b.g === "m" ? "남" : "여"} 확정
-            </span>
+              {m.photo && photos[m.photo] ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={photos[m.photo]}
+                  alt=""
+                  className="h-11 w-11 shrink-0 rounded-full object-cover"
+                />
+              ) : (
+                <AvatarFallback size={44} />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[14.5px] font-semibold">
+                  {m.nickname}
+                  {m.age && (
+                    <span className="ml-1.5 text-[12.5px] font-normal text-muted">
+                      {m.age}
+                    </span>
+                  )}
+                  {m.is_host && (
+                    <span className="ml-1.5 rounded-md bg-surface2 px-1.5 py-0.5 align-middle text-[11px] font-medium text-muted">
+                      호스트
+                    </span>
+                  )}
+                </p>
+                <p className="mt-0.5 truncate text-[12.5px] text-muted">
+                  {[m.area, m.level && `L${m.level} ${level(m.level).name}`]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              </div>
+              <ChevronRightIcon size={16} className="shrink-0 text-faint" />
+            </Link>
           ))}
-          {!dead && anyGender &&
-            Array.from({ length: left.total }, (_, i) => (
-              <span
-                key={`ea${i}`}
-                className="rounded-lg border border-dashed border-line px-3 py-1.5 text-[12.5px] text-faint"
-              >
-                모집중
-              </span>
+
+          {/* 남은 자리. 성별 무관 모임에는 "남 자리 / 여 자리" 가 없다 */}
+          {!dead &&
+            emptySeats.map((e, i) => (
+              <div key={`e${i}`} className="flex items-center gap-3 py-2">
+                <div className="h-11 w-11 shrink-0 rounded-full border border-dashed border-line" />
+                <p className="text-[13px] text-faint">{e}</p>
+              </div>
             ))}
-          {!dead && !anyGender &&
-            Array.from({ length: Math.max(0, left.male) }, (_, i) => (
-            <span
-              key={`em${i}`}
-              className="rounded-lg border border-dashed border-line px-3 py-1.5 text-[12.5px] text-faint"
-            >
-              남 모집중
-            </span>
-          ))}
-          {!dead && !anyGender &&
-            Array.from({ length: Math.max(0, left.female) }, (_, i) => (
-            <span
-              key={`ef${i}`}
-              className="rounded-lg border border-dashed border-line px-3 py-1.5 text-[12.5px] text-faint"
-            >
-              여 모집중
-            </span>
-          ))}
         </div>
-        <p className="mt-2.5 text-[12px] leading-relaxed text-faint">
-          다른 참가자 프로필은 확정되면 서로 볼 수 있어요. 호스트는 아래에서
-          지금 볼 수 있어요.
-        </p>
       </section>
 
       {/* 조기 확정 — 자리가 남아도 성비가 맞으면 그 인원으로 갈 수 있다 */}
@@ -493,47 +538,6 @@ export default function SessionDetail() {
         <p className="mt-6 rounded-xl border border-line px-5 py-4 text-center text-[12.5px] leading-relaxed text-muted">
           확정에 동의했어요. 남은 참가자의 답을 기다리는 중이에요.
         </p>
-      )}
-
-      {/* 호스트 — 눌러서 프로필 전체 보기 */}
-      {s.host && (
-        <section className="mt-6 border-t border-line pt-5">
-          <h2 className="text-[15px] font-bold">호스트</h2>
-          <Link
-            href={`/session/host?id=${s.id}`}
-            className="mt-3 flex items-center gap-3 rounded-xl transition-colors active:bg-surface2"
-          >
-            {hostPhoto ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={hostPhoto}
-                alt=""
-                className="h-12 w-12 shrink-0 rounded-full object-cover"
-              />
-            ) : (
-              <AvatarFallback size={48} />
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[15px] font-semibold">
-                {s.host.nickname}
-                {s.host.age && (
-                  <span className="ml-1.5 text-[13px] font-normal text-muted">
-                    {s.host.age}
-                  </span>
-                )}
-              </p>
-              <p className="mt-0.5 truncate text-[12.5px] text-muted">
-                {[
-                  s.host.area,
-                  s.host.level && `L${s.host.level} ${level(s.host.level).name}`,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </p>
-            </div>
-            <ChevronRightIcon size={16} className="shrink-0 text-faint" />
-          </Link>
-        </section>
       )}
 
       {/* 등반 인증 안내는 모임 진행 화면(/room)에 있다 — 상세에서는 뺐다.

@@ -213,6 +213,56 @@ export async function fetchSessionHost(
   return { host: r };
 }
 
+/* 모임 참여자 한 줄. 호스트도 이 목록에 같이 들어온다 (is_host) —
+   화면에서 두 덩어리로 나누지 않으려고 서버가 한 줄로 세워서 준다. */
+export interface SessionMember {
+  id: string;
+  nickname: string;
+  photo: string | null;
+  gender: "m" | "f";
+  age: number | null;
+  area: string | null;
+  level: LevelId | null;
+  is_host: boolean;
+}
+
+export async function fetchSessionMembers(
+  sessionId: string
+): Promise<SessionMember[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+  const { data, error } = await sb.rpc("session_members", {
+    p_session: sessionId,
+  });
+  if (error) {
+    console.error("session_members", error);
+    return [];
+  }
+  return (data as SessionMember[] | null) ?? [];
+}
+
+/* 참여자 한 사람의 프로필. session_host 를 사람 단위로 넓힌 것이라
+   같은 모양으로 돌아온다 (호스트를 넘겨도 된다). */
+export async function fetchSessionMember(
+  sessionId: string,
+  userId: string
+): Promise<{ host?: HostProfile; error?: string }> {
+  const sb = getSupabase();
+  if (!sb) return { error: "no_client" };
+  const { data, error } = await sb.rpc("session_member", {
+    p_session: sessionId,
+    p_user: userId,
+  });
+  if (error) {
+    console.error("session_member", error);
+    return { error: error.message };
+  }
+  const r = data as (HostProfile & { error?: string }) | null;
+  if (!r) return { error: "not_found" };
+  if (r.error) return { error: r.error };
+  return { host: r };
+}
+
 export async function createSession(p: {
   gym: string;
   /* Gym Master 의 id — 선택. 넘기면 서버가 실재·운영 여부를 확인하고

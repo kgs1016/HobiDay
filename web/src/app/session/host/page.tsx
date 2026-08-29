@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useQueryId } from "@/lib/queryId";
+import { useQueryId, useQueryParam } from "@/lib/queryId";
 import { careerLabel, level } from "@/lib/levels";
 import { MOCK_PEOPLE, MOCK_SESSIONS } from "@/lib/mock";
 import BackButton from "@/components/BackButton";
@@ -12,20 +12,21 @@ import { ShoeIllust } from "@/components/illustrations";
 import {
   hasSupabase,
   fetchSessionHost,
+  fetchSessionMember,
   signedPhotoUrls,
   type HostProfile,
 } from "@/lib/supabase";
 
 const ERRORS: Record<string, string> = {
   auth: "로그인이 필요해요",
-  not_found: "모임을 찾을 수 없어요",
-  left: "호스트가 탈퇴해서 프로필을 볼 수 없어요",
+  not_found: "프로필을 볼 수 없어요",
+  left: "탈퇴해서 프로필을 볼 수 없어요",
 };
 
 /** 목데이터 폴백 — Supabase 키가 없을 때 화면만 확인한다 */
-function mockHost(sessionId: string): HostProfile | null {
+function mockHost(sessionId: string, userId?: string): HostProfile | null {
   const s = MOCK_SESSIONS.find((x) => x.id === sessionId);
-  const p = MOCK_PEOPLE.find((x) => x.id === s?.host?.id);
+  const p = MOCK_PEOPLE.find((x) => x.id === (userId || s?.host?.id));
   if (!p) return null;
   return {
     id: p.id,
@@ -56,6 +57,9 @@ function Row({ label, value }: { label: string; value: string }) {
 export default function SessionHost() {
   const qid = useQueryId();
   const id = qid ?? "";
+  /* 참여자 명단에서 들어오면 누구인지가 붙는다. 없으면 호스트 —
+     이미 폰에 깔린 앱이 u 없이 이 주소를 부르고 있어서 그대로 받는다. */
+  const u = useQueryParam("u");
   const router = useRouter();
   const [host, setHost] = useState<HostProfile | null | undefined>(undefined);
   const [photo, setPhoto] = useState<string | null>(null);
@@ -71,10 +75,10 @@ export default function SessionHost() {
         return;
       }
       if (!hasSupabase()) {
-        setHost(mockHost(id));
+        setHost(mockHost(id, u ?? undefined));
         return;
       }
-      const r = await fetchSessionHost(id);
+      const r = u ? await fetchSessionMember(id, u) : await fetchSessionHost(id);
       if (r.error || !r.host) {
         setErr(r.error ?? "not_found");
         setHost(null);
@@ -85,7 +89,7 @@ export default function SessionHost() {
         setPhoto((await signedPhotoUrls([r.host.photo]))[r.host.photo] ?? null);
       }
     })();
-  }, [id, qid]);
+  }, [id, qid, u]);
 
   if (host === undefined)
     return (
@@ -99,7 +103,7 @@ export default function SessionHost() {
       <main className="flex flex-col items-center px-4 pt-24 text-center">
         <ShoeIllust size={64} />
         <p className="mt-4 text-[15px] font-semibold">
-          {(err && ERRORS[err]) ?? "호스트 정보를 볼 수 없어요"}
+          {(err && ERRORS[err]) ?? "프로필을 볼 수 없어요"}
         </p>
         <button
           onClick={() => router.back()}
@@ -111,12 +115,17 @@ export default function SessionHost() {
     );
 
   const lv = level(host.level);
+  /* session_member 는 is_host 를 함께 준다. u 없이 들어온 예전 주소
+     (session_host) 는 그 칸이 없으므로 호스트로 본다. */
+  const isHost = (host as HostProfile & { is_host?: boolean }).is_host ?? true;
 
   return (
     <main className="px-4 pb-10">
       <header className="flex items-center gap-2 pt-4 pb-4">
         <BackButton />
-        <h1 className="text-[18px] font-bold tracking-tight">호스트 프로필</h1>
+        <h1 className="text-[18px] font-bold tracking-tight">
+          {isHost ? "호스트 프로필" : "참여자 프로필"}
+        </h1>
       </header>
 
       {/* 사진과 이름 — 카드 없이 문서처럼 */}
@@ -164,9 +173,9 @@ export default function SessionHost() {
       </section>
 
       <p className="mt-5 text-center text-[11.5px] leading-relaxed text-faint">
-        모임을 연 사람이라 프로필이 공개돼요.
+        모임에 들어온 사람이라 이 모임 안에서 프로필이 보여요.
         <br />
-        다른 참가자는 모임이 확정되면 볼 수 있어요.
+        사람 찾기 공개 여부와는 별개예요.
       </p>
 
       <Link
