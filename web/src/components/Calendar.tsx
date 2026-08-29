@@ -12,7 +12,7 @@
 const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 /** "2026-08-29" — toISOString 은 UTC 라 한국 오전 9시 이전에 하루가 밀린다 */
-const ymd = (d: Date) =>
+export const ymd = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
     d.getDate()
   ).padStart(2, "0")}`;
@@ -58,26 +58,14 @@ export default function Calendar({
     return { day, key, off: (!!min && key < min) || (!!max && key > max) };
   });
 
-  const Nav = ({ back }: { back?: boolean }) => (
-    <button
-      type="button"
-      disabled={back ? prevOff : nextOff}
-      onClick={() => shift(back ? -1 : 1)}
-      aria-label={back ? "이전 달" : "다음 달"}
-      className="px-2 py-1 text-[15px] text-muted disabled:opacity-25"
-    >
-      {back ? "‹" : "›"}
-    </button>
-  );
-
   return (
     <div>
       <div className="flex items-center justify-between">
-        <Nav back />
+        <Nav back off={prevOff} onClick={() => shift(-1)} />
         <p className="text-[13.5px] font-semibold">
           {y}년 {m}월
         </p>
-        <Nav />
+        <Nav off={nextOff} onClick={() => shift(1)} />
       </div>
 
       <div className="mt-2 grid grid-cols-7 gap-y-1 text-center">
@@ -110,6 +98,29 @@ export default function Calendar({
         )}
       </div>
     </div>
+  );
+}
+
+/* 달 넘기기 화살표. 넘어갈 달이 통째로 범위 밖이면 같이 잠근다 */
+function Nav({
+  back,
+  off,
+  onClick,
+}: {
+  back?: boolean;
+  off: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={off}
+      onClick={onClick}
+      aria-label={back ? "이전 달" : "다음 달"}
+      className="px-2 py-1 text-[15px] text-muted disabled:opacity-25"
+    >
+      {back ? "‹" : "›"}
+    </button>
   );
 }
 

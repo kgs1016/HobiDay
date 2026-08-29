@@ -24,7 +24,7 @@ import {
   type Gym,
 } from "@/lib/supabase";
 import { isProfileComplete } from "@/lib/profileGate";
-import Calendar, { monthOf } from "@/components/Calendar";
+import Calendar, { monthOf, ymd } from "@/components/Calendar";
 import BackButton from "@/components/BackButton";
 import GymPicker from "@/components/GymPicker";
 import { ChevronDownIcon } from "@/components/icons";
@@ -62,6 +62,34 @@ function Chip({
   );
 }
 
+const hm = (d: Date) =>
+  `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+
+/* 화면을 열자마자 쓸 수 있는 날짜·시각.
+   날짜만 오늘로 채우고 시각을 15:00 에 두면, 저녁에 들어온 사람은
+   손도 대기 전에 "이미 지난 시각이에요" 와 잠긴 버튼을 본다 — 아무것도
+   안 했는데 혼난 기분이 든다. 그래서 시각도 같이 옮긴다.
+
+   서버는 "지금부터 30분 뒤" 부터 받는다. 여유를 조금 더 두고 다음 30분
+   칸으로 올린다. 밤늦게 열어서 오늘 안에는 더 잡을 수 없으면 내일
+   오후로 넘긴다 — 오늘을 고집하면 어차피 잠긴 화면이 된다. */
+function defaultSlot() {
+  const now = new Date();
+  const today = ymd(now);
+  const start = new Date(now.getTime() + 40 * 60 * 1000);
+  start.setSeconds(0, 0);
+  start.setMinutes(Math.ceil(start.getMinutes() / 30) * 30);
+
+  // 22시가 넘으면 두 시간을 잡는 순간 자정을 넘는다
+  if (ymd(start) === today && start.getHours() < 22) {
+    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+    return { date: today, start: hm(start), end: hm(end) };
+  }
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return { date: ymd(tomorrow), start: "15:00", end: "17:00" };
+}
+
 const inputCls =
   // iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다 — 16px 유지
   "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-[16px] text-ink [color-scheme:light] focus:border-accent focus:outline-none";
@@ -87,9 +115,16 @@ export default function NewSession() {
   const masterMode = !!gyms && gyms.length > 0;
   const selected = masterMode ? gyms!.find((g) => g.id === gymId) : undefined;
 
+  /* 빈 값으로 시작해서 브라우저에서 오늘로 채운다. 렌더 중에 new Date()
+     를 부르면 서버가 미리 그려둔 날이 박혀서, 하루만 지나도 어제가
+     기본값이 된다. 달력을 아무 데도 안 짚은 채 열어두면 여는 사람이
+     "어디부터 고를 수 있는지" 를 스스로 알아내야 한다. */
   const [date, setDate] = useState("");
   // 보고 있는 달. 날짜를 고르면 그 달에 머문다
   const [month, setMonth] = useState(monthOf(""));
+
+  const [startTime, setStartTime] = useState("15:00");
+  const [endTime, setEndTime] = useState("17:00");
 
   /* 지금 시각. 렌더 중에 new Date() 를 부르면 프리렌더된 값이 박혀서
      하루만 지나도 어제가 기준이 된다. 브라우저에서 읽고, 30초마다
@@ -99,6 +134,11 @@ export default function NewSession() {
   const [now, setNow] = useState(0);
   useEffect(() => {
     setNow(Date.now());
+    const slot = defaultSlot();
+    setDate((d) => d || slot.date);
+    setMonth(monthOf(slot.date));
+    setStartTime(slot.start);
+    setEndTime(slot.end);
     const t = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(t);
   }, []);
@@ -107,17 +147,10 @@ export default function NewSession() {
      거부한다). now 를 따라가니 자정을 넘겨도 어제가 남지 않는다. */
   const range = (() => {
     if (!now) return { min: "", max: "" };
-    const ymd = (d: Date) =>
-      // toISOString 은 UTC 라 한국 오전 9시 이전에 하루가 밀린다
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-        d.getDate()
-      ).padStart(2, "0")}`;
     const in90 = new Date(now);
     in90.setDate(in90.getDate() + 90);
     return { min: ymd(new Date(now)), max: ymd(in90) };
   })();
-  const [startTime, setStartTime] = useState("15:00");
-  const [endTime, setEndTime] = useState("17:00");
   /* 성비를 먼저 고르고 정원을 고른다 — 정원의 뜻이 성비에 따라 달라진다.
      반반이면 성별당 인원(2 = 2:2), 무관이면 총 인원(4 = 4명). */
   const [genderMode, setGenderMode] = useState<GenderMode>("balanced");

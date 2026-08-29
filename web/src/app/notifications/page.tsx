@@ -88,11 +88,20 @@ export default function Notifications() {
         /* 알림 하나하나를 카드로 만들지 않는다 — 행 + divider */
         <div className="flex flex-col divide-y divide-line">
           {list.map((n) => {
+            /* 읽은 것과 안 읽은 것은 점 하나로만 갈렸다. 점은 작아서
+               훑을 때 안 보인다 — 글자 자체를 다르게 한다. 안 읽은 건
+               진하게, 읽은 건 흐리게. 지우지 않고 남겨두되 눈은
+               새 알림에 먼저 가도록. */
+            const unread = !n.read_at;
             const row = (
               <div className="py-3.5">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="min-w-0 text-[14.5px] font-medium">
-                    {!n.read_at && (
+                  <p
+                    className={`min-w-0 text-[14.5px] ${
+                      unread ? "font-semibold text-ink" : "font-normal text-faint"
+                    }`}
+                  >
+                    {unread && (
                       <span className="mr-1.5 inline-block h-1.5 w-1.5 -translate-y-0.5 rounded-full bg-accent" />
                     )}
                     {n.title}
@@ -102,7 +111,11 @@ export default function Notifications() {
                   </span>
                 </div>
                 {n.body && (
-                  <p className="mt-1 text-[13px] leading-relaxed text-muted">
+                  <p
+                    className={`mt-1 text-[13px] leading-relaxed ${
+                      unread ? "text-muted" : "text-faint"
+                    }`}
+                  >
                     {n.body}
                   </p>
                 )}
