@@ -73,7 +73,7 @@ export interface Person {
 export const MOCK_SESSIONS: Session[] = [
   {
     id: "s1",
-    gym: "더클라임 B홍대",
+    gym: "더클라임 B홍대점",
     date: "토 8/1",
     start: "15:00",
     end: "17:00",
@@ -90,7 +90,7 @@ export const MOCK_SESSIONS: Session[] = [
   },
   {
     id: "s2",
-    gym: "더클라임 연남",
+    gym: "더클라임 연남점",
     date: "일 8/2",
     start: "11:00",
     end: "13:00",
@@ -107,7 +107,7 @@ export const MOCK_SESSIONS: Session[] = [
   },
   {
     id: "s3",
-    gym: "홍대클라이밍",
+    gym: "홍대클라이밍센터",
     date: "토 8/1",
     start: "19:00",
     end: "21:00",
@@ -124,7 +124,7 @@ export const MOCK_SESSIONS: Session[] = [
   },
   {
     id: "s4",
-    gym: "써미트클라이밍",
+    gym: "써미트클라이밍센터",
     date: "수 8/5",
     start: "19:30",
     end: "21:00",
@@ -141,7 +141,7 @@ export const MOCK_SESSIONS: Session[] = [
   },
   {
     id: "s5",
-    gym: "더월클라이밍 연남",
+    gym: "더클라임 강남점",
     date: "목 8/6",
     start: "10:00",
     end: "12:00",
@@ -160,10 +160,10 @@ export const MOCK_SESSIONS: Session[] = [
 ];
 
 export const MOCK_PEOPLE: Person[] = [
-  { id: "p1", nickname: "서연", age: 27, gender: "f", level: 3, careerId: 4, height: 164, homeGym: "써미트클라이밍", mbti: "ENFP", area: "연남동" },
-  { id: "p2", nickname: "지훈", age: 29, gender: "m", level: 3, careerId: 2, homeGym: "더클라임 연남", mbti: "ISTP", area: "망원동" },
-  { id: "p3", nickname: "하은", age: 31, gender: "f", level: 2, careerId: 1, height: 158, homeGym: "더클라임 B홍대", mbti: "ISFJ", area: "상수동" },
-  { id: "p4", nickname: "민지", age: 26, gender: "f", level: 4, careerId: 6, height: 170, homeGym: "더월 연남", mbti: "INTP", area: "연희동" },
+  { id: "p1", nickname: "서연", age: 27, gender: "f", level: 3, careerId: 4, height: 164, homeGym: "써미트클라이밍센터", mbti: "ENFP", area: "연남동" },
+  { id: "p2", nickname: "지훈", age: 29, gender: "m", level: 3, careerId: 2, homeGym: "더클라임 연남점", mbti: "ISTP", area: "망원동" },
+  { id: "p3", nickname: "하은", age: 31, gender: "f", level: 2, careerId: 1, height: 158, homeGym: "더클라임 B홍대점", mbti: "ISFJ", area: "상수동" },
+  { id: "p4", nickname: "민지", age: 26, gender: "f", level: 4, careerId: 6, height: 170, homeGym: "더클라임 강남점", mbti: "INTP", area: "연희동" },
 ];
 
 export function slotsLeft(s: Session) {

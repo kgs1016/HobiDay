@@ -355,7 +355,12 @@ export default function Home() {
         aliases: g.aliases,
       }))
     : MOCK_GYMS.map((name) => ({ name }));
-  const knownNames = new Set(baseOpts.map((o) => o.name));
+  /* 별칭까지 아는 이름으로 친다. master 가 "더클라임 B홍대점" 의 옛 이름을
+     알고 있는데도 "더클라임 B홍대" 로 열린 모임을 뒤에 또 붙이면, 같은
+     암장이 목록에 두 줄로 앉는다. */
+  const knownNames = new Set(
+    baseOpts.flatMap((o) => [o.name, ...(o.aliases ?? [])])
+  );
   const gymChoices: GymOption[] = [
     ...baseOpts,
     ...Array.from(new Set(sessions.map((s) => s.gym)))
