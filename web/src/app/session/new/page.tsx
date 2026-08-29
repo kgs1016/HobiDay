@@ -24,6 +24,7 @@ import {
   type Gym,
 } from "@/lib/supabase";
 import { isProfileComplete } from "@/lib/profileGate";
+import Calendar, { monthOf } from "@/components/Calendar";
 import BackButton from "@/components/BackButton";
 import GymPicker from "@/components/GymPicker";
 import { ChevronDownIcon } from "@/components/icons";
@@ -87,6 +88,8 @@ export default function NewSession() {
   const selected = masterMode ? gyms!.find((g) => g.id === gymId) : undefined;
 
   const [date, setDate] = useState("");
+  // 보고 있는 달. 날짜를 고르면 그 달에 머문다
+  const [month, setMonth] = useState(monthOf(""));
 
   /* 지금 시각. 렌더 중에 new Date() 를 부르면 프리렌더된 값이 박혀서
      하루만 지나도 어제가 기준이 된다. 브라우저에서 읽고, 30초마다
@@ -300,16 +303,26 @@ export default function NewSession() {
           )}
         </Field>
 
-        <Field label="날짜 · 시간">
-          <div className="grid grid-cols-3 gap-2">
-            <input
-              type="date"
-              value={date}
+        <Field label="날짜">
+          {/* 지난 날짜와 90일 밖은 눌리지 않는다 (달력이 직접 막는다).
+              min 이 빈 문자열인 동안 — 브라우저에서 시각을 읽기 전 —
+              은 아무 날도 안 막힌 채로 잠깐 보이지만, 그때는 등록
+              버튼이 잠겨 있어서 넘어가지 않는다. */}
+          <div className="rounded-xl border border-line bg-surface p-3">
+            <Calendar
+              from={date}
+              to={date}
+              onPick={setDate}
               min={range.min}
               max={range.max}
-              onChange={(e) => setDate(e.target.value)}
-              className={inputCls}
+              month={month}
+              onMonth={setMonth}
             />
+          </div>
+        </Field>
+
+        <Field label="시간">
+          <div className="grid grid-cols-2 gap-2">
             <input
               type="time"
               value={startTime}

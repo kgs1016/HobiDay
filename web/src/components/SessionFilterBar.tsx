@@ -9,6 +9,7 @@
    맞춰 바뀐다 — 모임 만들기와 같은 짜임이다. */
 
 import { useState } from "react";
+import Calendar, { monthOf } from "@/components/Calendar";
 import { LEVELS, type LevelId } from "@/lib/levels";
 import { GENDER_MODES } from "@/lib/capacity";
 import {
@@ -160,6 +161,8 @@ export default function SessionFilterBar({
   // 짐 검색 — 시트를 닫아도 남겨둔다 (다시 열어 이어서 고르는 흐름)
   const [gymQ, setGymQ] = useState("");
   const [gymRegion, setGymRegion] = useState<"" | "서울" | "경기">("");
+  // 달력이 보고 있는 달 — 시트를 닫았다 열어도 고른 달에 머문다
+  const [month, setMonth] = useState(monthOf(""));
 
   /* 배열형 조건은 눌렀다 다시 누르면 빠진다 */
   const toggle = <T,>(list: T[], v: T): T[] =>
@@ -186,11 +189,6 @@ export default function SessionFilterBar({
 
   const today = ymd(new Date());
   const lastAge = AGE_BANDS[AGE_BANDS.length - 1].to;
-  /* min 은 달력에서 지난 날을 흐리게만 만든다 — 칸에 직접 쳐 넣으면
-     그대로 들어온다. 브라우저마다 다르게 굴어서 값이 들어오는 자리에서
-     한 번 더 막는다. 지난 날짜는 골라봐야 결과가 언제나 0이다 (시작한
-     모임은 목록에서 내려간다). */
-  const notPast = (v: string) => (v && v < today ? today : v);
   const seatOpts = seatChoices(f.genderMode);
 
   return (
@@ -353,46 +351,38 @@ export default function SessionFilterBar({
             })()}
 
             {open === "date" && (
-              /* 뒤 날짜가 앞보다 이르면 결과가 조용히 0이 되므로, 그렇게
-                 고르는 순간 반대쪽을 같이 옮겨준다.
-                 날짜 칸 둘은 한 줄에 안 들어간다 (시각 칸보다 넓다). 억지로
-                 눌러 담으면 달력 아이콘이 잘리므로 위아래로 놓는다. */
-              <div className="mt-4 flex flex-col gap-2">
-                <label className="flex items-center gap-2.5">
-                  <span className="w-7 shrink-0 text-[12.5px] text-muted">부터</span>
-                  <input
-                    type="date"
-                    value={f.dateFrom}
+              <>
+                {/* 지난 날짜는 숫자 자체가 눌리지 않는다. <input type="date">
+                    의 min 은 브라우저마다 굴는 게 달라서 — 어떤 데서는
+                    흐려지고 어떤 데서는 그냥 눌린 뒤 값만 안 들어갔다 —
+                    달력을 직접 그린다. */}
+                <div className="mt-4">
+                  <Calendar
+                    from={f.dateFrom}
+                    to={f.dateTo || f.dateFrom}
                     min={today}
-                    onChange={(e) => {
-                      const v = notPast(e.target.value);
-                      onChange({
-                        ...f,
-                        dateFrom: v,
-                        dateTo: f.dateTo && v && f.dateTo < v ? v : f.dateTo,
-                      });
+                    month={month}
+                    onMonth={setMonth}
+                    onPick={(d) => {
+                      /* 한 번 누르면 그 하루가 곧 결과다. 뒤의 날을 한 번
+                         더 누르면 기간으로 넓어진다. 이미 기간이 잡혀
+                         있거나 앞을 누르면 거기서 다시 시작한다 —
+                         "지우고 다시" 를 시키지 않는다. */
+                      const single = f.dateFrom && f.dateFrom === f.dateTo;
+                      if (single && d > f.dateFrom)
+                        return onChange({ ...f, dateTo: d });
+                      onChange({ ...f, dateFrom: d, dateTo: d });
                     }}
-                    className={inputCls}
                   />
-                </label>
-                <label className="flex items-center gap-2.5">
-                  <span className="w-7 shrink-0 text-[12.5px] text-muted">까지</span>
-                  <input
-                    type="date"
-                    value={f.dateTo}
-                    min={f.dateFrom || today}
-                    onChange={(e) => {
-                      // 시작일보다 이른 종료일도 같은 이유로 막는다
-                      const v = notPast(e.target.value);
-                      onChange({
-                        ...f,
-                        dateTo: f.dateFrom && v && v < f.dateFrom ? f.dateFrom : v,
-                      });
-                    }}
-                    className={inputCls}
-                  />
-                </label>
-              </div>
+                </div>
+                <p className="mt-3 text-center text-[12.5px] text-muted">
+                  {!f.dateFrom
+                    ? "하루만 골라도 되고, 두 번 누르면 기간이 돼요"
+                    : f.dateFrom === f.dateTo
+                      ? "다른 날을 한 번 더 누르면 그날까지 넓어져요"
+                      : "이 기간의 모임만 보여드려요"}
+                </p>
+              </>
             )}
 
             {open === "time" && (
