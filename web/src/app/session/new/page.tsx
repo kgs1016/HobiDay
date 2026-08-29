@@ -90,9 +90,10 @@ function defaultSlot() {
   return { date: ymd(tomorrow), start: "15:00", end: "17:00" };
 }
 
-const inputCls =
-  // iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다 — 16px 유지
-  "w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-[16px] text-ink [color-scheme:light] focus:border-accent focus:outline-none";
+// iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다 — 16px 유지
+const boxCls =
+  "rounded-lg border border-line bg-surface px-3 py-2.5 text-[16px] text-ink [color-scheme:light] focus:border-accent focus:outline-none";
+const inputCls = `w-full ${boxCls}`;
 
 export default function NewSession() {
   const router = useRouter();
@@ -355,18 +356,22 @@ export default function NewSession() {
         </Field>
 
         <Field label="시간">
-          <div className="grid grid-cols-2 gap-2">
+          {/* 시각 칸을 반 폭으로 늘려놓으면 "04:30 PM" 옆이 텅 빈다.
+              글자만큼만 차지하게 두고 사이에 ~ 를 넣으면, 두 칸이 각각의
+              입력이 아니라 하나의 범위로 읽힌다 (필터의 시간 칸과 같은 모양) */}
+          <div className="flex items-center gap-2">
             <input
               type="time"
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
-              className={inputCls}
+              className={boxCls}
             />
+            <span className="text-[13px] text-muted">~</span>
             <input
               type="time"
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
-              className={inputCls}
+              className={boxCls}
             />
           </div>
           <p className="mt-1.5 text-[12px] text-muted">1.5~2시간을 권장해요</p>
