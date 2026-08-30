@@ -8,11 +8,21 @@
  *    ios     → APNs 직접 (Firebase 안 거침 — iOS 앱에 Firebase SDK 를
  *              심지 않아도 되고, 네이티브 코드 수정이 0 이 된다)
  *
- *  흐름:
- *    앱 (JWT 포함) → 이 함수
- *      → can_notify() 로 관계 검사 (매칭·관심·같은 모임만 허용, 차단 거부)
- *      → push_tokens 에서 상대 기기 토큰 조회
- *      → 플랫폼별 발송, 죽은 토큰은 그 자리에서 정리
+ *  부르는 길이 둘이다.
+ *
+ *    ① 앱 (유저 JWT) → 이 함수
+ *        → can_notify() 로 관계 검사 (매칭·관심·같은 모임만, 차단 거부)
+ *        → push_tokens 에서 상대 기기 토큰 조회
+ *        → 플랫폼별 발송, 죽은 토큰은 그 자리에서 정리
+ *
+ *    ② 크론 (service role) → 이 함수 { drain: true }
+ *        → notifications 에서 아직 안 보낸 줄을 집어 그대로 발송
+ *
+ *  ②가 있는 이유: DB 는 밖으로 HTTP 를 못 쏜다. 크론이 남기는 알림
+ *  ("오늘 모임이 있어요" 등)은 알림함에만 쌓이고 폰은 조용했다.
+ *  notifications 를 발송 대기열로 쓰고, 밖에서 그걸 비운다.
+ *  대기열의 줄은 넣을 때 이미 누가 받을지 정해진 것이라 관계 검사를
+ *  다시 하지 않는다 — 서버가 "이 사람이 알아야 한다" 고 판단한 결과다.
  *
  *  필요한 secret (supabase secrets set):
  *    FIREBASE_SERVICE_ACCOUNT  Firebase > 프로젝트 설정 > 서비스 계정 JSON (android)
@@ -151,32 +161,89 @@ async function sendApns(
   return false;
 }
 
+/* ── 기기 하나에 한 건 보내기 ──
+   두 경로(앱·대기열)가 같은 방식으로 보내야 해서 따로 뺐다.
+   죽은 토큰은 쌓아두면 매번 실패만 반복하므로 그 자리에서 지운다. */
+type Sender = {
+  sa: { project_id: string; client_email: string; private_key: string } | null;
+  apnsKey?: string;
+  apnsKeyId?: string;
+  teamId?: string;
+};
+
+async function deliver(
+  // deno-lint-ignore no-explicit-any
+  admin: any,
+  s: Sender,
+  tok: { token: string; platform: string },
+  title: string,
+  text: string,
+  url: string
+): Promise<boolean> {
+  let result: true | false | "dead" = false;
+  try {
+    if (tok.platform === "android" && s.sa) {
+      result = await sendFcm(s.sa, tok.token, title, text, url);
+    } else if (tok.platform === "ios" && s.apnsKey && s.apnsKeyId && s.teamId) {
+      result = await sendApns(s.apnsKey, s.apnsKeyId, s.teamId, tok.token, title, text, url);
+    } else {
+      return false; // 이 플랫폼의 발송 경로가 아직 미설정
+    }
+  } catch {
+    result = false;
+  }
+  if (result === "dead") {
+    await admin.from("push_tokens").delete().eq("token", tok.token);
+    return false;
+  }
+  return result === true;
+}
+
 /* ── 본체 ── */
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("method", { status: 405 });
 
-  // 호출자 확인 — verify_jwt 로 서명은 이미 검증됐고, 여기서 uid 를 꺼낸다
-  const supa = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: req.headers.get("Authorization")! } } }
-  );
-  const { data: userData } = await supa.auth.getUser();
-  const me = userData?.user?.id;
-  if (!me) return Response.json({ error: "no_auth" }, { status: 401 });
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  /* 대기열을 비우러 온 것인가. service role 키로만 들어올 수 있다 —
+     이 모드는 관계 검사를 건너뛰므로 유저가 흉내낼 수 있으면 안 된다. */
+  const draining = authHeader === `Bearer ${serviceKey}`;
 
-  let body: Body;
+  let me: string | undefined;
+  if (!draining) {
+    // 호출자 확인 — verify_jwt 로 서명은 이미 검증됐고, 여기서 uid 를 꺼낸다
+    const supa = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: userData } = await supa.auth.getUser();
+    me = userData?.user?.id;
+    if (!me) return Response.json({ error: "no_auth" }, { status: 401 });
+  }
+
+  let body: Body = {} as Body;
   try {
     body = await req.json();
   } catch {
-    return Response.json({ error: "bad_json" }, { status: 400 });
+    // 대기열 비우기는 본문이 없어도 된다 — 보낼 것은 DB 가 안다
+    if (!draining) return Response.json({ error: "bad_json" }, { status: 400 });
   }
-  const to = [...new Set(body.to ?? [])].filter((x) => x && x !== me).slice(0, 8);
-  const title = (body.title ?? "").slice(0, 80);
-  const text = (body.body ?? "").slice(0, 200);
-  const url = body.url && body.url.startsWith("/") ? body.url : "/";
-  if (!to.length || !title) return Response.json({ error: "bad_input" }, { status: 400 });
+
+  let to: string[] = [];
+  let title = "";
+  let text = "";
+  let url = "/";
+  if (!draining) {
+    to = [...new Set(body.to ?? [])].filter((x) => x && x !== me).slice(0, 8);
+    title = (body.title ?? "").slice(0, 80);
+    text = (body.body ?? "").slice(0, 200);
+    url = body.url && body.url.startsWith("/") ? body.url : "/";
+    if (!to.length || !title) {
+      return Response.json({ error: "bad_input" }, { status: 400 });
+    }
+  }
 
   const saRaw = Deno.env.get("FIREBASE_SERVICE_ACCOUNT");
   const sa = saRaw ? JSON.parse(saRaw) : null;
@@ -190,11 +257,51 @@ Deno.serve(async (req) => {
   }
 
   // 관계 검사·토큰 조회는 service role 로 (RLS 밖 — 남의 토큰을 읽어야 한다)
-  const admin = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-  );
+  const admin = createClient(Deno.env.get("SUPABASE_URL")!, serviceKey);
+  const sender: Sender = { sa, apnsKey, apnsKeyId, teamId };
 
+  /* ── ② 대기열 비우기 ──
+     DB 가 남긴 알림 중 아직 폰에 안 간 것을 집어 보낸다. */
+  if (draining) {
+    const { data: rows } = await admin.rpc("notifications_pending", { p_limit: 200 });
+    const list = (rows ?? []) as {
+      id: string; user_id: string; title: string; body: string | null; url: string | null;
+    }[];
+    if (!list.length) return Response.json({ ok: true, sent: 0, drained: 0 });
+
+    const users = [...new Set(list.map((r) => r.user_id))];
+    const { data: tokens } = await admin
+      .from("push_tokens")
+      .select("token, platform, user_id")
+      .in("user_id", users);
+
+    const byUser = new Map<string, { token: string; platform: string }[]>();
+    for (const t of tokens ?? []) {
+      const arr = byUser.get(t.user_id) ?? [];
+      arr.push({ token: t.token, platform: t.platform });
+      byUser.set(t.user_id, arr);
+    }
+
+    let sent = 0;
+    for (const r of list) {
+      for (const tok of byUser.get(r.user_id) ?? []) {
+        if (
+          await deliver(admin, sender, tok, (r.title ?? "").slice(0, 80),
+            (r.body ?? "").slice(0, 200),
+            r.url && r.url.startsWith("/") ? r.url : "/")
+        ) sent++;
+      }
+    }
+
+    /* 기기가 없는 사람 것까지 전부 보낸 것으로 찍는다. 폰을 안 쓰는
+       사람(웹만 쓰는 사람)의 알림을 대기열에 남겨두면 영원히 안 빠지고,
+       매번 다시 시도하다가 대기열이 그 줄로만 채워진다. 알림함에는
+       이미 남아 있어서 그 사람이 잃는 것은 없다. */
+    await admin.rpc("notifications_mark_pushed", { p_ids: list.map((r) => r.id) });
+    return Response.json({ ok: true, sent, drained: list.length });
+  }
+
+  /* ── ① 앱이 부른 길 ── */
   const allowed: string[] = [];
   for (const target of to) {
     const { data: ok } = await admin.rpc("can_notify", { p_from: me, p_to: target });
@@ -209,22 +316,8 @@ Deno.serve(async (req) => {
   if (!tokens?.length) return Response.json({ ok: true, sent: 0 });
 
   let sent = 0;
-  for (const { token, platform } of tokens) {
-    let result: true | false | "dead" = false;
-    try {
-      if (platform === "android" && sa) {
-        result = await sendFcm(sa, token, title, text, url);
-      } else if (platform === "ios" && apnsReady) {
-        result = await sendApns(apnsKey!, apnsKeyId!, teamId!, token, title, text, url);
-      } else {
-        continue; // 이 플랫폼의 발송 경로가 아직 미설정
-      }
-    } catch {
-      result = false;
-    }
-    if (result === true) sent++;
-    // 죽은 토큰(앱 삭제 등)은 쌓아두면 매번 실패만 반복한다
-    else if (result === "dead") await admin.from("push_tokens").delete().eq("token", token);
+  for (const tok of tokens) {
+    if (await deliver(admin, sender, tok, title, text, url)) sent++;
   }
 
   return Response.json({ ok: true, sent });

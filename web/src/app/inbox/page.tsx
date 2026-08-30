@@ -165,17 +165,18 @@ export default function Inbox() {
       ? await approveSignup(h.session_id, h.user_id)
       : await rejectSignup(h.session_id, h.user_id);
     setBusy(null);
-    // 승인이든 거절이든 알린다. 신청비 10크레딧이 걸려 있어서, 결과를
-    // 모르면 신청자는 신청함을 직접 열어볼 때까지 계속 기다린다.
-    // (관심 거절은 여전히 안 알린다 — 짝사랑을 드러내지 않기로 했다)
-    if (!r.error)
+    /* 승인은 여기서 알린다 — 그 자리에서 폰이 울리는 게 낫다.
+       거절은 서버(session_reject)가 남긴다. 여기서 보내면 이미 늦다:
+       거절이 signups.status 를 'cut' 으로 바꾸는 순간 can_notify 가
+       "관계 없음" 이 되어 알림이 조용히 버려졌다. 신청비 10크레딧이
+       걸린 소식인데 아무도 모른 채 사라지고 있었다.
+       (관심 거절은 여전히 안 알린다 — 짝사랑을 드러내지 않기로 했다) */
+    if (!r.error && ok)
       notifyPush(
         h.user_id,
-        ok ? "✅ 모임 신청이 수락됐어요" : "모임 신청 결과를 알려드려요",
-        ok
-          ? `${h.gym} 모임에 자리가 잡혔어요`
-          : `${h.gym} 모임은 이번엔 함께하지 못하게 됐어요. 신청비는 돌려드렸어요.`,
-        ok ? `/session?id=${h.session_id}` : "/inbox"
+        "✅ 모임 신청이 수락됐어요",
+        `${h.gym} 모임에 자리가 잡혔어요`,
+        `/session?id=${h.session_id}`
       );
     /* 참가자끼리 차단한 사이라 서버가 자동으로 잘라냈다. 호스트는
        제3자라 누가 누구를 차단했는지 알 이유가 없다 — 그냥 처리할 수
