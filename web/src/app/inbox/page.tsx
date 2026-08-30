@@ -574,13 +574,24 @@ export default function Inbox() {
                               note: "정원이 다 차지 않아 모임이 열리지 못했어요.",
                             }
                       : running
-                        ? mine
+                        ? mine && s.session_status === "confirmed"
                           ? {
                               label: "오늘 모임이에요",
                               cls: "bg-accent-soft text-accent-pressed",
                               note: "모임이 진행 중이에요.",
                             }
-                          : STATUS.cut
+                          : mine
+                            ? {
+                                /* 정원을 못 채운 채 시작 시각이 지났다.
+                                   끝나면 "열리지 못했어요" 로 넘어가는데,
+                                   그 전까지만 "진행 중" 이라고 말하고
+                                   있었다. 같은 모임을 세 시간 사이에 두
+                                   가지로 말한 셈이다. */
+                                label: "열리지 못했어요",
+                                cls: "bg-surface2 text-muted",
+                                note: "정원이 다 차지 않아 모임이 열리지 못했어요.",
+                              }
+                            : STATUS.cut
                         : mine && s.session_status === "confirmed"
                           ? {
                               label: "모임 확정",
