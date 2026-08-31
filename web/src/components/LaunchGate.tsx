@@ -11,7 +11,8 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { fetchAppFlags, hasSupabase } from "@/lib/supabase";
 
-// 잠겨 있어도 다녀야 하는 곳 — 가입·프로필·내 정보·법적 문서
+// 잠겨 있어도 다녀야 하는 곳 — 가입·프로필·내 정보·법적 문서·고객센터
+// (/support 는 스토어 Support URL — 심사관이 로그인 없이 열어본다)
 const OPEN_PATHS = [
   "/login",
   "/signup",
@@ -22,6 +23,7 @@ const OPEN_PATHS = [
   "/safety",
   "/terms",
   "/privacy",
+  "/support",
 ];
 
 export default function LaunchGate() {

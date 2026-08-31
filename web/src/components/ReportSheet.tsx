@@ -2,12 +2,15 @@
 
 /* 신고 시트 — 사람 찾기·채팅 어디서든 같은 화면을 쓴다.
    신고하면 차단까지 함께 걸린다(서버 처리). 두 번 누르게 하지 않고,
-   신고해놓고 계속 보이는 상태도 만들지 않는다. */
+   신고해놓고 계속 보이는 상태도 만들지 않는다.
+   신고 없이 차단만 하는 길도 여기 있다 — 애플 심사 1.2 가 신고와
+   차단을 별개 장치로 요구하고, 사유를 고르기 싫은 사용자도 있다. */
 
 import { useState } from "react";
 import { notifyPush } from "@/lib/nativePush";
 import {
   REPORT_REASONS,
+  blockUser,
   reportUser,
   type ReportContext,
   type ReportReason,
@@ -64,6 +67,38 @@ export default function ReportSheet({
             `\n참가자들에게는 신청비를 모두 돌려드렸어요.`
           : "") +
         `\n\n24시간 안에 확인하고 조치할게요.`
+    );
+    onDone?.();
+    onClose();
+  };
+
+  const blockOnly = async () => {
+    setBusy(true);
+    const r = await blockUser(targetId);
+    setBusy(false);
+    if (r.error) {
+      alert(`차단하지 못했어요: ${r.error}`);
+      return;
+    }
+    if (r.notify?.length)
+      notifyPush(
+        r.notify,
+        "😢 모임이 취소됐어요",
+        "모임이 취소됐어요. 신청 크레딧은 돌려드렸어요.",
+        "/inbox",
+        { pushOnly: true }
+      );
+    alert(
+      `${nickname}님을 차단했어요. 서로 보이지 않아요.` +
+        (r.left_sessions
+          ? `\n\n같이 가기로 한 모임 ${r.left_sessions}개에서도 빠졌어요.` +
+            `\n신청비는 확인 후 돌려드릴게요.`
+          : "") +
+        (r.cancelled_sessions
+          ? `\n\n내가 연 모임 ${r.cancelled_sessions}개는 취소했어요.` +
+            `\n참가자들에게는 신청비를 모두 돌려드렸어요.`
+          : "") +
+        `\n\n차단은 마이 > 안전 설정에서 풀 수 있어요.`
     );
     onDone?.();
     onClose();
@@ -127,6 +162,14 @@ export default function ReportSheet({
             {busy ? "접수 중…" : "신고하고 차단"}
           </button>
         </div>
+
+        <button
+          onClick={blockOnly}
+          disabled={busy}
+          className="mt-4 w-full text-center text-[13px] font-medium text-muted underline underline-offset-4 disabled:opacity-50"
+        >
+          신고 없이 차단만 할게요
+        </button>
       </div>
     </div>
   );

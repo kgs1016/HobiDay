@@ -42,11 +42,30 @@ function GoogleLogo() {
   );
 }
 
+function AppleLogo() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="#fff"
+        d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.032 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zm3.35-3.066c.84-1.012 1.404-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.56-1.702"
+      />
+    </svg>
+  );
+}
+
+/* 애플 심사 4.8 — 카카오·구글 같은 서드파티 로그인을 쓰는 앱은
+   Sign in with Apple 을 함께 제공해야 한다. 버튼 문구는 애플이
+   허용하는 표현("Apple로 계속하기") 그대로 쓴다. */
 const OAUTH = {
   kakao: {
     label: "카카오로 시작하기",
     cls: "bg-[#FEE500] text-[#191600]",
     Logo: KakaoLogo,
+  },
+  apple: {
+    label: "Apple로 계속하기",
+    cls: "bg-black text-white",
+    Logo: AppleLogo,
   },
   google: {
     label: "구글로 시작하기",
@@ -55,6 +74,9 @@ const OAUTH = {
   },
 } as const;
 
+/* 노출 순서는 대시보드 응답 순서가 아니라 여기서 정한다 */
+const ORDER = Object.keys(OAUTH) as Provider[];
+
 type Provider = keyof typeof OAUTH;
 
 export default function OAuthButtons() {
@@ -62,7 +84,7 @@ export default function OAuthButtons() {
 
   useEffect(() => {
     enabledOAuthProviders().then((list) =>
-      setProviders(list.filter((p): p is Provider => p in OAUTH))
+      setProviders(ORDER.filter((p) => list.includes(p)))
     );
   }, []);
 

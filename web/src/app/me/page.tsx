@@ -243,6 +243,7 @@ export default function Me() {
         {/* 끝난 모임은 홈에서도 채팅에서도 사라진다 — 여기가 유일한 통로 */}
         {!locked && <MenuRow href="/me/history" label="매칭 기록" />}
         <MenuRow href="/safety" label="안전 설정 · 차단 목록" />
+        <MenuRow href="/support" label="고객센터 · 문의" />
       </section>
 
       {/* 계정 */}

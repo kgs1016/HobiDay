@@ -1278,7 +1278,14 @@ export async function blockUser(targetId: string) {
   if (!sb) return { error: "no_client" };
   const { data, error } = await sb.rpc("block_user", { p_target: targetId });
   if (error) return { error: error.message };
-  return data as { ok?: boolean; error?: string };
+  // 차단도 신고와 똑같이 얽힌 모임을 갈라놓는다 — 반환 모양도 같다
+  return data as {
+    ok?: boolean;
+    left_sessions?: number;
+    cancelled_sessions?: number;
+    notify?: string[];
+    error?: string;
+  };
 }
 
 export async function unblockUser(targetId: string) {

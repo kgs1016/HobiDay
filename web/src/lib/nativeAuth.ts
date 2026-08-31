@@ -28,7 +28,7 @@ export const NATIVE_REDIRECT = `${NATIVE_SCHEME}://auth/callback`;
 
 export const isNative = () => Capacitor.isNativePlatform();
 
-export type Provider = "kakao" | "google";
+export type Provider = "kakao" | "google" | "apple";
 
 /** 웹이면 주소를 옮기고, 앱이면 시스템 브라우저로 연다. */
 export async function signInWithProvider(
