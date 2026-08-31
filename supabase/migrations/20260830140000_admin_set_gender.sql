@@ -23,16 +23,20 @@
 -- 읽어서 반대 성별만 고르므로, 바꾸는 순간 알아서 따라온다.
 
 -- ───────────────────────────────────────────────────────────────
---  1. 잠금에 열쇠 구멍 하나
+--  1. 잠금은 "누가 부르느냐" 로 가른다
 -- ───────────────────────────────────────────────────────────────
--- 트리거는 그대로 두되, 트랜잭션 안에서만 잠깐 열 수 있게 한다.
--- set_config(..., true) 는 그 트랜잭션이 끝나면 사라져서, 열어둔 채로
--- 다음 요청에 새어 나가지 않는다.
+-- 앱에서 오는 요청은 anon 아니면 authenticated 로 들어온다. 그 둘만
+-- 막으면 된다. 대시보드(postgres)와 security definer 함수 안쪽은
+-- 그 역할이 아니라 자연히 통과한다.
+--
+-- 처음엔 세션 설정(GUC)으로 잠깐 여는 방식을 썼는데, 그러면 잠금이
+-- "클라이언트가 그 설정을 못 건드린다" 는 가정 위에 서게 된다.
+-- 역할로 가르면 가정이 필요 없다.
 create or replace function profiles_gender_is_fixed()
 returns trigger language plpgsql set search_path = public as $$
 begin
   if new.gender is distinct from old.gender
-     and coalesce(current_setting('hobiday.gender_unlock', true), '') <> 'on' then
+     and current_user in ('anon', 'authenticated') then
     raise exception '성별은 바꿀 수 없어요'
       using errcode = 'check_violation',
             hint = '잘못 고르셨다면 탈퇴 후 다시 가입해주세요';
@@ -70,14 +74,13 @@ begin
     return json_build_object('error','busy', 'sessions', live);
   end if;
 
-  perform set_config('hobiday.gender_unlock', 'on', true);
+  /* security definer 라 이 안에서 current_user 는 함수 주인(postgres)이다.
+     위 트리거의 검사를 자연히 지나간다. */
   update profiles set gender = p_gender where id = p_user;
 
   /* 지난 신청 기록도 함께 옮긴다. 안 옮기면 프로필과 다른 값이 남아서,
      매칭 기록처럼 옛 모임을 다시 그리는 화면에서 어긋난다. */
   update signups set gender = p_gender where user_id = p_user;
-
-  perform set_config('hobiday.gender_unlock', 'off', true);
 
   return json_build_object('ok', true, 'changed', true,
                            'from', old_gender, 'to', p_gender);
