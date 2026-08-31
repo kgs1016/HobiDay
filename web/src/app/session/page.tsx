@@ -7,7 +7,7 @@ import { useQueryId, useQueryParam } from "@/lib/queryId";
 import { notifyPush } from "@/lib/nativePush";
 import { level, levelRangeLabel } from "@/lib/levels";
 import { isProfileComplete } from "@/lib/profileGate";
-import { MOCK_SESSIONS, slotsLeft, type Session } from "@/lib/mock";
+import { MOCK_PEOPLE, MOCK_SESSIONS, slotsLeft, type Session } from "@/lib/mock";
 import { capacityLabel, capacityRo, totalSeats } from "@/lib/capacity";
 import { AvatarFallback, ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 import {
@@ -18,15 +18,37 @@ import {
   currentUser,
   deleteSession,
   fetchSession,
+  fetchSessionMembers,
   fetchMyProfileDb,
   joinSession,
   proposeConfirm,
   signedPhotoUrls,
   toSession,
   withdrawConfirm,
+  type SessionMember,
 } from "@/lib/supabase";
 
 type S = Session & { myStatus?: string | null; cancelled?: boolean };
+
+/* 목데이터 폴백 — Supabase 키가 없을 때 화면만 확인한다.
+   목데이터에는 신청 테이블이 없어서 확정 인원수만큼 사람을 빌려 세운다. */
+function mockMembers(x: Session): SessionMember[] {
+  const host = MOCK_PEOPLE.find((p) => p.id === x.host?.id);
+  const rest = MOCK_PEOPLE.filter((p) => p.id !== host?.id).slice(
+    0,
+    Math.max(0, x.maleJoined + x.femaleJoined - (host ? 1 : 0))
+  );
+  return [...(host ? [host] : []), ...rest].map((p) => ({
+    id: p.id,
+    nickname: p.nickname,
+    photo: null,
+    gender: p.gender,
+    age: p.age,
+    area: p.area,
+    level: p.level,
+    is_host: p.id === host?.id,
+  }));
+}
 
 export default function SessionDetail() {
   const id = useQueryId();
@@ -34,20 +56,39 @@ export default function SessionDetail() {
   const router = useRouter();
   const [s, setS] = useState<S | null | undefined>(undefined);
   const [hostPhoto, setHostPhoto] = useState<string | null>(null);
+  /* 확정된 참가자. 서버에 session_members 가 아직 없으면 빈 배열로 오고,
+     그때는 예전처럼 "남 확정 · 여 확정" 익명 칸을 그린다. 화면이 DB 보다
+     먼저 배포돼도 이름 대신 익명 칸이 보일 뿐 아무것도 안 깨진다. */
+  const [members, setMembers] = useState<SessionMember[]>([]);
+  const [memberPhotos, setMemberPhotos] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
     if (!id) return setS(null);
     if (!hasSupabase()) {
-      setS(MOCK_SESSIONS.find((x) => x.id === id) ?? null);
+      const m = MOCK_SESSIONS.find((x) => x.id === id) ?? null;
+      setS(m);
+      setMembers(m ? mockMembers(m) : []);
       return;
     }
     // 목록에서 찾지 않고 단건으로 받는다. 목록은 "지금 신청할 수 있는
     // 모임" 만 담아서, 시작했거나 취소된 모임은 여기 없다.
-    const [row, user] = await Promise.all([fetchSession(id), currentUser()]);
+    const [row, user, mem] = await Promise.all([
+      fetchSession(id),
+      currentUser(),
+      fetchSessionMembers(id),
+    ]);
     setS(row ? toSession(row, undefined, user?.id) : null);
-    if (row?.host_photo) {
-      setHostPhoto((await signedPhotoUrls([row.host_photo]))[row.host_photo] ?? null);
+    setMembers(mem);
+    // 얼굴은 비공개 버킷에 있다 — 호스트와 참가자 것을 한 번에 받는다
+    const paths = [
+      row?.host_photo,
+      ...mem.map((m) => m.photo),
+    ].filter(Boolean) as string[];
+    if (paths.length) {
+      const urls = await signedPhotoUrls(paths);
+      setMemberPhotos(urls);
+      if (row?.host_photo) setHostPhoto(urls[row.host_photo] ?? null);
     }
   };
 
@@ -368,7 +409,10 @@ export default function SessionDetail() {
         )}
       </section>
 
-      {/* 참가 현황 — 익명 */}
+      {/* 참가 현황 — 확정된 자리에는 그 사람 이름이 들어간다.
+          누르면 프로필이 열린다 (호스트도 이 명단 안에 있다).
+          명단을 못 받으면(서버에 아직 session_members 가 없거나 볼 수
+          없는 모임이면) 예전처럼 익명 칸을 그린다. */}
       <section className="mt-6 border-t border-line pt-5">
         <h2 className="text-[15px] font-bold">
           참가 현황{" "}
@@ -377,14 +421,40 @@ export default function SessionDetail() {
           </span>
         </h2>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {badges.map((b) => (
-            <span
-              key={b.key}
-              className="rounded-lg bg-surface2 px-3 py-1.5 text-[12.5px] font-medium text-ink"
-            >
-              {b.g === "m" ? "남" : "여"} 확정
-            </span>
-          ))}
+          {members.length > 0
+            ? members.map((m) => (
+                <Link
+                  key={m.id}
+                  href={`/session/host?id=${s.id}&u=${m.id}`}
+                  className="flex items-center gap-1.5 rounded-lg bg-surface2 py-1 pl-1 pr-2.5 transition-colors active:bg-line"
+                >
+                  {m.photo && memberPhotos[m.photo] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={memberPhotos[m.photo]}
+                      alt=""
+                      className="h-6 w-6 shrink-0 rounded-full object-cover"
+                    />
+                  ) : (
+                    <AvatarFallback size={24} />
+                  )}
+                  <span className="text-[12.5px] font-medium text-ink">
+                    {m.nickname}
+                    {m.is_host && (
+                      <span className="ml-1 font-normal text-faint">· 호스트</span>
+                    )}
+                  </span>
+                </Link>
+              ))
+            : badges.map((b) => (
+                <span
+                  key={b.key}
+                  className="rounded-lg bg-surface2 px-3 py-1.5 text-[12.5px] font-medium text-ink"
+                >
+                  {b.g === "m" ? "남" : "여"} 확정
+                </span>
+              ))}
+
           {!dead && anyGender &&
             Array.from({ length: left.total }, (_, i) => (
               <span
@@ -413,10 +483,6 @@ export default function SessionDetail() {
             </span>
           ))}
         </div>
-        <p className="mt-2.5 text-[12px] leading-relaxed text-faint">
-          다른 참가자 프로필은 확정되면 서로 볼 수 있어요. 호스트는 아래에서
-          지금 볼 수 있어요.
-        </p>
       </section>
 
       {/* 조기 확정 — 자리가 남아도 성비가 맞으면 그 인원으로 갈 수 있다 */}
