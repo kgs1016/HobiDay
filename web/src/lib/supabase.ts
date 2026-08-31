@@ -862,12 +862,38 @@ export async function uploadProfilePhoto(
   if (!sb || !user) return { error: "no_auth" };
   if (file.size > PHOTO_MAX_BYTES) return { error: "too_large" };
 
+  /* 파일명에 시각을 넣는다 — 사진을 바꾸면 주소도 바뀌어서, 아래의
+     1년짜리 캐시가 옛 사진을 계속 보여주는 일이 없다. */
   const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const path = `${user.id}/avatar.${ext}`;
-  const { error } = await sb.storage
-    .from(PHOTO_BUCKET)
-    .upload(path, file, { upsert: true, contentType: file.type || undefined });
+  const path = `${user.id}/avatar-${Date.now()}.${ext}`;
+  const { error } = await sb.storage.from(PHOTO_BUCKET).upload(path, file, {
+    upsert: true,
+    contentType: file.type || undefined,
+    // 주소가 사진 내용에 묶여 있으니(위) 브라우저가 오래 캐시해도 안전하다.
+    // 기본값(1시간)이면 폰이 한 시간마다 같은 사진을 다시 확인하러 간다.
+    cacheControl: "31536000",
+  });
   if (error) return { error: error.message };
+
+  /* 이전 사진 정리 — 실패해도 무해하다 (폴더에 파일만 남는다).
+     프로필이 아직 참조 중인 파일은 남긴다: 사진은 고르는 즉시 올라오지만
+     프로필 저장은 나중이라, 골라만 놓고 저장 안 하면 옛 경로가 살아 있다.
+     그 파일은 다음번 업로드 때 참조가 풀린 뒤 지워진다. */
+  try {
+    const { data: row } = await sb
+      .from("profiles")
+      .select("photo")
+      .eq("id", user.id)
+      .maybeSingle();
+    const keep = new Set([path, row?.photo].filter(Boolean));
+    const { data: files } = await sb.storage.from(PHOTO_BUCKET).list(user.id);
+    const old = (files ?? [])
+      .map((f) => `${user.id}/${f.name}`)
+      .filter((p) => !keep.has(p));
+    if (old.length) await sb.storage.from(PHOTO_BUCKET).remove(old);
+  } catch {
+    /* 정리는 최선일 뿐 — 업로드는 이미 성공했다 */
+  }
   return { path };
 }
 
@@ -875,36 +901,74 @@ export async function uploadProfilePhoto(
  *
  *  발급받은 주소는 유효기간 동안 재사용한다 — 매번 새로 발급하면 주소가
  *  달라져서 브라우저가 같은 사진을 캐시하지 못하고, 화면에 올 때마다
- *  전부 다시 내려받는다 (폰에서 사진이 느리던 주범). */
-const _photoUrlCache = new Map<string, { url: string; exp: number }>();
+ *  전부 다시 내려받는다 (폰에서 사진이 느리던 주범).
+ *
+ *  캐시는 localStorage 에도 남긴다 — 메모리에만 두면 앱을 껐다 켤 때마다
+ *  주소가 전부 바뀌어서, 디스크에 캐시된 사진을 두고도 다시 내려받았다.
+ *  유효기간 7일: 주소가 새어나가도 아바타 한 장이고, 짧게 잡으면
+ *  그만큼 자주 전체 재다운로드가 일어난다. */
+const PHOTO_URL_CACHE_KEY = "hobiday.photoUrls.v1";
+let _photoUrlCache: Map<string, { url: string; exp: number }> | null = null;
+
+function photoUrlCache(): Map<string, { url: string; exp: number }> {
+  if (_photoUrlCache) return _photoUrlCache;
+  _photoUrlCache = new Map();
+  try {
+    const raw = localStorage.getItem(PHOTO_URL_CACHE_KEY);
+    if (raw) {
+      const now = Date.now();
+      for (const [k, v] of Object.entries(
+        JSON.parse(raw) as Record<string, { url: string; exp: number }>
+      )) {
+        if (v && typeof v.url === "string" && v.exp > now) _photoUrlCache.set(k, v);
+      }
+    }
+  } catch {
+    // 저장소가 없거나(프리렌더) 내용이 깨졌으면 빈 캐시로 시작한다
+  }
+  return _photoUrlCache;
+}
+
+function persistPhotoUrlCache() {
+  try {
+    localStorage.setItem(
+      PHOTO_URL_CACHE_KEY,
+      JSON.stringify(Object.fromEntries(photoUrlCache()))
+    );
+  } catch {
+    // 못 남겨도 동작에는 지장 없다 — 다음 실행에서 다시 발급할 뿐
+  }
+}
 
 export async function signedPhotoUrls(
   paths: string[],
-  seconds = 3600
+  seconds = 7 * 24 * 3600
 ): Promise<Record<string, string>> {
   const sb = getSupabase();
   const uniq = [...new Set(paths.filter(Boolean))];
   if (!sb || uniq.length === 0) return {};
 
+  const cache = photoUrlCache();
   const now = Date.now();
   const out: Record<string, string> = {};
   const need: string[] = [];
   for (const p of uniq) {
-    const c = _photoUrlCache.get(p);
+    const c = cache.get(p);
     if (c && c.exp > now) out[p] = c.url;
     else need.push(p);
   }
   if (need.length === 0) return out;
 
   const { data } = await sb.storage.from(PHOTO_BUCKET).createSignedUrls(need, seconds);
-  // 만료 5분 전까지만 재사용 — 화면에 뜬 채로 만료되는 걸 피한다
-  const exp = now + (seconds - 300) * 1000;
+  // 만료 1시간 전까지만 재사용 — 화면에 뜬 채로 만료되는 걸 피한다
+  const exp = now + (seconds - 3600) * 1000;
   for (const d of data ?? []) {
     if (d.path && d.signedUrl) {
       out[d.path] = d.signedUrl;
-      _photoUrlCache.set(d.path, { url: d.signedUrl, exp });
+      cache.set(d.path, { url: d.signedUrl, exp });
     }
   }
+  persistPhotoUrlCache();
   return out;
 }
 
