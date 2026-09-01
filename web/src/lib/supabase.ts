@@ -415,7 +415,9 @@ export async function deleteSession(id: string) {
   return data as { ok?: boolean; notify?: string[]; error?: string };
 }
 
-/** 참가자가 모임에서 빠진다. 대기 중이면 신청비 반환, 확정 후엔 반환 없음.
+/** 참가자가 모임에서 빠진다. 승인 전(waiting) 취소만 신청비 반환 —
+ *  받아준 자리를 자의로 비우면 반환 없음. 모임이 무너지는 경우의 전원
+ *  반환은 session_collapse 몫이다 (no_refund_after_approval).
  *  cancelled — 내가 빠지면서 확정이 1명이 돼 모임 자체가 취소됐다.
  *  notify    — 그때 남아 있던 사람들 (신청비는 서버가 이미 돌려줬다) */
 export async function cancelSignup(id: string) {
@@ -1076,7 +1078,7 @@ export const CREDIT_LABELS: Record<string, string> = {
    실제 적립·차감은 전부 서버가 하고, 여기 값은 안내 문구에만 쓴다.
    ⚠️ SQL 의 credit_rule 을 바꾸면 여기도 같이 바꿀 것. */
 export const REQUEST_COST = 10; // request_extra
-export const SESSION_JOIN_COST = 10; // session_join — 거절·확정 전 취소 시 반환
+export const SESSION_JOIN_COST = 10; // session_join — 거절·승인 전 취소·모임 무산 시 반환
 export const CREDIT_SESSION_VIDEO = 2; // session_video (모임당 1회)
 
 export interface Credits {
