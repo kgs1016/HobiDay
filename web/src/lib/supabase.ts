@@ -1217,6 +1217,9 @@ export async function markChatRead(matchId: string) {
 export interface SessionChat {
   session_id: string;
   gym: string;
+  /* 암장 대표사진 — 없으면 null, 마이그레이션 전 DB 는 키 자체가 없다.
+     목록의 동그라미에 쓴다. */
+  gym_thumb?: string | null;
   starts_at: string;
   /** 방이 닫히는 기준 — 끝나거나 취소되고 24시간 뒤 */
   ends_at: string;
