@@ -71,6 +71,7 @@ export default function ProfileNew() {
   const [age, setAge] = useState("");
   const [area, setArea] = useState("");
   const [level, setLevel] = useState<LevelId>(2);
+  const [showLevelGuide, setShowLevelGuide] = useState(false);
   const [careerId, setCareerId] = useState<CareerId | null>(null);
   const [height, setHeight] = useState("");
   const [homeGym, setHomeGym] = useState("");
@@ -336,7 +337,39 @@ export default function ProfileNew() {
           <p className="mt-1.5 text-[12px] text-muted">
             L{level} {LEVELS[level - 1].name} — 더클라임 기준{" "}
             {LEVELS[level - 1].colors} ({LEVELS[level - 1].vgrade})
+            <button
+              type="button"
+              onClick={() => setShowLevelGuide((v) => !v)}
+              className="ml-1.5 font-medium text-accent-pressed underline underline-offset-2"
+            >
+              {showLevelGuide ? "참고표 접기" : "참고표 보기"}
+            </button>
           </p>
+          {/* 전체 참고표 — 표에서 바로 골라도 된다 */}
+          {showLevelGuide && (
+            <div className="mt-2 divide-y divide-line rounded-lg border border-line">
+              {LEVELS.map((l) => (
+                <button
+                  key={l.id}
+                  type="button"
+                  onClick={() => setLevel(l.id)}
+                  className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-[12.5px] ${
+                    level === l.id ? "bg-accent-soft font-semibold" : ""
+                  }`}
+                >
+                  <span className="shrink-0">
+                    L{l.id} {l.name}
+                  </span>
+                  <span className="text-right text-muted">
+                    {l.colors} · {l.vgrade}
+                  </span>
+                </button>
+              ))}
+              <p className="px-3 py-2 text-[11.5px] text-faint">
+                짐마다 편차가 커요 — 안 가본 짐은 한 단계 낮춰 잡으세요
+              </p>
+            </div>
+          )}
         </Field>
 
         <Field label="구력 (클라이밍 시작한 지)">
