@@ -60,7 +60,11 @@ export default function SessionHost() {
   /* 참여자 명단에서 들어오면 누구인지가 붙는다. 없으면 호스트 —
      이미 폰에 깔린 앱이 u 없이 이 주소를 부르고 있어서 그대로 받는다. */
   const u = useQueryParam("u");
+  const from = useQueryParam("from");
   const router = useRouter();
+  /* 채팅방에서 들어왔으면 그 방으로 돌려보낸다 — 방은 상태로만 열려 있어
+     router.back() 으로는 목록에 떨어진다. /room · /session 과 같은 규칙. */
+  const backTo = from === "chat" && id ? `/chat?room=${id}#session` : undefined;
   const [host, setHost] = useState<HostProfile | null | undefined>(undefined);
   const [photo, setPhoto] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -106,7 +110,7 @@ export default function SessionHost() {
           {(err && ERRORS[err]) ?? "프로필을 볼 수 없어요"}
         </p>
         <button
-          onClick={() => router.back()}
+          onClick={() => (backTo ? router.push(backTo) : router.back())}
           className="mt-6 rounded-xl bg-accent px-6 py-2.5 text-[14px] font-semibold text-white active:bg-accent-pressed"
         >
           돌아가기
@@ -122,7 +126,7 @@ export default function SessionHost() {
   return (
     <main className="px-4 pb-10">
       <header className="flex items-center gap-2 pt-4 pb-4">
-        <BackButton />
+        <BackButton to={backTo} />
         <h1 className="text-[18px] font-bold tracking-tight">
           {isHost ? "호스트 프로필" : "참여자 프로필"}
         </h1>
@@ -179,7 +183,8 @@ export default function SessionHost() {
       </p>
 
       <Link
-        href={`/session?id=${id}`}
+        /* 채팅에서 왔으면 모임 정보의 뒤로가기도 채팅으로 이어지게 한다 */
+        href={backTo ? `/session?id=${id}&from=chat` : `/session?id=${id}`}
         className="mt-6 block rounded-xl border border-line bg-surface py-3.5 text-center text-[14px] font-medium text-ink"
       >
         모임 정보로 돌아가기

@@ -486,17 +486,21 @@ function ChatFrame({
   );
 }
 
-/** 말풍선 — 단체방에서는 남의 말에 보낸 사람이 붙는다 */
+/** 말풍선 — 단체방에서는 남의 말에 보낸 사람이 붙는다.
+ *  onProfile 이 있으면 아바타를 눌러 그 사람 프로필을 연다.
+ *  1:1 방은 이름 없이(상대가 한 명뿐) 아바타만 붙는다. */
 function Bubble({
   m,
   name,
   photoUrl,
   isHost,
+  onProfile,
 }: {
   m: ChatMessage;
   name?: string | null;
   photoUrl?: string;
   isHost?: boolean;
+  onProfile?: () => void;
 }) {
   const bubble = (
     <div
@@ -527,26 +531,43 @@ function Bubble({
 
   if (m.mine) return <div className="max-w-[78%] self-end">{bubble}</div>;
 
-  // 1:1 방은 상대가 한 명뿐이라 이름을 붙이지 않는다
-  if (!name) return <div className="max-w-[78%] self-start">{bubble}</div>;
+  if (!name && !onProfile)
+    return <div className="max-w-[78%] self-start">{bubble}</div>;
+
+  /* 이름 줄이 있으면 아바타를 그 아래 말풍선에 맞추고(mt-4),
+     없으면(1:1) 말풍선 위쪽에 맞춘다 */
+  const avatar = photoUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={photoUrl}
+      alt=""
+      className={`h-7 w-7 shrink-0 rounded-full object-cover ${name ? "mt-4" : "mt-1"}`}
+    />
+  ) : (
+    <AvatarFallback size={28} className={name ? "mt-4" : "mt-1"} />
+  );
 
   return (
     <div className="flex max-w-[86%] gap-2 self-start">
-      {photoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={photoUrl}
-          alt=""
-          className="mt-4 h-7 w-7 shrink-0 rounded-full object-cover"
-        />
+      {onProfile ? (
+        <button
+          type="button"
+          onClick={onProfile}
+          aria-label={`${name ?? "상대"} 프로필 보기`}
+          className="shrink-0 self-start"
+        >
+          {avatar}
+        </button>
       ) : (
-        <AvatarFallback size={28} className="mt-4" />
+        avatar
       )}
       <div className="min-w-0">
-        <p className="mb-0.5 text-[11.5px] font-medium text-muted">
-          {name}
-          {isHost && <span className="ml-1 text-faint">· 호스트</span>}
-        </p>
+        {name && (
+          <p className="mb-0.5 text-[11.5px] font-medium text-muted">
+            {name}
+            {isHost && <span className="ml-1 text-faint">· 호스트</span>}
+          </p>
+        )}
         {bubble}
       </div>
     </div>
@@ -620,7 +641,15 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
   const [msgs, setMsgs] = useState<ChatMessage[] | null>(null);
   const [reporting, setReporting] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  // 상대 말풍선 옆 아바타 — 사진 주소는 캐시돼 있어 재서명이 싸다
+  const [partnerPhoto, setPartnerPhoto] = useState<string | undefined>();
   const bottom = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!chat.photo) return;
+    (async () =>
+      setPartnerPhoto((await signedPhotoUrls([chat.photo!]))[chat.photo!]))();
+  }, [chat.photo]);
 
   const load = useCallback(async () => {
     // 실패(상대가 나감 등)해도 보고 있던 대화를 지우지 않는다
@@ -711,7 +740,12 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
         ) : (
           <div className="flex flex-col gap-2">
             {msgs.map((m) => (
-              <Bubble key={m.id} m={m} />
+              <Bubble
+                key={m.id}
+                m={m}
+                photoUrl={partnerPhoto}
+                onProfile={() => setShowProfile(true)}
+              />
             ))}
             <div ref={bottom} />
           </div>
@@ -831,6 +865,15 @@ function SessionThread({
               name={m.sender_name ?? "탈퇴한 사용자"}
               photoUrl={m.sender_photo ? photos[m.sender_photo] : undefined}
               isHost={m.sender_is_host}
+              /* 탈퇴한 사람(sender_id null)은 열어줄 프로필이 없다 */
+              onProfile={
+                m.sender_id
+                  ? () =>
+                      router.push(
+                        `/session/host?id=${room.session_id}&u=${m.sender_id}&from=chat`
+                      )
+                  : undefined
+              }
             />
           ))}
           {/* 시스템 안내 — 말풍선이 아니라 가운데 한 줄로 둔다 */}
