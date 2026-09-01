@@ -194,20 +194,12 @@ export default function NewSession() {
   })();
 
   const toggleLevel = (id: LevelId) => {
-    // 인접 1단계까지만 허용 — 클릭한 레벨을 포함해 범위 재계산
-    if (id < levelMin) {
-      if (levelMax - id <= 1) setLevelMin(id);
-      else {
-        setLevelMin(id);
-        setLevelMax((id + 1) as LevelId);
-      }
-    } else if (id > levelMax) {
-      if (id - levelMin <= 1) setLevelMax(id);
-      else {
-        setLevelMax(id);
-        setLevelMin((id - 1) as LevelId);
-      }
-    } else {
+    /* 범위 밖을 누르면 그쪽으로 넓히고, 범위 안을 누르면 그 레벨 하나로.
+       L1~L5 전체도 된다 — 필터와 같은 동작이다 (SessionFilterBar).
+       "인접 1단계까지" 제한은 2026-09-01 에 풀었다 (full_level_range). */
+    if (id < levelMin) setLevelMin(id);
+    else if (id > levelMax) setLevelMax(id);
+    else {
       setLevelMin(id);
       setLevelMax(id);
     }
@@ -401,7 +393,7 @@ export default function NewSession() {
           </div>
         </Field>
 
-        <Field label="레벨 범위 (인접 1단계까지)">
+        <Field label="레벨 범위">
           <div className="flex gap-1.5">
             {LEVELS.map((l) => (
               <Chip
@@ -414,9 +406,11 @@ export default function NewSession() {
             ))}
           </div>
           <p className="mt-1.5 text-[12px] text-muted">
-            {LEVELS.slice(levelMin - 1, levelMax)
-              .map((l) => `L${l.id} ${l.name}(${l.colors})`)
-              .join(" · ")}
+            {levelMin === 1 && levelMax === 5
+              ? "모든 레벨 환영 — 오늘 처음인 사람도 올 수 있어요"
+              : LEVELS.slice(levelMin - 1, levelMax)
+                  .map((l) => `L${l.id} ${l.name}(${l.colors})`)
+                  .join(" · ")}
           </p>
         </Field>
 

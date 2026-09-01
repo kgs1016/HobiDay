@@ -22,12 +22,15 @@ export const level = (id: LevelId) => LEVELS[id - 1];
 /** 목록 카드용 짧은 표기 — "L2 초급–L3 중급" / "L3 중급".
     색·V등급까지 다 붙이면 카드가 문장이 된다. 상세에서만 전체를 보여준다. */
 export function levelRangeShort(min: LevelId, max: LevelId): string {
+  if (min === 1 && max === 5) return "모든 레벨";
   if (min === max) return `L${min} ${level(min).name}`;
   return `L${min} ${level(min).name}–L${max} ${level(max).name}`;
 }
 
-/** "L2 초급 ~ L3 중급 (주황·초록·파랑)" */
+/** "L2 초급 ~ L3 중급 (주황·초록·파랑)".
+ *  L1~L5 전부면 색을 늘어놓는 대신 "모든 레벨" 로 줄인다. */
 export function levelRangeLabel(min: LevelId, max: LevelId): string {
+  if (min === 1 && max === 5) return "모든 레벨 (L1 입문 ~ L5 상급)";
   const colors = LEVELS.slice(min - 1, max)
     .map((l) => l.colors)
     .join("·");
