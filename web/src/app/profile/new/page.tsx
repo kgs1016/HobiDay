@@ -70,7 +70,8 @@ export default function ProfileNew() {
   const [gender, setGender] = useState<"m" | "f">("f");
   const [age, setAge] = useState("");
   const [area, setArea] = useState("");
-  const [level, setLevel] = useState<LevelId>(2);
+  /* 레벨은 선택 — 기본값을 두면 "안 고른 사람" 과 "L2 인 사람" 이 안 갈린다 */
+  const [level, setLevel] = useState<LevelId | null>(null);
   const [showLevelGuide, setShowLevelGuide] = useState(false);
   const [careerId, setCareerId] = useState<CareerId | null>(null);
   const [height, setHeight] = useState("");
@@ -322,21 +323,23 @@ export default function ProfileNew() {
           </Field>
         </div>
 
-        <Field label="레벨 (편하게 완등하는 수준)">
+        <Field label="레벨 (선택 — 편하게 완등하는 수준)">
           <div className="flex gap-1.5">
             {LEVELS.map((l) => (
               <Chip
                 key={l.id}
                 active={level === l.id}
-                onClick={() => setLevel(l.id)}
+                /* 고른 걸 다시 누르면 해제 — 레벨은 비워둘 수 있다 */
+                onClick={() => setLevel(level === l.id ? null : l.id)}
               >
                 L{l.id}
               </Chip>
             ))}
           </div>
           <p className="mt-1.5 text-[12px] text-muted">
-            L{level} {LEVELS[level - 1].name} — 더클라임 기준{" "}
-            {LEVELS[level - 1].colors} ({LEVELS[level - 1].vgrade})
+            {level
+              ? `L${level} ${LEVELS[level - 1].name} — 더클라임 기준 ${LEVELS[level - 1].colors} (${LEVELS[level - 1].vgrade})`
+              : "아직 감이 없으면 비워둬도 돼요"}
             <button
               type="button"
               onClick={() => setShowLevelGuide((v) => !v)}
@@ -365,9 +368,6 @@ export default function ProfileNew() {
                   </span>
                 </button>
               ))}
-              <p className="px-3 py-2 text-[11.5px] text-faint">
-                짐마다 편차가 커요 — 안 가본 짐은 한 단계 낮춰 잡으세요
-              </p>
             </div>
           )}
         </Field>

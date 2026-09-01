@@ -61,7 +61,8 @@ export interface Person {
   nickname: string;
   age: number;
   gender: "m" | "f";
-  level: LevelId;
+  /* 레벨은 선택 입력 — 없으면 카드·프로필에서 그 칸을 접는다 */
+  level: LevelId | null;
   careerId?: CareerId;
   height?: number;
   homeGym: string;

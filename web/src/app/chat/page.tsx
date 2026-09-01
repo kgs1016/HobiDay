@@ -316,7 +316,8 @@ export default function ChatPage() {
                 <p className="text-[15px] font-semibold">
                   {c.nickname}
                   <span className="ml-1.5 text-[12px] font-normal text-muted">
-                    {c.age} · L{c.level} {level(c.level).name}
+                    {c.age}
+                    {c.level && ` · L${c.level} ${level(c.level).name}`}
                   </span>
                 </p>
                 <p
@@ -586,7 +587,7 @@ function PartnerSheet({ chat, onClose }: { chat: Chat; onClose: () => void }) {
     (async () => setUrl((await signedPhotoUrls([chat.photo!]))[chat.photo!] ?? null))();
   }, [chat.photo]);
 
-  const lv = level(chat.level);
+  const lv = chat.level ? level(chat.level) : null;
 
   return (
     <div
@@ -619,8 +620,9 @@ function PartnerSheet({ chat, onClose }: { chat: Chat; onClose: () => void }) {
           </span>
         </p>
         <p className="mt-1 text-[13px] text-muted">
-          L{chat.level} {lv.name} ({lv.colors})
-          {chat.home_gym && ` · ${chat.home_gym}`}
+          {[lv && `L${chat.level} ${lv.name} (${lv.colors})`, chat.home_gym]
+            .filter(Boolean)
+            .join(" · ")}
         </p>
         <p className="mt-3 text-[12.5px] leading-relaxed text-faint">
           {origin(chat)}
@@ -702,7 +704,9 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
       <ChatFrame
         onBack={onBack}
         title={chat.nickname}
-        sub={`${origin(chat)} · L${chat.level} ${level(chat.level).name}`}
+        sub={[origin(chat), chat.level && `L${chat.level} ${level(chat.level).name}`]
+          .filter(Boolean)
+          .join(" · ")}
         onTitle={() => setShowProfile(true)}
         closedNote={
           chat.partner_left

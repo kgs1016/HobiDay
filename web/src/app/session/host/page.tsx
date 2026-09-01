@@ -118,7 +118,7 @@ export default function SessionHost() {
       </main>
     );
 
-  const lv = level(host.level);
+  const lv = host.level ? level(host.level) : null;
   /* session_member 는 is_host 를 함께 준다. u 없이 들어온 예전 주소
      (session_host) 는 그 칸이 없으므로 호스트로 본다. */
   const isHost = (host as HostProfile & { is_host?: boolean }).is_host ?? true;
@@ -151,7 +151,9 @@ export default function SessionHost() {
           </span>
         </p>
         <p className="mt-1 text-[13px] text-muted">
-          {host.area} · L{host.level} {lv.name}
+          {[host.area, lv && `L${host.level} ${lv.name}`]
+            .filter(Boolean)
+            .join(" · ")}
         </p>
         {host.hosted > 1 && (
           <span className="mt-3 rounded-md bg-surface2 px-2.5 py-1 text-[11.5px] font-medium text-muted">
@@ -166,7 +168,9 @@ export default function SessionHost() {
       </section>
 
       <section className="mt-6 border-t border-line pt-2">
-        <Row label="레벨" value={`L${host.level} ${lv.name} (${lv.colors})`} />
+        {lv && (
+          <Row label="레벨" value={`L${host.level} ${lv.name} (${lv.colors})`} />
+        )}
         {host.career && (
           <Row label="구력" value={careerLabel(host.career) ?? "-"} />
         )}

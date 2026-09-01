@@ -187,7 +187,7 @@ export interface HostProfile {
   gender: "m" | "f";
   age: number;
   area: string;
-  level: LevelId;
+  level: LevelId | null;
   career: CareerId | null;
   height: number | null;
   home_gym: string;
@@ -500,7 +500,7 @@ export interface HostedRequest {
   nickname: string;
   age: number;
   gender: "m" | "f";
-  level: LevelId;
+  level: LevelId | null;
   career: CareerId | null;
   height: number | null;
   home_gym: string;
@@ -635,7 +635,7 @@ export interface RoomPerson {
   nickname: string;
   age: number;
   gender: "m" | "f";
-  level: LevelId;
+  level: LevelId | null;
   career: CareerId | null;
   height: number | null;
   home_gym: string;
@@ -662,7 +662,7 @@ export interface Room {
     gender_mode: GenderMode;
     note: string | null;
   };
-  me: { id: string; gender: "m" | "f"; level: LevelId };
+  me: { id: string; gender: "m" | "f"; level: LevelId | null };
   /** 지금 확정된 인원. 성비 모임은 짝이 맞는 수(n:n 의 n),
       성별 무관 모임은 그냥 머릿수다. */
   matched: number;
@@ -724,7 +724,7 @@ export async function fetchMatches(id: string) {
     id: string;
     nickname: string;
     age: number;
-    level: LevelId;
+    level: LevelId | null;
     career: CareerId | null;
     home_gym: string;
     area: string;
@@ -793,7 +793,7 @@ export interface Chat {
   partner_id: string;
   nickname: string;
   age: number;
-  level: LevelId;
+  level: LevelId | null;
   home_gym: string;
   photo: string | null;
   /** 상대가 나갔다 — 방은 남지만 더 보낼 수는 없다 */
@@ -1112,7 +1112,7 @@ export interface ReceivedRequest {
   from_id: string;
   nickname: string;
   age: number;
-  level: LevelId;
+  level: LevelId | null;
   career: CareerId | null;
   height: number | null;
   home_gym: string;
@@ -1129,7 +1129,7 @@ export interface SentRequest {
   to_id: string;
   nickname: string;
   age: number;
-  level: LevelId;
+  level: LevelId | null;
   home_gym: string;
 }
 

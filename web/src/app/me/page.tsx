@@ -143,7 +143,8 @@ export default function Me() {
                 <p className="text-[17px] font-bold">{profile.nickname}</p>
                 <p className="mt-0.5 text-[13px] text-muted">
                   {[
-                    `L${profile.level} ${level(profile.level).name}`,
+                    profile.level &&
+                      `L${profile.level} ${level(profile.level).name}`,
                     careerLabel(profile.careerId) &&
                       `구력 ${careerLabel(profile.careerId)}`,
                     profile.homeGym,

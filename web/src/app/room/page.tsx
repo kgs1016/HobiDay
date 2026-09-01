@@ -311,7 +311,7 @@ function PersonRow({ p, photo }: { p: RoomPerson; photo?: string }) {
         </p>
         <p className="truncate text-[12.5px] text-muted">
           {[
-            `L${p.level} ${level(p.level).name}`,
+            p.level && `L${p.level} ${level(p.level).name}`,
             careerLabel(p.career) && `구력 ${careerLabel(p.career)}`,
             p.home_gym,
             p.mbti,

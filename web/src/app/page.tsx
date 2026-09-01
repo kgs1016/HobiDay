@@ -518,7 +518,7 @@ export default function Home() {
                   {[
                     me.age,
                     me.area,
-                    `L${me.level}`,
+                    me.level && `L${me.level}`,
                     careerLabel(me.careerId) && `클라이밍 ${careerLabel(me.careerId)}`,
                   ]
                     .filter(Boolean)
@@ -588,7 +588,9 @@ export default function Home() {
                       </span>
                     </p>
                     <p className="mt-0.5 truncate text-[13px] text-muted">
-                      {[p.area, `L${p.level}`].filter(Boolean).join(" · ")}
+                      {[p.area, p.level && `L${p.level}`]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </p>
                     {careerLabel(p.careerId) && (
                       <p className="mt-0.5 text-[12.5px] text-faint">
@@ -655,7 +657,8 @@ export default function Home() {
             </p>
             <p className="mt-1 text-[13px] text-muted">
               {[
-                `L${detail.level} ${level(detail.level).name} (${level(detail.level).colors})`,
+                detail.level &&
+                  `L${detail.level} ${level(detail.level).name} (${level(detail.level).colors})`,
                 careerLabel(detail.careerId) &&
                   `구력 ${careerLabel(detail.careerId)}`,
                 detail.homeGym,

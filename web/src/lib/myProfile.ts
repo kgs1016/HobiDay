@@ -7,7 +7,8 @@ export interface MyProfile {
   gender: "m" | "f";
   age: number;
   area: string;
-  level: LevelId;
+  /** 레벨 — 자기신고 · 선택 입력. 비우면 카드에 표시하지 않는다 */
+  level: LevelId | null;
   /** 구력 — 기존 프로필엔 없어서 optional */
   careerId?: CareerId;
   /** 키(cm) — 선택 입력. 표시만 하고 필터로는 쓰지 않는다 */

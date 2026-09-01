@@ -407,7 +407,7 @@ export default function Inbox() {
                             </p>
                             <p className="mt-0.5 truncate text-[12.5px] text-muted">
                               {[
-                                `L${h.level} ${level(h.level).name}`,
+                                h.level && `L${h.level} ${level(h.level).name}`,
                                 careerLabel(h.career) &&
                                   `구력 ${careerLabel(h.career)}`,
                                 h.home_gym,
@@ -484,7 +484,7 @@ export default function Inbox() {
                           </p>
                           <p className="mt-0.5 truncate text-[12.5px] text-muted">
                             {[
-                              `L${r.level} ${level(r.level).name}`,
+                              r.level && `L${r.level} ${level(r.level).name}`,
                               careerLabel(r.career) && `구력 ${careerLabel(r.career)}`,
                               r.home_gym,
                               r.mbti,
@@ -676,7 +676,8 @@ export default function Inbox() {
                       <p className="truncate text-[14.5px] font-semibold">
                         {r.nickname}
                         <span className="ml-1.5 text-[12px] font-normal text-muted">
-                          {r.age} · L{r.level} {level(r.level).name}
+                          {r.age}
+                          {r.level && ` · L${r.level} ${level(r.level).name}`}
                         </span>
                       </p>
                       <p className="mt-0.5 truncate text-[12.5px] text-muted">
