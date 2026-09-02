@@ -67,16 +67,6 @@ export default function Support() {
           차단만 할 수도 있어요. 차단 목록은 마이 &gt; 안전 설정에서 관리합니다.
         </p>
         <p>
-          <b className="text-ink">Q. 모임에서 빠지면 신청비(크레딧)는 어떻게 되나요?</b>
-          <br />
-          확정 전에는 그 자리에서 돌려드리고, 확정 후에는 상황을 확인한 뒤
-          처리해요. 자세한 규칙은{" "}
-          <Link href="/terms" className="underline underline-offset-2 text-ink">
-            이용약관
-          </Link>
-          에 있습니다.
-        </p>
-        <p>
           <b className="text-ink">Q. 계정을 삭제하고 싶어요.</b>
           <br />
           앱의 마이 &gt; 회원 탈퇴에서 바로 삭제할 수 있어요. 탈퇴하면

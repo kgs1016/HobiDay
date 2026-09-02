@@ -405,7 +405,7 @@ export async function fetchMatchHistory(): Promise<MatchRecord[] | null> {
   return data as MatchRecord[];
 }
 
-/** 호스트가 모임을 삭제(취소 표시)한다. 신청비는 서버가 전원 반환.
+/** 호스트가 모임을 삭제(취소 표시)한다.
  *  notify = 알림 보낼 참가자 id 목록 (클라이언트가 push 를 부탁한다) */
 export async function deleteSession(id: string) {
   const sb = getSupabase();
@@ -415,11 +415,10 @@ export async function deleteSession(id: string) {
   return data as { ok?: boolean; notify?: string[]; error?: string };
 }
 
-/** 참가자가 모임에서 빠진다. 승인 전(waiting) 취소만 신청비 반환 —
- *  받아준 자리를 자의로 비우면 반환 없음. 모임이 무너지는 경우의 전원
- *  반환은 session_collapse 몫이다 (no_refund_after_approval).
+/** 참가자가 모임에서 빠진다. 신청은 무료다 (session_join_free) —
+ *  유료 시절 신청의 반환만 서버가 원장 집계로 알아서 처리한다.
  *  cancelled — 내가 빠지면서 확정이 1명이 돼 모임 자체가 취소됐다.
- *  notify    — 그때 남아 있던 사람들 (신청비는 서버가 이미 돌려줬다) */
+ *  notify    — 그때 남아 있던 사람들 */
 export async function cancelSignup(id: string) {
   const sb = getSupabase();
   if (!sb) return { error: "no_client" };
@@ -1078,7 +1077,8 @@ export const CREDIT_LABELS: Record<string, string> = {
    실제 적립·차감은 전부 서버가 하고, 여기 값은 안내 문구에만 쓴다.
    ⚠️ SQL 의 credit_rule 을 바꾸면 여기도 같이 바꿀 것. */
 export const REQUEST_COST = 10; // request_extra
-export const SESSION_JOIN_COST = 10; // session_join — 거절·승인 전 취소·모임 무산 시 반환
+// 모임 신청은 무료다 (2026-09-02). session_join·session_refund 라벨은
+// 유료 시절 원장을 읽기 위해 CREDIT_LABELS 에 남아 있다.
 export const CREDIT_SESSION_VIDEO = 2; // session_video (모임당 1회)
 
 export interface Credits {

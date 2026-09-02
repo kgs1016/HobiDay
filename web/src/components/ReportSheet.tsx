@@ -45,26 +45,22 @@ export default function ReportSheet({
       alert(`신고를 접수하지 못했어요: ${r.error}`);
       return;
     }
-    /* 같은 모임에 얽혀 있었다면 서버가 이미 갈라놨다. 신청비를 그
-       자리에서 돌려주지 않는 건 신고 내용을 봐야 하기 때문이라, 그
-       말을 안 하면 돈만 떼인 것처럼 보인다. */
+    /* 같은 모임에 얽혀 있었다면 서버가 이미 갈라놨다 */
     if (r.notify?.length)
       notifyPush(
         r.notify,
         "😢 모임이 취소됐어요",
-        "모임이 취소됐어요. 신청 크레딧은 돌려드렸어요.",
+        "모임이 취소됐어요.",
         "/inbox",
         { pushOnly: true }
       );
     alert(
       `신고가 접수됐어요.\n${nickname}님은 차단되어 서로 보이지 않아요.` +
         (r.left_sessions
-          ? `\n\n같이 가기로 한 모임 ${r.left_sessions}개에서도 빠졌어요.` +
-            `\n신고 내용을 확인한 뒤 신청비를 돌려드릴게요.`
+          ? `\n\n같이 가기로 한 모임 ${r.left_sessions}개에서도 빠졌어요.`
           : "") +
         (r.cancelled_sessions
-          ? `\n\n내가 연 모임 ${r.cancelled_sessions}개는 취소했어요.` +
-            `\n참가자들에게는 신청비를 모두 돌려드렸어요.`
+          ? `\n\n내가 연 모임 ${r.cancelled_sessions}개는 취소했어요.`
           : "") +
         `\n\n24시간 안에 확인하고 조치할게요.`
     );
@@ -91,12 +87,10 @@ export default function ReportSheet({
     alert(
       `${nickname}님을 차단했어요. 서로 보이지 않아요.` +
         (r.left_sessions
-          ? `\n\n같이 가기로 한 모임 ${r.left_sessions}개에서도 빠졌어요.` +
-            `\n신청비는 확인 후 돌려드릴게요.`
+          ? `\n\n같이 가기로 한 모임 ${r.left_sessions}개에서도 빠졌어요.`
           : "") +
         (r.cancelled_sessions
-          ? `\n\n내가 연 모임 ${r.cancelled_sessions}개는 취소했어요.` +
-            `\n참가자들에게는 신청비를 모두 돌려드렸어요.`
+          ? `\n\n내가 연 모임 ${r.cancelled_sessions}개는 취소했어요.`
           : "") +
         `\n\n차단은 마이 > 안전 설정에서 풀 수 있어요.`
     );

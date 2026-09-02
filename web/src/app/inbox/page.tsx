@@ -40,8 +40,7 @@ const when = (iso: string) => {
 /* 호스트 승인제라 상태가 셋이다.
    waiting  호스트가 아직 안 봤거나 고민 중
    confirmed 자리가 잡혔다 (모임 성사와는 다르다)
-   cut      호스트가 받지 않았거나, 답 없이 모임이 시작됐다.
-            둘 다 신청비를 돌려준다 (거절은 즉시, 무응답은 크론이) */
+   cut      호스트가 받지 않았거나, 답 없이 모임이 시작됐다 */
 const STATUS: Record<string, { label: string; cls: string; note?: string }> = {
   waiting: {
     label: "승인 대기",
@@ -56,7 +55,7 @@ const STATUS: Record<string, { label: string; cls: string; note?: string }> = {
   cut: {
     label: "거절됨",
     cls: "bg-surface2 text-muted",
-    note: "신청비는 돌려드렸어요. 다른 모임을 둘러보세요.",
+    note: "다른 모임을 둘러보세요.",
   },
 };
 
@@ -168,8 +167,7 @@ export default function Inbox() {
     /* 승인은 여기서 알린다 — 그 자리에서 폰이 울리는 게 낫다.
        거절은 서버(session_reject)가 남긴다. 여기서 보내면 이미 늦다:
        거절이 signups.status 를 'cut' 으로 바꾸는 순간 can_notify 가
-       "관계 없음" 이 되어 알림이 조용히 버려졌다. 신청비 10크레딧이
-       걸린 소식인데 아무도 모른 채 사라지고 있었다.
+       "관계 없음" 이 되어 알림이 조용히 버려졌다.
        (관심 거절은 여전히 안 알린다 — 짝사랑을 드러내지 않기로 했다) */
     if (!r.error && ok)
       notifyPush(
@@ -185,11 +183,11 @@ export default function Inbox() {
       notifyPush(
         h.user_id,
         "모임 신청 결과를 알려드려요",
-        `${h.gym} 모임은 이번엔 함께하지 못하게 됐어요. 신청비는 돌려드렸어요.`,
+        `${h.gym} 모임은 이번엔 함께하지 못하게 됐어요.`,
         "/inbox"
       );
       load();
-      return alert("받을 수 없는 신청이라 취소했어요.\n신청비는 돌려드렸어요.");
+      return alert("받을 수 없는 신청이라 취소했어요.");
     }
     if (r.error) {
       const msg: Record<string, string> = {
@@ -553,9 +551,7 @@ export default function Inbox() {
                     ? {
                         label: "모임 취소됨",
                         cls: "bg-surface2 text-muted",
-                        note: mine
-                          ? "모임이 취소됐어요. 신청 크레딧은 돌려드렸어요."
-                          : "모임이 취소됐어요. 대기 중이던 신청 크레딧은 돌려드렸어요.",
+                        note: "모임이 취소됐어요.",
                       }
                     : gone
                       ? !mine

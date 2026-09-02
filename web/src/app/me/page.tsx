@@ -221,11 +221,9 @@ export default function Me() {
                 </div>
               ))
             )}
-            {/* 반환 규칙이 관심과 모임에서 다르다 — 줄이더라도 이 구분은 지킨다 */}
             <p className="pb-3 pt-1 text-[11.5px] leading-relaxed text-faint">
-              관심 보내기 {REQUEST_COST}크레딧 — 보내는 순간 쓰여요 · 모임 신청{" "}
-              {REQUEST_COST}크레딧 — 거절되거나 모임이 취소되거나 내가 나가면
-              돌려드려요 · 등반 영상 인증 +{CREDIT_SESSION_VIDEO}
+              관심 보내기 {REQUEST_COST}크레딧 — 보내는 순간 쓰여요 · 모임 신청
+              무료 · 등반 영상 인증 +{CREDIT_SESSION_VIDEO}
             </p>
           </div>
         )}

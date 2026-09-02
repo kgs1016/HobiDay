@@ -11,7 +11,6 @@ import { MOCK_PEOPLE, MOCK_SESSIONS, slotsLeft, type Session } from "@/lib/mock"
 import { capacityLabel, capacityRo, totalSeats } from "@/lib/capacity";
 import { AvatarFallback, ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 import {
-  SESSION_JOIN_COST,
   hasSupabase,
   acceptConfirm,
   cancelSignup,
@@ -134,8 +133,8 @@ export default function SessionDetail() {
      (채팅방에서 들어오니까). 그런데 문구는 아직 살아있는 모임만
      염두에 두고 있었다. 상태를 먼저 보고 말한다. */
   const dead = !!s.cancelled || ended;
-  /* 시작한 모임의 대기 신청은 이미 끝난 것이다 — 크론이 곧 신청비를
-     돌려준다. 신청함은 이걸 반영해서 "거절됨" 으로 보여주는데 이 화면만
+  /* 시작한 모임의 대기 신청은 이미 끝난 것이다 — 크론이 곧 거절로
+     처리한다. 신청함은 이걸 반영해서 "거절됨" 으로 보여주는데 이 화면만
      "승인 대기 중" 이라고 해서, 같은 신청이 두 화면에서 다르게 보였다. */
   const missed = started && s.myStatus === "waiting";
   const joined = s.myStatus === "confirmed" || s.myStatus === "waiting";
@@ -226,11 +225,11 @@ export default function SessionDetail() {
     ...Array.from({ length: s.femaleJoined }, (_, i) => ({ g: "f", key: `f${i}` })),
   ];
 
-  /* 호스트: 모임 삭제. 신청비는 서버가 전원 반환하고, 알림은 여기서 부탁한다 */
+  /* 호스트: 모임 삭제. 알림은 여기서 부탁한다 */
   const onDelete = async () => {
     if (
       !confirm(
-        "모임을 삭제할까요?\n신청자들에게는 취소로 표시되고, 신청비는 전원 돌려드려요."
+        "모임을 삭제할까요?\n신청자들에게는 취소로 표시돼요."
       )
     )
       return;
@@ -244,21 +243,19 @@ export default function SessionDetail() {
     if (r.error) return alert(`삭제 실패: ${r.error}`);
     if (r.notify?.length)
       // 알림함에는 session_collapse 가 이미 남겼다 — 푸시만 쏜다
-      notifyPush(r.notify, "😢 모임이 취소됐어요", `${s.gym} 모임이 취소됐어요. 신청 크레딧은 돌려드렸어요.`, "/inbox", { pushOnly: true });
-    alert("모임을 삭제했어요. 신청비는 전원 돌려드렸어요.");
+      notifyPush(r.notify, "😢 모임이 취소됐어요", `${s.gym} 모임이 취소됐어요.`, "/inbox", { pushOnly: true });
+    alert("모임을 삭제했어요.");
     router.push("/");
   };
 
-  /* 참가자: 모임에서 빠지기.
-     호스트가 받아준 뒤로는 내 자리가 잡힌 것이라, 자의로 비우면
-     신청비는 돌려주지 않는다. 승인 전이면 잡힌 자리가 없어 돌려준다. */
+  /* 참가자: 모임에서 빠지기 */
   const onLeave = async () => {
     const mine = s.myStatus === "confirmed"; // 호스트가 받아준 자리
     if (
       !confirm(
         mine
-          ? "모임에서 나갈까요?\n자리를 비우는 거라 신청비는 돌려드리지 않아요.\n채팅방도 목록에서 사라져요."
-          : "신청을 취소할까요? 신청비는 돌려드려요."
+          ? "모임에서 나갈까요?\n채팅방도 목록에서 사라져요."
+          : "신청을 취소할까요?"
       )
     )
       return;
@@ -275,15 +272,13 @@ export default function SessionDetail() {
         notifyPush(
           r.notify,
           "😢 모임이 취소됐어요",
-          `${s.gym} 모임에 남은 사람이 없어 취소됐어요. 신청 크레딧은 돌려드렸어요.`,
+          `${s.gym} 모임에 남은 사람이 없어 취소됐어요.`,
           "/inbox",
           { pushOnly: true }
         );
       alert("모임에서 나왔어요.\n남은 사람이 없어 모임은 취소됐어요.");
     } else {
-      alert(
-        mine ? "모임에서 나왔어요." : "신청을 취소했어요. 신청비는 돌려드렸어요."
-      );
+      alert(mine ? "모임에서 나왔어요." : "신청을 취소했어요.");
     }
     load();
   };
@@ -323,15 +318,6 @@ export default function SessionDetail() {
     // 목록에서 사라지기 전에 열어둔 화면에서 누른 경우
     if (r.error === "started")
       return alert("이미 시작한 모임이에요. 다른 모임을 찾아보세요.");
-    if (r.error === "no_credits")
-      return alert(
-        `크레딧이 부족해요.
-` +
-          `모임 신청 1회 = ${r.cost}크레딧 · 지금 ${r.balance}크레딧이에요.
-
-` +
-          `모임에서 등반 영상을 올리면 크레딧이 쌓여요.`
-      );
     if (r.error) return alert(`신청 실패: ${r.error}`);
     // 승인제의 핵심 알림 — 호스트가 신청이 온 걸 몰라서 승인이 늦으면
     // 신청자는 하염없이 기다린다
@@ -339,13 +325,7 @@ export default function SessionDetail() {
       notifyPush(s.host.id, "🙋 새 모임 신청", `${s.gym} 모임에 신청이 왔어요. 확인해주세요!`, "/inbox");
     // 호스트 승인제 — 신청은 전부 대기로 들어간다
     alert(
-      `신청했어요! 호스트가 확인하면 알려드릴게요.
-` +
-        (typeof r.cost === "number"
-          ? `크레딧 -${r.cost} (거절되면 돌려드려요)
-`
-          : "") +
-        "신청함 → 보낸 신청에서 상태를 볼 수 있어요."
+      "신청했어요! 호스트가 확인하면 알려드릴게요.\n신청함 → 보낸 신청에서 상태를 볼 수 있어요."
     );
     load();
   };
@@ -682,7 +662,7 @@ export default function SessionDetail() {
           {s.cancelled
             ? "취소된 모임이에요"
             : missed
-              ? "이번엔 함께하지 못했어요 · 신청비는 돌려드려요"
+              ? "이번엔 함께하지 못했어요"
               : ended
                 ? "끝난 모임이에요"
                 : s.iAmHost
@@ -701,7 +681,7 @@ export default function SessionDetail() {
                       ? "이미 시작한 모임이에요"
                       : full
                         ? "자리가 다 찼어요"
-                        : `참여 신청하기 · ${SESSION_JOIN_COST}크레딧`}
+                        : "참여 신청하기"}
         </button>
       </div>
     </div>
