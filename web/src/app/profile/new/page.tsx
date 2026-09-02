@@ -208,11 +208,10 @@ export default function ProfileNew() {
         </h1>
       </header>
 
+      {/* 설명 문장은 붙이지 않는다 — 문구 원칙(AGENTS.md) */}
       {onboarding ? (
-        <p className="mb-5 rounded-lg bg-accent-soft px-4 py-3 text-[12.5px] leading-relaxed text-muted">
-          <b className="font-semibold text-ink">시작 전에 프로필을 완성해주세요.</b>
-          <br />
-          서로 얼굴과 실력을 알고 만나는 서비스예요. 모두가 같은 조건이에요.
+        <p className="mb-5 rounded-lg bg-accent-soft px-4 py-3 text-[13px] font-semibold text-ink">
+          시작 전에 프로필을 완성해주세요
         </p>
       ) : (
         <p className="mb-5 rounded-lg bg-surface2 px-4 py-3 text-[12.5px] leading-relaxed text-muted">
