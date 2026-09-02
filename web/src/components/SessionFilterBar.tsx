@@ -169,8 +169,8 @@ export default function SessionFilterBar({
     list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
 
   /* 레벨 범위 — 밖을 누르면 그쪽으로 넓히고, 안을 누르면 그 한 칸으로
-     좁힌다. 모임 만들기의 레벨 고르기와 같은 손놀림이다. 다만 여기엔
-     "인접 1단계" 제한이 없다 — 찾는 쪽은 넓게 볼 수 있어야 한다. */
+     좁힌다. 모임 만들기의 레벨 고르기와 같은 손놀림이고, 제한도 이제
+     양쪽 다 없다 (여는 쪽의 "인접 1단계" 는 09-01 에 풀렸다). */
   const pickLevel = (id: LevelId) => {
     if (!f.levelMin || !f.levelMax) return onChange({ ...f, levelMin: id, levelMax: id });
     if (id < f.levelMin) return onChange({ ...f, levelMin: id });
