@@ -1,0 +1,48 @@
+{
+  "tool": "Built-in image_gen",
+  "usage": "Color preview only; no grade mapping or persisted profile change.",
+  "assets": [
+    {
+      "color": "white",
+      "file": "web/public/illustrations/climbing-shoe/white-v2.webp",
+      "generatedSource": "exec-922511a1-5ced-4eef-a171-13f6ad304282.png",
+      "prompt": "Use case: precise-object-edit. Image 1 is the approved climbing shoe and is the EDIT TARGET. Produce exactly one color variant of this same image. Change ONLY the blue microfiber upper, blue trim, blue tongue and blue velcro strap to neutral soft ivory white, approximately #E9E8E2; preserve natural darker folds. Preserve absolutely the same shoe geometry, thin outsole, downturned toe, stitching locations and texture, strap position, pull loop, exact camera/viewpoint, orientation, lighting, object scale, canvas dimensions, margins, placement, and transparency. Keep every charcoal rubber area, lining, and black pull loop neutral and unchanged. Do not redesign, rotate, crop, add text, add branding, or add props. Keep the genuinely transparent alpha background. This variant must align with the original as closely as possible when switching colors in a profile UI.\nFinal background correction: Precise background replacement edit. The supplied image is an EDIT TARGET of a climbing shoe. Preserve the entire shoe EXACTLY: every fabric color, rubber color, stitching, strap, loop, material texture, highlights, silhouette, object position, size, viewpoint, orientation and canvas. Change ONLY the background: remove the visible gray and white checkerboard completely and replace it with a flat solid pure WHITE #FFFFFF background. Every background pixel and all corners should be solid white, with only a very subtle soft contact shadow below the shoe. Do not simulate transparency. Do not create a grid, squares, transparency pattern, gradient, border, texture or props on the background. Do not change the shoe itself."
+    },
+    {
+      "color": "yellow",
+      "file": "web/public/illustrations/climbing-shoe/yellow-v2.webp",
+      "generatedSource": "exec-20718ed6-1887-4dfb-9186-b7709895ac36.png",
+      "prompt": "Use case: precise-object-edit. Image 1 is the approved climbing shoe and is the EDIT TARGET. Produce exactly one color variant of this same image. Change ONLY the blue microfiber upper, blue trim, blue tongue and blue velcro strap to warm golden yellow, approximately #F0C83E, with natural material highlights. Preserve absolutely the same shoe geometry, thin outsole, downturned toe, stitching locations and texture, strap position, pull loop, exact camera/viewpoint, orientation, lighting, object scale, canvas dimensions, margins, placement, and transparency. Keep every charcoal rubber area, lining, and black pull loop neutral and unchanged. Do not redesign, rotate, crop, add text, add branding, or add props. Keep the genuinely transparent alpha background. This variant must align with the original as closely as possible when switching colors in a profile UI.\nFinal background correction: Precise background replacement edit. The supplied image is an EDIT TARGET of a climbing shoe. Preserve the entire shoe EXACTLY: every fabric color, rubber color, stitching, strap, loop, material texture, highlights, silhouette, object position, size, viewpoint, orientation and canvas. Change ONLY the background: remove the visible gray and white checkerboard completely and replace it with a flat solid pure WHITE #FFFFFF background. Every background pixel and all corners should be solid white, with only a very subtle soft contact shadow below the shoe. Do not simulate transparency. Do not create a grid, squares, transparency pattern, gradient, border, texture or props on the background. Do not change the shoe itself."
+    },
+    {
+      "color": "orange",
+      "file": "web/public/illustrations/climbing-shoe/orange-v2.webp",
+      "generatedSource": "exec-96828f4a-7d12-47ff-80e9-e4882c01f25f.png",
+      "prompt": "Precise product image color edit. Image 1 is the approved shoe EDIT TARGET. Change only the blue microfiber upper, blue trim, blue tongue and blue velcro strap to #EF8953, warm clear orange, retaining their photoreal material shading and texture. Preserve exactly the same shoe design, silhouette, posture, stitching, charcoal rubber areas, dark lining, black heel loop, light direction, camera view, orientation, scale, placement and square canvas. No text, new logos, props or redesign. IMPORTANT BACKGROUND: use a perfectly plain solid pure white (#FFFFFF) studio background. Composite the existing transparent background onto white. DO NOT depict a checkerboard or transparency pattern anywhere. Do not draw squares. The entire background and all canvas corners must be plain white. Keep a very faint natural contact shadow if needed. Generate a single shoe color variant that visually aligns with the original for color switching in an app."
+    },
+    {
+      "color": "green",
+      "file": "web/public/illustrations/climbing-shoe/green-v2.webp",
+      "generatedSource": "exec-9b3d508f-0ce9-499d-a318-e0f350a364b5.png",
+      "prompt": "Precise product image color edit. Image 1 is the approved shoe EDIT TARGET. Change only the blue microfiber upper, blue trim, blue tongue and blue velcro strap to #63A889, calm medium green, retaining their photoreal material shading and texture. Preserve exactly the same shoe design, silhouette, posture, stitching, charcoal rubber areas, dark lining, black heel loop, light direction, camera view, orientation, scale, placement and square canvas. No text, new logos, props or redesign. IMPORTANT BACKGROUND: use a perfectly plain solid pure white (#FFFFFF) studio background. Composite the existing transparent background onto white. DO NOT depict a checkerboard or transparency pattern anywhere. Do not draw squares. The entire background and all canvas corners must be plain white. Keep a very faint natural contact shadow if needed. Generate a single shoe color variant that visually aligns with the original for color switching in an app."
+    },
+    {
+      "color": "blue",
+      "file": "web/public/illustrations/climbing-shoe/blue-v2.webp",
+      "generatedSource": "exec-5b0cfab2-3630-4809-9f37-adedffb7e120.png",
+      "prompt": "Approved original: refined 3D performance bouldering shoe, sky blue microfiber upper, thin matte charcoal rubber, one diagonal velcro strap, three-quarter view, no outline or branding, transparent background. Built-in image_gen."
+    },
+    {
+      "color": "purple",
+      "file": "web/public/illustrations/climbing-shoe/purple-v2.webp",
+      "generatedSource": "exec-598e45ec-c1a7-4ebd-a2cc-1bea9bc7ba17.png",
+      "prompt": "Precise product image color edit. Image 1 is the approved shoe EDIT TARGET. Change only the blue microfiber upper, blue trim, blue tongue and blue velcro strap to #A28BCC, soft medium purple, retaining their photoreal material shading and texture. Preserve exactly the same shoe design, silhouette, posture, stitching, charcoal rubber areas, dark lining, black heel loop, light direction, camera view, orientation, scale, placement and square canvas. No text, new logos, props or redesign. IMPORTANT BACKGROUND: use a perfectly plain solid pure white (#FFFFFF) studio background. Composite the existing transparent background onto white. DO NOT depict a checkerboard or transparency pattern anywhere. Do not draw squares. The entire background and all canvas corners must be plain white. Keep a very faint natural contact shadow if needed. Generate a single shoe color variant that visually aligns with the original for color switching in an app."
+    },
+    {
+      "color": "black",
+      "file": "web/public/illustrations/climbing-shoe/black-v2.webp",
+      "generatedSource": "exec-eb8be681-20be-4f38-8ddb-83e6bf82eff4.png",
+      "prompt": "Use case: precise-object-edit. Image 1 is the approved climbing shoe and is the EDIT TARGET. Produce exactly one color variant of this same image. Change ONLY the blue microfiber upper, blue trim, blue tongue and blue velcro strap to deep graphite black, approximately #333943; retain subtle visible material texture and seam highlights. Preserve absolutely the same shoe geometry, thin outsole, downturned toe, stitching locations and texture, strap position, pull loop, exact camera/viewpoint, orientation, lighting, object scale, canvas dimensions, margins, placement, and transparency. Keep every charcoal rubber area, lining, and black pull loop neutral and unchanged. Do not redesign, rotate, crop, add text, add branding, or add props. Keep the genuinely transparent alpha background. This variant must align with the original as closely as possible when switching colors in a profile UI.\nFinal background correction: Precise background replacement edit. The supplied image is an EDIT TARGET of a climbing shoe. Preserve the entire shoe EXACTLY: every fabric color, rubber color, stitching, strap, loop, material texture, highlights, silhouette, object position, size, viewpoint, orientation and canvas. Change ONLY the background: remove the visible gray and white checkerboard completely and replace it with a flat solid pure WHITE #FFFFFF background. Every background pixel and all corners should be solid white, with only a very subtle soft contact shadow below the shoe. Do not simulate transparency. Do not create a grid, squares, transparency pattern, gradient, border, texture or props on the background. Do not change the shoe itself."
+    }
+  ]
+}

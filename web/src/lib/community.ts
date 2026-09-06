@@ -54,7 +54,19 @@ export interface PostDetail {
   updated_at: string;
   mine: boolean;
   comments: PostComment[];
+  video_path?: string | null;
+  thumbnail_path?: string | null;
+  liked?: boolean;
+  like_count?: number;
 }
+
+export interface VideoSummary extends PostSummary {
+  thumbnail_path: string;
+  like_count: number;
+}
+
+export const FEEDBACK_VIDEO_MAX_BYTES = 50 * 1024 * 1024;
+export const VIDEO_PAGE = 12;
 
 /* DB 체크 제약과 같은 값 — 한쪽만 바꾸지 말 것 */
 export const POST_TITLE_MAX = 80;
@@ -64,9 +76,10 @@ export const COMMENT_MAX = 1000;
 export const POST_PAGE = 30;
 
 export const COMMUNITY_TABS = [
+  { id: "video", label: "영상 피드백" },
+  { id: "board", label: "자유 게시판" },
   { id: "competition", label: "대회 정보" },
   { id: "news", label: "클라이밍 뉴스" },
-  { id: "board", label: "자유 게시판" },
 ] as const;
 export type CommunityTab = (typeof COMMUNITY_TABS)[number]["id"];
 

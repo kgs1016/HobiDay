@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ProfileTodo from "@/components/ProfileTodo";
+import ProfileShoe from "@/components/ProfileShoe";
 import { resetProfileGate } from "@/components/RequireProfile";
 import { AvatarFallback, ChevronRightIcon } from "@/components/icons";
 import { careerLabel, level } from "@/lib/levels";
@@ -175,6 +176,8 @@ export default function Me() {
           </div>
         )}
       </section>
+
+      <ProfileShoe />
 
       {/* 크레딧 · 내 영상 — 섹션 사이는 얇은 회색 밴드로 구분한다 */}
       <section className="border-t-8 border-surface2 px-4">

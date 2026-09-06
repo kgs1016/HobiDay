@@ -105,16 +105,19 @@
 
 ### 커뮤니티 (하단 탭 · 신청함 옆)
 
-만남 말고도 매일 열어볼 이유를 준다. 세 칸이다.
+영상 피드백 · 자유 게시판 · 대회 정보 · 클라이밍 뉴스. 기본 탭은 영상 피드백이다.
 
 | 칸 | 내용 | 채워지는 방식 |
 |---|---|---|
+| **영상 피드백** | 영상 1개 + 짧은 글, 좋아요 · 댓글 | 유저가 직접 업로드. MP4/MOV/WebM, 최대 50MB. 썸네일 중심 최신순 목록 |
 | **대회 정보** | 다가오는 대회(D-day · 일정 · 장소) + 날짜 없는 대회 소식 | IFSC 공식 일정(ICS) 자동 수집 · 국내 대회는 뉴스 검색 + 운영자 손 입력(`community_article_upsert`) |
 | **클라이밍 뉴스** | 최신순 기사 | 구글 뉴스 RSS("클라이밍 OR 볼더링 OR 스포츠클라이밍") 자동 수집 |
 | **자유 게시판** | 글 · 댓글. 로그인(프로필 완성)한 누구나 | 유저 작성. 신고하면 글쓴이 차단 + 글 증거 보존, 댓글이 달리면 글쓴이에게 알림 |
 
 - 자동 수집은 GitHub Actions([`community-feed.yml`](.github/workflows/community-feed.yml))가 6시간마다 [`scripts/community-feed.mjs`](scripts/community-feed.mjs)를 돌려 `community_articles` 에 업서트한다. **레포 Secrets 에 `SUPABASE_SERVICE_ROLE_KEY` 를 넣어야 돈다** (앱·저장소에는 절대 넣지 않는 키). 잘못 들어온 기사는 대시보드에서 `hidden = true`.
 - 게시판은 전부 RPC(`post_*` · `comment_*`) — 차단 관계의 글·댓글은 서버가 걸러낸다. 삭제는 soft delete. 스키마는 [`20260906120000_community.sql`](supabase/migrations/20260906120000_community.sql).
+- 영상은 `posts.video_path`로 구분해 자유 게시판에서는 제외한다. 전용 비공개 `community-videos` 버킷과 5분 서명 URL을 쓰며, 차단·삭제 후 새 URL 발급은 막힌다. 이미 발급된 URL은 만료까지 유효하다. 게시 후 파일 교체·직접 삭제는 막고 신고 시 경로를 증거로 보존한다. 재시도는 같은 게시물 ID·좋아요 상태로 처리한다.
+- 영상 SQL: [`20260906160000_video_feedback.sql`](supabase/migrations/20260906160000_video_feedback.sql). 권한·좋아요·신고·차단 회귀 확인: `npx supabase db query --linked --file supabase/tests/video_feedback.sql` (테스트 데이터는 롤백). 업로드 후 게시하지 않은 파일은 비공개 상태로 남으므로 운영자가 Storage에서 정리할 수 있다.
 
 ### 라운드 로테이션은 보관
 

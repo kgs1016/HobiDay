@@ -1,12 +1,13 @@
 "use client";
 
-/* 커뮤니티 — 하단 탭. 세 칸이다.
+/* 커뮤니티 — 영상 피드백 · 자유 게시판 · 대회 · 뉴스.
    대회 정보·클라이밍 뉴스는 크론이 밖에서 가져와 쌓아둔 기사를 읽는다
    (scripts/community-feed.mjs). 자유 게시판은 로그인한 누구나 쓴다.
    칸은 ?tab= 으로 기억한다 — 글을 읽고 돌아와도 같은 칸이 열리게. */
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import VideoFeedbackFeed from "@/components/VideoFeedbackFeed";
 import { useQueryParam } from "@/lib/queryId";
 import { AvatarFallback, PlusIcon } from "@/components/icons";
 import { ChalkBagIllust } from "@/components/illustrations";
@@ -154,10 +155,10 @@ function PostRow({ p, photo }: { p: PostSummary; photo?: string }) {
 export default function Community() {
   const mockMode = !hasSupabase();
   const q = useQueryParam("tab");
-  // 주소의 ?tab= 이 먼저다 (없으면 대회 정보). 탭을 누르면 그게 이긴다.
+  // 주소의 ?tab= 이 먼저다 (없으면 영상 피드백). 탭을 누르면 그게 이긴다.
   const [picked, setPicked] = useState<CommunityTab | null>(null);
   const tab: CommunityTab | null =
-    picked ?? (q === undefined ? null : isCommunityTab(q) ? q : "competition");
+    picked ?? (q === undefined ? null : isCommunityTab(q) ? q : "video");
   const [authed, setAuthed] = useState<boolean | null>(mockMode ? true : null);
 
   // 목데이터는 처음부터 들고 시작한다 — 받아올 게 없다
@@ -193,7 +194,7 @@ export default function Community() {
         setMore(rows.length >= POST_PAGE);
         const urls = await photoUrls(rows);
         if (alive) setPhotos((p) => ({ ...p, ...urls }));
-      } else if (!articles[tab]) {
+      } else if (tab !== "video" && !articles[tab]) {
         const rows = await fetchArticles(tab);
         if (alive) setArticles((a) => ({ ...a, [tab]: rows ?? [] }));
       }
@@ -208,7 +209,7 @@ export default function Community() {
   const select = (t: CommunityTab) => {
     setPicked(t);
     // 주소에 남긴다 — 글에서 뒤로 오면 같은 칸이 열린다. 히스토리는 안 쌓인다.
-    window.history.replaceState(null, "", t === "competition" ? "/community" : `/community?tab=${t}`);
+    window.history.replaceState(null, "", t === "video" ? "/community" : `/community?tab=${t}`);
   };
 
   /* 다음 장 — 마지막 글보다 오래된 것부터 */
@@ -223,7 +224,7 @@ export default function Community() {
     setBusy(false);
   };
 
-  const list = tab && tab !== "board" ? articles[tab] : undefined;
+  const list = tab && tab !== "board" && tab !== "video" ? articles[tab] : undefined;
   const upcoming = list?.filter((a) => a.starts_at) ?? [];
   const undated = list?.filter((a) => !a.starts_at) ?? [];
 
@@ -231,23 +232,23 @@ export default function Community() {
     <main className="px-4">
       <header className="flex items-center justify-between pt-6 pb-3">
         <h1 className="text-[20px] font-bold tracking-tight">커뮤니티</h1>
-        {tab === "board" && authed && (
+        {(tab === "board" || tab === "video") && authed && (
           <Link
-            href="/community/write"
+            href={tab === "video" ? "/community/upload" : "/community/write"}
             className="flex items-center gap-1 py-1 text-[13.5px] font-semibold text-accent-pressed"
           >
             <PlusIcon size={14} strokeWidth={2.2} />
-            글쓰기
+            {tab === "video" ? "영상 올리기" : "글쓰기"}
           </Link>
         )}
       </header>
 
-      <div className="flex gap-5 border-b border-line">
+      <div className="flex gap-4 overflow-x-auto border-b border-line">
         {COMMUNITY_TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => select(t.id)}
-            className={`-mb-px border-b-2 pb-2.5 pt-1 text-[15px] ${
+            className={`-mb-px shrink-0 whitespace-nowrap border-b-2 pb-2.5 pt-1 text-[14px] ${
               tab === t.id
                 ? "border-ink font-bold text-ink"
                 : "border-transparent font-medium text-faint"
@@ -268,7 +269,9 @@ export default function Community() {
             로그인 하기
           </Link>
         </div>
-      ) : !tab || authed === null ? null : tab === "board" ? (
+      ) : !tab || authed === null ? null : tab === "video" ? (
+        <VideoFeedbackFeed />
+      ) : tab === "board" ? (
         posts === null ? (
           <p className="pt-16 text-center text-[13.5px] text-faint">불러오는 중…</p>
         ) : posts.length === 0 ? (

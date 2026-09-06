@@ -7,7 +7,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useQueryId } from "@/lib/queryId";
+import { useQueryId, useQueryParam } from "@/lib/queryId";
+import FeedbackVideoPlayer from "@/components/FeedbackVideoPlayer";
+import { setVideoLike } from "@/lib/feedbackVideo";
 import BackButton from "@/components/BackButton";
 import ReportSheet from "@/components/ReportSheet";
 import { AvatarFallback } from "@/components/icons";
@@ -27,7 +29,7 @@ import {
   signedPhotoUrls,
 } from "@/lib/supabase";
 
-const BOARD = "/community?tab=board";
+
 
 /** 목데이터 — 실제 조회처럼 비동기로 준다 */
 const mockPost = async (id: string) => MOCK_POSTS.find((p) => p.id === id) ?? null;
@@ -58,8 +60,12 @@ function Avatar({ url, size }: { url?: string; size: number }) {
 
 export default function PostPage() {
   const id = useQueryId();
+  const from = useQueryParam("from");
   const router = useRouter();
   const [post, setPost] = useState<PostDetail | null | undefined>(undefined);
+  const BOARD = post?.video_path || from === "video" ? "/community?tab=video" : "/community?tab=board";
+  const [likeBusy, setLikeBusy] = useState(false);
+  const [likeError, setLikeError] = useState("");
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
@@ -103,6 +109,18 @@ export default function PostPage() {
     if (r.error) return alert(ERRORS[r.error] ?? `실패: ${r.error}`);
     setComment("");
     load();
+  };
+
+  const like = async () => {
+    if (!post || likeBusy) return;
+    setLikeBusy(true);
+    setLikeError("");
+    try {
+      const r = await setVideoLike(post.id, !post.liked);
+      if (r.error) throw new Error(ERRORS[r.error] ?? "좋아요를 저장하지 못했어요");
+      setPost((p) => p ? { ...p, liked: r.liked, like_count: r.like_count } : p);
+    } catch (e) { setLikeError(e instanceof Error ? e.message : "다시 시도해주세요"); }
+    finally { setLikeBusy(false); }
   };
 
   const removeComment = async (c: PostComment) => {
@@ -151,12 +169,12 @@ export default function PostPage() {
         <div className="flex-1" />
         {post.mine ? (
           <>
-            <Link
+            {!post.video_path && <Link
               href={`/community/write?id=${post.id}`}
               className="px-2 py-1 text-[13.5px] font-medium text-muted"
             >
               수정
-            </Link>
+            </Link>}
             <button
               onClick={removePost}
               disabled={busy}
@@ -185,7 +203,7 @@ export default function PostPage() {
       </header>
 
       <article>
-        <h1 className="text-[19px] font-bold leading-snug tracking-tight">{post.title}</h1>
+        <h1 className="text-[19px] font-bold leading-snug tracking-tight">{post.video_path ? "영상 피드백" : post.title}</h1>
         <div className="mt-3 flex items-center gap-2.5">
           <Avatar url={post.photo ? photos[post.photo] : undefined} size={32} />
           <div className="min-w-0">
@@ -196,9 +214,17 @@ export default function PostPage() {
             </p>
           </div>
         </div>
+        {post.video_path && <FeedbackVideoPlayer key={post.video_path} path={post.video_path} thumbnail={post.thumbnail_path} />}
         <p className="mt-5 whitespace-pre-wrap break-words text-[15px] leading-relaxed">
           {post.body}
         </p>
+        {post.video_path && <div className="mt-4">
+          <button onClick={like} disabled={likeBusy} aria-pressed={!!post.liked}
+            className={`rounded-full border px-4 py-2 text-sm font-semibold disabled:opacity-50 ${post.liked ? "border-accent bg-accent-soft text-accent-pressed" : "border-line text-muted"}`}>
+            {post.liked ? "♥" : "♡"} 좋아요 {post.like_count ?? 0}
+          </button>
+          {likeError && <p role="alert" className="mt-2 text-sm text-danger">{likeError}</p>}
+        </div>}
       </article>
 
       <section className="mt-8 border-t border-line pt-5">
