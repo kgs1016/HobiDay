@@ -6,6 +6,12 @@ import type { GenderMode } from "./capacity";
 import type { CareerId, LevelId } from "./levels";
 import type { Session } from "./mock";
 import type { MyProfile } from "./myProfile";
+import type {
+  Article,
+  ArticleKind,
+  PostDetail,
+  PostSummary,
+} from "./community";
 
 let _client: SupabaseClient | null | undefined;
 
@@ -1332,7 +1338,7 @@ export const REPORT_REASONS = [
 ] as const;
 
 export type ReportReason = (typeof REPORT_REASONS)[number]["id"];
-export type ReportContext = "profile" | "chat" | "session";
+export type ReportContext = "profile" | "chat" | "session" | "post" | "comment";
 
 /** 신고하면 차단까지 함께 걸린다 (서버에서 처리) */
 /* ── 알림함 ──
@@ -1430,3 +1436,68 @@ export async function fetchMyBlocks() {
   if (error) return null;
   return data as BlockedPerson[];
 }
+
+/* ── 커뮤니티 ──
+   대회 정보·뉴스는 크론이 쌓아둔 기사(community_articles)를 읽기만 한다.
+   자유 게시판은 전부 RPC — 닉네임 조인과 차단 필터를 서버가 한다.
+   타입·목데이터는 lib/community.ts */
+
+export async function fetchArticles(kind: ArticleKind): Promise<Article[] | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc("community_articles", { p_kind: kind });
+  if (error) {
+    console.error("community_articles", error);
+    return null;
+  }
+  return data as Article[];
+}
+
+/** 최신순 한 장. before 를 주면 그보다 오래된 글부터 (다음 장) */
+export async function fetchPosts(before?: string): Promise<PostSummary[] | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc("post_list", { p_before: before ?? null });
+  if (error) {
+    console.error("post_list", error);
+    return null;
+  }
+  return data as PostSummary[];
+}
+
+/** 글 하나 + 댓글. 지워졌거나 차단 관계면 null */
+export async function fetchPost(id: string): Promise<PostDetail | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc("post_detail", { p_post: id });
+  if (error) {
+    console.error("post_detail", error);
+    return null;
+  }
+  return (data as PostDetail | null) ?? null;
+}
+
+type RpcResult<T = object> = ({ ok?: true; error?: string } & Partial<T>);
+
+async function callRpc<T = object>(fn: string, args: Record<string, unknown>) {
+  const sb = getSupabase();
+  if (!sb) return { error: "no_client" } as RpcResult<T>;
+  const { data, error } = await sb.rpc(fn, args);
+  if (error) return { error: error.message } as RpcResult<T>;
+  return (data ?? {}) as RpcResult<T>;
+}
+
+export const createPost = (title: string, body: string) =>
+  callRpc<{ id: string }>("post_create", { p_title: title, p_body: body });
+
+export const updatePost = (id: string, title: string, body: string) =>
+  callRpc("post_update", { p_post: id, p_title: title, p_body: body });
+
+export const deletePost = (id: string) => callRpc("post_delete", { p_post: id });
+
+/** 글쓴이 알림은 서버가 남긴다 (관계 검사 없는 대기열 경로) */
+export const createComment = (postId: string, body: string) =>
+  callRpc<{ id: string }>("comment_create", { p_post: postId, p_body: body });
+
+export const deleteComment = (id: string) =>
+  callRpc("comment_delete", { p_comment: id });

@@ -103,6 +103,19 @@
 조건(짐·시간·레벨)이 먼저인 모임과 반대로, 사람을 먼저 고르는 탭.
 공개 프로필 카드에 **관심 보내기**(10크레딧 · 보내는 순간 소진) → 상대가 수락하면 1:1 채팅.
 
+### 커뮤니티 (하단 탭 · 신청함 옆)
+
+만남 말고도 매일 열어볼 이유를 준다. 세 칸이다.
+
+| 칸 | 내용 | 채워지는 방식 |
+|---|---|---|
+| **대회 정보** | 다가오는 대회(D-day · 일정 · 장소) + 날짜 없는 대회 소식 | IFSC 공식 일정(ICS) 자동 수집 · 국내 대회는 뉴스 검색 + 운영자 손 입력(`community_article_upsert`) |
+| **클라이밍 뉴스** | 최신순 기사 | 구글 뉴스 RSS("클라이밍 OR 볼더링 OR 스포츠클라이밍") 자동 수집 |
+| **자유 게시판** | 글 · 댓글. 로그인(프로필 완성)한 누구나 | 유저 작성. 신고하면 글쓴이 차단 + 글 증거 보존, 댓글이 달리면 글쓴이에게 알림 |
+
+- 자동 수집은 GitHub Actions([`community-feed.yml`](.github/workflows/community-feed.yml))가 6시간마다 [`scripts/community-feed.mjs`](scripts/community-feed.mjs)를 돌려 `community_articles` 에 업서트한다. **레포 Secrets 에 `SUPABASE_SERVICE_ROLE_KEY` 를 넣어야 돈다** (앱·저장소에는 절대 넣지 않는 키). 잘못 들어온 기사는 대시보드에서 `hidden = true`.
+- 게시판은 전부 RPC(`post_*` · `comment_*`) — 차단 관계의 글·댓글은 서버가 걸러낸다. 삭제는 soft delete. 스키마는 [`20260906120000_community.sql`](supabase/migrations/20260906120000_community.sql).
+
 ### 라운드 로테이션은 보관
 
 "모든 이성과 정확히 1번씩" 로테이션과 라운드별 공통점 카드는 구현까지 갔다가 뺐다 —

@@ -57,6 +57,16 @@ export function InboxIcon(p: IconProps) {
   );
 }
 
+/* 커뮤니티 — 말풍선 둘. 채팅(말풍선 하나)과 헷갈리지 않게 겹쳐 그린다 */
+export function CommunityIcon(p: IconProps) {
+  return (
+    <Base {...p}>
+      <path d="M14.5 5.5H6a2 2 0 0 0-2 2v5.2a2 2 0 0 0 2 2h1v3l3.3-3h4.2a2 2 0 0 0 2-2V7.5a2 2 0 0 0-2-2Z" />
+      <path d="M16.5 9.5H18a2 2 0 0 1 2 2v4.7a2 2 0 0 1-2 2h-1v2.6l-2.9-2.6H12" />
+    </Base>
+  );
+}
+
 export function UserIcon(p: IconProps) {
   return (
     <Base {...p}>

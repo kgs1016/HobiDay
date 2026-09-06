@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { currentUser, hasSupabase, fetchAppFlags, fetchInboxCounts } from "@/lib/supabase";
-import { HomeIcon, ChatIcon, InboxIcon, UserIcon } from "@/components/icons";
+import { HomeIcon, ChatIcon, InboxIcon, CommunityIcon, UserIcon } from "@/components/icons";
 
 const TABS = [
   { href: "/", label: "홈", Icon: HomeIcon },
   { href: "/chat", label: "채팅", Icon: ChatIcon },
   { href: "/inbox", label: "신청함", Icon: InboxIcon },
+  { href: "/community", label: "커뮤니티", Icon: CommunityIcon },
   { href: "/me", label: "내 정보", Icon: UserIcon },
 ];
 
@@ -81,7 +82,7 @@ export default function BottomNav() {
       className="fixed bottom-0 inset-x-0 z-20 border-t border-line bg-surface"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <div className={`mx-auto max-w-md grid ${locked ? "grid-cols-2" : "grid-cols-4"}`}>
+      <div className={`mx-auto max-w-md grid ${locked ? "grid-cols-2" : "grid-cols-5"}`}>
         {tabs.map((t) => {
           const active =
             t.href === "/" ? pathname === "/" : pathname.startsWith(t.href);

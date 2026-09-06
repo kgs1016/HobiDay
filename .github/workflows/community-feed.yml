@@ -1,0 +1,37 @@
+# 커뮤니티 "대회 정보 · 클라이밍 뉴스" 는 밖에서 가져온 기사로 채운다.
+# 이 워크플로가 6시간마다 scripts/community-feed.mjs 를 돌려 IFSC 일정과
+# 구글 뉴스를 community_articles 에 업서트한다. 앱은 그 표를 읽기만 한다.
+#
+# - 쓰기라서 service role 키가 필요하다 (RLS 를 통과하는 키 — 앱·저장소에
+#   절대 넣지 않는다). 레포 Settings > Secrets and variables > Actions 에
+#   SUPABASE_SERVICE_ROLE_KEY 를 만든다 (대시보드 Settings > API Keys > service_role).
+#   키가 없으면 스크립트가 어디에 넣을지 알려주고 실패한다.
+# - URL 은 keepalive.yml 과 같은 값이다. 샌드박스에 쏘려면 둘 다 바꾼다.
+# - 출처 하나가 죽어도 나머지는 저장된다. 전부 실패해야 빨간불이다.
+# - 잘못 들어온 기사는 대시보드에서 hidden = true (지우면 다음 실행에 되살아난다).
+
+name: Community Feed
+
+on:
+  schedule:
+    # 6시간마다 (UTC 00:23 · 06:23 · 12:23 · 18:23 = KST 09:23 · 15:23 · 21:23 · 03:23).
+    # 정각은 실행이 몰려 지연되므로 일부러 비켜둠.
+    - cron: "23 */6 * * *"
+  workflow_dispatch: # 수동 실행
+
+permissions:
+  contents: read
+
+jobs:
+  feed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 기사 수집
+        run: node scripts/community-feed.mjs
+        env:
+          SUPABASE_URL: https://loigwslmwvltdurjttpe.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
