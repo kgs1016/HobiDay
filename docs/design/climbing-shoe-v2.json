@@ -1,6 +1,6 @@
 {
   "tool": "Built-in image_gen",
-  "usage": "Color preview only; no grade mapping or persisted profile change.",
+  "usage": "Profile shoe color is derived from recorded ascents using web/src/lib/shoeProgress.ts. Color selection is not exposed to users.",
   "assets": [
     {
       "color": "white",

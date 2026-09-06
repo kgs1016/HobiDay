@@ -119,6 +119,15 @@
 - 영상은 `posts.video_path`로 구분해 자유 게시판에서는 제외한다. 전용 비공개 `community-videos` 버킷과 5분 서명 URL을 쓰며, 차단·삭제 후 새 URL 발급은 막힌다. 이미 발급된 URL은 만료까지 유효하다. 게시 후 파일 교체·직접 삭제는 막고 신고 시 경로를 증거로 보존한다. 재시도는 같은 게시물 ID·좋아요 상태로 처리한다.
 - 영상 SQL: [`20260906160000_video_feedback.sql`](supabase/migrations/20260906160000_video_feedback.sql). 권한·좋아요·신고·차단 회귀 확인: `npx supabase db query --linked --file supabase/tests/video_feedback.sql` (테스트 데이터는 롤백). 업로드 후 게시하지 않은 파일은 비공개 상태로 남으므로 운영자가 Storage에서 정리할 수 있다.
 
+### 내 암벽화 · 완등 기록
+
+- 암벽화 색은 본인의 문제별 완등 기록으로 계산한다. 직접 색을 선택하지 않으며, 출석·구력·영상 수·기존 자기신고 L등급은 승급 계산에 쓰지 않는다.
+- 초기 기준: 흰색 시작 → 노랑 V1+ 3개 → 주황 V2+ 5개 → 초록 V3+ 8개 → 파랑 V4+ 10개 → 보라 V6+ 12개 → 검정 V8+ 15개. 정의와 계산은 [`shoeProgress.ts`](web/src/lib/shoeProgress.ts)에 모은다.
+- 높은 난이도는 하위 조건에도 포함하고, 충족한 가장 높은 단계를 바로 부여한다. 기간 제한은 없다. 수정·삭제 시 남은 기록으로 다시 계산한다.
+- `/me/ascents`에서 암장·문제 구분·안내된 V등급을 직접 기록한다. 과거 완등도 입력할 수 있다. V등급 미상은 전체 완등 수에만 포함하며, 암장의 홀드 색을 자동 환산하지 않는다.
+- 같은 사람의 암장·문제 구분이 같으면 공백·대소문자 차이까지 정규화해 중복을 막는다. 세팅이 바뀐 문제는 세팅·벽 위치·번호로 구분한다. 아직 공인 문제 목록이나 영상 검증 시스템은 아니므로 인증된 실력으로 표시하지 않는다.
+- 마이그레이션: [`20260907120000_climbing_ascents.sql`](supabase/migrations/20260907120000_climbing_ascents.sql). 개인 기록은 본인만 RPC로 읽고 변경하며 탈퇴 시 삭제된다. 권한·중복·수정·삭제·페이지 집계 검증: `npx supabase db query --linked --file supabase/tests/climbing_ascents.sql` (롤백). 단계 계산 검증: `cd web && node scripts/test-shoe-progress.cjs`.
+
 ### 라운드 로테이션은 보관
 
 "모든 이성과 정확히 1번씩" 로테이션과 라운드별 공통점 카드는 구현까지 갔다가 뺐다 —
