@@ -1180,6 +1180,8 @@ export async function respondRequest(id: string, accept: boolean) {
     match_id?: string;
     /** 거절했을 때 알림을 받아야 하는 사람 (보낸 사람) */
     notify?: string;
+    /** 거절한 사람 닉네임 — 푸시가 알림함과 같은 문구를 쓰도록 */
+    by?: string;
     error?: string;
   };
 }

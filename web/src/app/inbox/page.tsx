@@ -57,7 +57,8 @@ const STATUS: Record<string, { label: string; cls: string; note?: string }> = {
   cut: {
     label: "거절됨",
     cls: "bg-surface2 text-muted",
-    note: "다른 모임을 둘러보세요.",
+    /* 거절은 문을 닫지 않는다 — 시작 전이면 카드를 눌러 다시 신청한다 */
+    note: "다시 신청할 수 있어요.",
   },
 };
 
@@ -163,11 +164,11 @@ export default function Inbox() {
       router.push("/chat");
     } else if (r.notify) {
       /* 거절도 알린다. 알림함에는 서버(request_respond)가 이미 남겼으니
-         폰만 울린다 — 누가 거절했는지는 넣지 않는다. */
+         폰만 울린다 — 문구도 서버가 쓴 것과 같아야 해서 이름을 받아 쓴다. */
       notifyPush(
         r.notify,
-        "채팅 신청 결과를 알려드려요",
-        "보낸 채팅 신청이 이번엔 연결되지 않았어요.",
+        "채팅 신청이 거절됐어요",
+        `${r.by ?? "상대"}님이 거절했어요.`,
         "/inbox",
         { pushOnly: true }
       );
@@ -535,10 +536,6 @@ export default function Inbox() {
                     </div>
                   ))}
                 </div>
-                <p className="mt-2 text-[11.5px] text-faint">
-                  거절하면 상대에게 결과만 알려요. 누가 거절했는지는 알리지
-                  않아요.
-                </p>
               </section>
             )}
           </div>
@@ -615,21 +612,20 @@ export default function Inbox() {
                             }
                           : (STATUS[s.my_status] ?? STATUS.waiting);
 
-                  /* 관계가 끝난 카드는 링크를 걸지 않는다. 거절당한
-                     모임의 상세를 열어봐야 할 이유가 없고, 서버도 이제
-                     그 문을 닫았다 — 링크를 두면 "찾을 수 없어요" 로
-                     떨어진다.
+                  /* 아직 시작 전인 모임은 대기든 거절이든 열어본다.
+                     대기 중이면 신청을 무르러(그 버튼이 상세에만 있다),
+                     거절당했으면 다시 신청하러 — 거절은 문을 닫지 않는다.
+                     서버도 그 둘을 열어준다. 대기자는 관계자라서,
+                     거절당한 사람은 남들과 같은 문(살아 있고 시작 안 한
+                     모임)으로.
 
-                     승인 대기 중인 신청도 연다. 신청을 무르는 버튼이
-                     상세에만 있어서, 여기서 링크를 막으면 호스트가 답을
-                     줄 때까지 취소할 길이 없었다. 시작 시각이 지나면
-                     크론이 곧 거절로 바꾸고 서버가 문을 닫으므로,
-                     시작 전까지만 연다. */
+                     시작 시각이 지나면 둘 다 닫는다. 그때부터는 서버가
+                     막아서 링크를 두면 "찾을 수 없어요" 로 떨어진다. */
                   const openable =
                     !cancelled &&
                     (mine
                       ? !(gone && s.session_status !== "confirmed")
-                      : s.my_status === "waiting" && !running && !gone);
+                      : !running && !gone);
                   const body = (
                     <>
                       <div className="flex items-start justify-between gap-2">
@@ -684,9 +680,10 @@ export default function Inbox() {
           {sent.length > 0 && (
             <section>
               <h2 className="mb-2 text-[15px] font-bold">보낸 채팅</h2>
-              {/* 목록에서 사라지는 때를 미리 알려둔다 */}
+              {/* 목록에서 사라지는 때를 미리 알려둔다. 결과가 온 건 알림함에
+                  남으니 여기서 하루면 충분하다. */}
               <p className="mb-2 text-[11.5px] leading-relaxed text-faint">
-                보낸 지 7일이 지나면 목록에서 사라져요.
+                답이 오면 하루, 답이 없으면 7일 뒤 목록에서 사라져요.
               </p>
               <div className="flex flex-col gap-2">
                 {sent.map((r) => (

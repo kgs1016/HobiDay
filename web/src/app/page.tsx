@@ -148,8 +148,11 @@ export default function Home() {
     })();
   }, []);
 
+  /* already 는 이제 두 경우뿐이다 — 답을 기다리는 중이거나, 이미 채팅이
+     열려 있거나. 거절당한 상대에게는 다시 보낼 수 있다(request_send 가
+     거절된 행을 치운다). */
   const REQ_ERRORS: Record<string, string> = {
-    already: "이미 채팅을 보낸 상대예요",
+    already: "이미 보낸 채팅 신청이 있어요",
     self: "나에게는 보낼 수 없어요",
     not_public: "상대가 프로필을 내렸어요",
     no_profile: "먼저 내 프로필을 만들어주세요",
@@ -168,6 +171,12 @@ export default function Home() {
           `모임에서 등반 영상을 올리면 +${CREDIT_SESSION_VIDEO}크레딧씩 쌓여요.`
       );
     }
+    if (r.error === "already")
+      return alert(
+        r.status === "accepted"
+          ? "이미 채팅이 열려 있어요"
+          : "이미 보낸 채팅 신청이 답을 기다리고 있어요"
+      );
     if (r.error) return alert(REQ_ERRORS[r.error] ?? `실패: ${r.error}`);
 
     notifyPush(
@@ -727,8 +736,7 @@ export default function Home() {
                 수락 여부와 상관없이 돌려드리지 않아요
               </li>
               <li>
-                · 거절되면 알려드려요 · 보낸 지 7일이 지나면 보낸
-                목록에서 사라져요
+                · 거절되면 알려드려요 · 거절돼도 다시 보낼 수 있어요
               </li>
             </ul>
             <textarea
