@@ -1346,12 +1346,31 @@ export async function fetchNotifications() {
   return data as { unread: number; items: AppNotification[] };
 }
 
-/** 알림함을 열면 다 읽은 것으로 친다. 읽고 24시간 뒤에 사라진다. */
-export async function markNotificationsRead() {
+/** 알림 하나를 읽음으로. 목록을 훑은 것은 읽은 게 아니라서, 실제로
+ *  누른 알림만 이걸 부른다. 읽고 24시간 뒤에 사라진다. */
+export async function markNotificationRead(id: string) {
+  const sb = getSupabase();
+  if (!sb) return false;
+  const { data, error } = await sb.rpc("notification_read", { p_id: id });
+  return error ? false : (data as boolean);
+}
+
+/* ── 보낸 신청 배지 ──
+   "아직 안 본 결과" 의 수. 대기 중인 신청은 세지 않는다 — 내가 할 일이
+   없는데 배지가 박혀 있으면 배지가 아무 뜻도 없어진다. */
+
+export async function fetchSentChanges() {
   const sb = getSupabase();
   if (!sb) return 0;
-  const { data, error } = await sb.rpc("notifications_read");
-  return error ? 0 : (data as number);
+  const { data, error } = await sb.rpc("sent_changes");
+  return error ? 0 : Number(data ?? 0);
+}
+
+/** 보낸 신청 탭을 열었다 = 여기까지는 봤다 */
+export async function markSentSeen() {
+  const sb = getSupabase();
+  if (!sb) return;
+  await sb.rpc("sent_mark_seen");
 }
 
 export async function reportUser(

@@ -1,10 +1,11 @@
 "use client";
 
 /* 알림함 — 홈 오른쪽 위 종 아이콘으로 들어온다.
-   화면을 열면 전부 읽은 것으로 친다. 목록을 봤다는 게 곧 읽었다는
-   뜻이라 알림마다 따로 누르게 하지 않는다. 읽은 알림은 24시간 뒤에
-   사라진다 (그 말은 굳이 화면에 쓰지 않는다 — 알림 하나하나에
-   유통기한을 붙여 읽히게 할 이유가 없다). */
+   누른 알림만 읽음이 된다. 예전엔 화면을 열기만 해도 전부 읽음으로
+   밀었는데, 종을 눌러 목록만 훑어도 안 열어본 알림까지 흐려진 채
+   24시간 뒤 사라졌다. 목록을 훑는 것은 읽는 게 아니다.
+   읽은 알림은 24시간 뒤에 사라진다 (그 말은 굳이 화면에 쓰지 않는다 —
+   알림 하나하나에 유통기한을 붙여 읽히게 할 이유가 없다). */
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -13,7 +14,7 @@ import {
   currentUser,
   fetchNotifications,
   hasSupabase,
-  markNotificationsRead,
+  markNotificationRead,
   type AppNotification,
 } from "@/lib/supabase";
 
@@ -40,12 +41,23 @@ export default function Notifications() {
       const user = await currentUser();
       setAuthed(!!user);
       if (!user) return;
-      // 먼저 그리고 나서 읽음 처리한다 — 안 읽은 표시를 한 번은 보여준다
       const r = await fetchNotifications();
       setList(r?.items ?? []);
-      await markNotificationsRead();
     })();
   }, []);
+
+  /* 누른 알림만 읽음으로. 화면은 기다리지 않고 바로 흐려진다 —
+     링크가 있는 알림은 곧바로 다른 화면으로 넘어가서, 응답을 기다리면
+     읽음이 반영되는 걸 볼 새가 없다. */
+  const read = (id: string, alreadyRead: boolean) => {
+    if (alreadyRead) return;
+    setList((l) =>
+      (l ?? []).map((x) =>
+        x.id === id ? { ...x, read_at: new Date().toISOString() } : x
+      )
+    );
+    markNotificationRead(id);
+  };
 
   return (
     <main className="px-4 pb-10">
@@ -125,12 +137,22 @@ export default function Notifications() {
               <Link
                 key={n.id}
                 href={n.url}
+                onClick={() => read(n.id, !unread)}
                 className="block transition-colors active:bg-surface2"
               >
                 {row}
               </Link>
             ) : (
-              <div key={n.id}>{row}</div>
+              /* 갈 데가 없는 알림도 눌러서 읽음으로 넘길 수 있어야 한다.
+                 안 그러면 배지가 영영 안 내려간다. */
+              <button
+                key={n.id}
+                type="button"
+                onClick={() => read(n.id, !unread)}
+                className="block w-full text-left transition-colors active:bg-surface2"
+              >
+                {row}
+              </button>
             );
           })}
         </div>

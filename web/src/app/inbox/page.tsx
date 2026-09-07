@@ -16,7 +16,9 @@ import {
   fetchHostedRequests,
   fetchMySignups,
   fetchReceivedRequests,
+  fetchSentChanges,
   fetchSentRequests,
+  markSentSeen,
   rejectSignup,
   respondRequest,
   signedPhotoUrls,
@@ -98,23 +100,29 @@ export default function Inbox() {
   const [received, setReceived] = useState<ReceivedRequest[]>([]);
   const [signups, setSignups] = useState<MySignup[]>([]);
   const [sent, setSent] = useState<SentRequest[]>([]);
+  /* 보낸 신청 배지 = 아직 안 본 "결과" 의 수. 대기 중인 신청은 세지
+     않는다 — 호스트가 답할 일이라 내가 할 게 없는데, 예전엔 그걸 세느라
+     답이 올 때까지 1이 박혀 있었다. 서버가 sent_seen_at 과 비교해 센다. */
+  const [sentChanges, setSentChanges] = useState(0);
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const [pr, ho, re, si, se] = await Promise.all([
+    const [pr, ho, re, si, se, sc] = await Promise.all([
       fetchConfirmProposals(),
       fetchHostedRequests(),
       fetchReceivedRequests(),
       fetchMySignups(),
       fetchSentRequests(),
+      fetchSentChanges(),
     ]);
     setProposals(pr ?? []);
     setHosted(ho ?? []);
     setReceived(re ?? []);
     setSignups(si ?? []);
     setSent(se ?? []);
+    setSentChanges(sc);
 
     const paths = [
       ...(ho ?? []).map((x) => x.photo),
@@ -264,7 +272,17 @@ export default function Inbox() {
     );
 
   const receivedCount = proposals.length + hosted.length + received.length;
-  const waitingCount = signups.filter((s) => s.my_status === "waiting").length;
+
+  /* 보낸 신청 탭을 열면 여기까지 본 것으로 친다. 배지는 기다리지 않고
+     바로 0 이 된다 — 탭이 열렸는데 숫자가 남아 있으면 안 지워진 것처럼
+     보인다. 서버에도 같은 시각을 남겨서 다시 들어와도 안 뜬다. */
+  const openTab = (key: Tab) => {
+    setTab(key);
+    if (key === "sent" && sentChanges > 0) {
+      setSentChanges(0);
+      markSentSeen();
+    }
+  };
 
   return (
     <main className="px-4">
@@ -277,12 +295,12 @@ export default function Inbox() {
         {(
           [
             ["received", "받은 신청", receivedCount],
-            ["sent", "보낸 신청", waitingCount],
+            ["sent", "보낸 신청", sentChanges],
           ] as const
         ).map(([key, label, badge]) => (
           <button
             key={key}
-            onClick={() => setTab(key)}
+            onClick={() => openTab(key)}
             className={`-mb-px flex items-center gap-1.5 border-b-2 pb-2.5 pt-1 text-[15px] ${
               tab === key
                 ? "border-ink font-bold text-ink"
