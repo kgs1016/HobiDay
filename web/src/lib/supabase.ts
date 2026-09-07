@@ -1117,7 +1117,11 @@ export interface ReceivedRequest {
 export interface SentRequest {
   id: string;
   created_at: string;
-  status: "pending" | "accepted";
+  /** 답한 시각. 아직 답이 없으면 null */
+  responded_at: string | null;
+  /* 있는 그대로 내려온다. 예전엔 거절도 pending 으로 뭉개서 내려줬다 —
+     소개팅 앱이던 시절의 짝사랑 비노출 규칙이었고, 2026-09 에 없앴다. */
+  status: "pending" | "accepted" | "declined";
   to_id: string;
   nickname: string;
   age: number;
@@ -1174,6 +1178,8 @@ export async function respondRequest(id: string, accept: boolean) {
     ok?: boolean;
     accepted?: boolean;
     match_id?: string;
+    /** 거절했을 때 알림을 받아야 하는 사람 (보낸 사람) */
+    notify?: string;
     error?: string;
   };
 }

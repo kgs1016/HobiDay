@@ -161,6 +161,16 @@ export default function Inbox() {
         notifyPush(from, "🎉 채팅 신청이 수락됐어요", "채팅이 열렸어요. 먼저 인사해보세요!", "/chat");
       alert("수락했어요! 채팅으로 이동합니다.");
       router.push("/chat");
+    } else if (r.notify) {
+      /* 거절도 알린다. 알림함에는 서버(request_respond)가 이미 남겼으니
+         폰만 울린다 — 누가 거절했는지는 넣지 않는다. */
+      notifyPush(
+        r.notify,
+        "채팅 신청 결과를 알려드려요",
+        "보낸 채팅 신청이 이번엔 연결되지 않았어요.",
+        "/inbox",
+        { pushOnly: true }
+      );
     }
   };
 
@@ -176,7 +186,7 @@ export default function Inbox() {
        거절은 서버(session_reject)가 남긴다. 여기서 보내면 이미 늦다:
        거절이 signups.status 를 'cut' 으로 바꾸는 순간 can_notify 가
        "관계 없음" 이 되어 알림이 조용히 버려졌다.
-       (거절은 여전히 안 알린다 — 누가 거절했는지 드러내지 않는다) */
+       거절도 이제 알린다 — 무응답과 구분되어야 다음으로 넘어간다. */
     if (!r.error && ok)
       notifyPush(
         h.user_id,
@@ -526,7 +536,8 @@ export default function Inbox() {
                   ))}
                 </div>
                 <p className="mt-2 text-[11.5px] text-faint">
-                  거절하면 상대에게 알리지 않아요.
+                  거절하면 상대에게 결과만 알려요. 누가 거절했는지는 알리지
+                  않아요.
                 </p>
               </section>
             )}
@@ -673,10 +684,9 @@ export default function Inbox() {
           {sent.length > 0 && (
             <section>
               <h2 className="mb-2 text-[15px] font-bold">보낸 채팅</h2>
-              {/* 목록에서 사라진 이유를 여기서 설명한다 — 거절인지
-                  7일 만료인지는 일부러 구분하지 않는다 */}
+              {/* 목록에서 사라지는 때를 미리 알려둔다 */}
               <p className="mb-2 text-[11.5px] leading-relaxed text-faint">
-                상대가 거절하거나 보낸 지 7일이 지나면 목록에서 사라져요.
+                보낸 지 7일이 지나면 목록에서 사라져요.
               </p>
               <div className="flex flex-col gap-2">
                 {sent.map((r) => (
@@ -696,6 +706,10 @@ export default function Inbox() {
                         {r.home_gym}
                       </p>
                     </div>
+                    {/* 거절과 무응답을 구분해서 보여준다. 예전엔 둘 다
+                        '기다리는 중' 이었다 — 소개팅 앱이던 시절의
+                        짝사랑 비노출 규칙이고, 매칭 앱에서는 다음 사람에게
+                        넘어갈 수가 없어서 없앴다. */}
                     <span
                       className={`shrink-0 rounded-md px-2.5 py-1 text-[11.5px] font-medium ${
                         r.status === "accepted"
@@ -703,7 +717,11 @@ export default function Inbox() {
                           : "bg-surface2 text-muted"
                       }`}
                     >
-                      {r.status === "accepted" ? "수락됨" : "기다리는 중"}
+                      {r.status === "accepted"
+                        ? "수락됨"
+                        : r.status === "declined"
+                          ? "거절됨"
+                          : "기다리는 중"}
                     </span>
                   </div>
                 ))}
