@@ -38,14 +38,14 @@ function badge(s: MyHostedSession) {
     return s.status === "confirmed"
       ? { label: "완료", cls: "bg-accent-soft text-accent-pressed" }
       : { label: "무산됨", cls: "bg-surface2 text-muted" };
-  // 둘이면 그 순간 확정이고 방도 열린다
-  const chatting = s.confirmed >= 2;
+  /* 둘이면 그 순간 확정이다. 확정은 모집의 끝이 아니라서, 최대 정원이
+     남아 있으면 확정된 채로 계속 받는다 — 둘을 같이 적는다. */
   if (s.status === "confirmed")
-    return { label: "확정 · 채팅방 열림", cls: "bg-accent-soft text-accent-pressed" };
-  return {
-    label: chatting ? "모집 중 · 채팅방 열림" : "모집 중",
-    cls: "bg-accent-soft text-accent-pressed",
-  };
+    return {
+      label: s.confirmed < s.capacity ? "확정 · 모집 중" : "확정",
+      cls: "bg-accent-soft text-accent-pressed",
+    };
+  return { label: "모집 중", cls: "bg-accent-soft text-accent-pressed" };
 }
 
 /* 목록의 한 줄 — 카드 대신 divider(부모 divide-y)로 구분한다 */

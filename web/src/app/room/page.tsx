@@ -191,7 +191,7 @@ export default function Room() {
 
         {others.length === 0 ? (
           <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
-            아직 다른 참가자가 확정되지 않았어요. 자리가 차면 여기에 보여요.
+            아직 다른 참가자가 확정되지 않았어요.
           </p>
         ) : (
           <div className="mt-3 flex flex-col gap-3">

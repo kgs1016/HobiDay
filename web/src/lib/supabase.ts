@@ -489,8 +489,9 @@ export async function approveSignup(sessionId: string, userId: string) {
     p_user: userId,
   });
   if (error) return { error: error.message };
-  /* chat_opened — 이번 승인으로 확정이 2명이 돼서 방이 막 열렸다
-     confirmed   — 이번 승인으로 정원이 다 찼다 (둘은 이제 다른 사건)
+  /* chat_opened — 이번 승인으로 확정이 2명이 돼서 모임이 열렸다.
+     confirmed 도 서버가 같이 주지만 값이 늘 같다 — 둘이 되는 것이
+     곧 확정이라 갈릴 일이 없다. 부르는 쪽은 chat_opened 만 본다.
      notify      — 알릴 사람 (호스트·방금 승인된 사람 제외) */
   return data as {
     ok?: boolean;
