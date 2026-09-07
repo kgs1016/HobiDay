@@ -225,7 +225,7 @@ export default function Me() {
               ))
             )}
             <p className="pb-3 pt-1 text-[11.5px] leading-relaxed text-faint">
-              관심 보내기 {REQUEST_COST}크레딧 — 보내는 순간 쓰여요 · 모임 신청
+              채팅 보내기 {REQUEST_COST}크레딧 — 보내는 순간 쓰여요 · 모임 신청
               무료 · 등반 영상 인증 +{CREDIT_SESSION_VIDEO}
             </p>
           </div>

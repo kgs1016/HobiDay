@@ -50,7 +50,7 @@ const STATUS: Record<string, { label: string; cls: string; note?: string }> = {
   confirmed: {
     label: "자리 확정",
     cls: "bg-accent-soft text-accent-pressed",
-    note: "남녀 수가 맞으면 모임이 열려요.",
+    note: "정원이 차면 모임이 열려요.",
   },
   cut: {
     label: "거절됨",
@@ -140,7 +140,7 @@ export default function Inbox() {
     })();
   }, [load]);
 
-  /* 관심 수락·거절 */
+  /* 채팅 신청 수락·거절 */
   const respond = async (id: string, accept: boolean) => {
     const from = received.find((x) => x.id === id)?.from_id;
     setBusy(id);
@@ -150,7 +150,7 @@ export default function Inbox() {
     setReceived((l) => l.filter((x) => x.id !== id));
     if (r.accepted) {
       if (from)
-        notifyPush(from, "🎉 관심이 수락됐어요", "채팅이 열렸어요. 먼저 인사해보세요!", "/chat");
+        notifyPush(from, "🎉 채팅 신청이 수락됐어요", "채팅이 열렸어요. 먼저 인사해보세요!", "/chat");
       alert("수락했어요! 채팅으로 이동합니다.");
       router.push("/chat");
     }
@@ -168,7 +168,7 @@ export default function Inbox() {
        거절은 서버(session_reject)가 남긴다. 여기서 보내면 이미 늦다:
        거절이 signups.status 를 'cut' 으로 바꾸는 순간 can_notify 가
        "관계 없음" 이 되어 알림이 조용히 버려졌다.
-       (관심 거절은 여전히 안 알린다 — 짝사랑을 드러내지 않기로 했다) */
+       (거절은 여전히 안 알린다 — 누가 거절했는지 드러내지 않는다) */
     if (!r.error && ok)
       notifyPush(
         h.user_id,
@@ -191,10 +191,7 @@ export default function Inbox() {
     }
     if (r.error) {
       const msg: Record<string, string> = {
-        full:
-          h.gender_mode === "any"
-            ? "정원이 이미 다 찼어요"
-            : "그 성별 자리가 이미 다 찼어요",
+        full: "정원이 이미 다 찼어요",
         not_waiting: "이미 처리된 신청이에요",
         not_host: "내가 연 모임이 아니에요",
         started: "이미 시작한 모임이에요",
@@ -241,8 +238,7 @@ export default function Inbox() {
     if (r.confirmed) {
       alert(
         `모임이 확정됐어요! 🎉\n${capacityRo(
-          r.capacity ?? p.matched,
-          r.gender_mode ?? p.gender_mode
+          r.capacity ?? p.matched
         )} 진행하고, 모임 채팅방이 열렸어요.`
       );
     }
@@ -310,7 +306,7 @@ export default function Inbox() {
           <Empty
             title="답할 게 없어요"
             sub={
-              "내 모임에 신청이 오거나\n받은 관심이 있으면 여기에 쌓여요"
+              "내 모임에 신청이 오거나\n받은 채팅 신청이 있으면 여기에 쌓여요"
             }
           />
         ) : (
@@ -338,10 +334,10 @@ export default function Inbox() {
                         </div>
                       </div>
                       <p className="mt-2.5 text-[12.5px] leading-relaxed text-muted">
-                        {capacityRo(p.capacity, p.gender_mode)} 열린 모임인데,
-                        자리를 더 기다리지 않고{" "}
+                        {capacityRo(p.capacity)} 열린 모임인데, 자리를 더
+                        기다리지 않고{" "}
                         <b className="font-semibold text-ink">
-                          {capacityRo(p.matched, p.gender_mode)} 진행
+                          {capacityRo(p.matched)} 진행
                         </b>
                         하자는 제안이에요. 받으면 바로 확정되고 채팅방이 열려요.
                       </p>
@@ -377,13 +373,9 @@ export default function Inbox() {
                 <div className="flex flex-col gap-2">
                   {hosted.map((h) => {
                     const key = `${h.session_id}:${h.user_id}`;
-                    /* 성별 무관 모임은 성별로 세면 안 된다 — 총원으로 본다.
-                       서버(session_has_seat)와 같은 셈이어야 "받기" 를 눌렀을
-                       때 full 로 튕기지 않는다. */
-                    const noRoom =
-                      h.gender_mode === "any"
-                        ? h.confirmed_total >= h.capacity
-                        : h.same_gender_confirmed >= h.capacity;
+                    /* 서버(session_has_seat)와 같은 셈이어야 "받기" 를
+                       눌렀을 때 full 로 튕기지 않는다. */
+                    const noRoom = h.confirmed_total >= h.capacity;
                     return (
                       <div
                         key={key}
@@ -425,11 +417,8 @@ export default function Inbox() {
 
                         {noRoom && (
                           <p className="mt-2.5 text-[12px] text-muted">
-                            {h.gender_mode === "any"
-                              ? "자리가"
-                              : `${h.gender === "m" ? "남성" : "여성"} 자리가`}{" "}
-                            이미 다 찼어요. 받으려면 확정된 참가자가 빠져야
-                            해요.
+                            자리가 이미 다 찼어요. 받으려면 확정된 참가자가
+                            빠져야 해요.
                           </p>
                         )}
 
@@ -456,11 +445,11 @@ export default function Inbox() {
               </section>
             )}
 
-            {/* 받은 관심 */}
+            {/* 받은 채팅 신청 */}
             {received.length > 0 && (
               <section>
                 <h2 className="mb-2 text-[15px] font-bold">
-                  받은 관심{" "}
+                  받은 채팅{" "}
                   <span className="font-normal text-muted">{received.length}</span>
                 </h2>
                 <div className="flex flex-col gap-2">
@@ -528,7 +517,7 @@ export default function Inbox() {
       ) : signups.length === 0 && sent.length === 0 ? (
         <Empty
           title="아직 보낸 게 없어요"
-          sub={"모임에 신청하거나 관심을 보내면\n여기서 진행 상황이 보여요"}
+          sub={"모임에 신청하거나 채팅을 보내면\n여기서 진행 상황이 보여요"}
         />
       ) : (
         <div className="flex flex-col gap-7 py-4 pb-6">
@@ -539,8 +528,8 @@ export default function Inbox() {
               <div className="flex flex-col gap-2">
                 {signups.map((s) => {
                   /* 내 신청 상태만 보면 모임이 어느 단계인지가 빠진다.
-                     그래서 이미 끝난 모임을 "남녀 수가 맞으면 모임이
-                     열려요" 라고 안내하고 있었다. 모임 쪽을 먼저 본다 —
+                     그래서 이미 끝난 모임을 "정원이 차면 모임이 열려요"
+                     라고 안내하고 있었다. 모임 쪽을 먼저 본다 —
                      모임 상세 화면과 같은 순서다. */
                   const cancelled = s.session_status === "cancelled";
                   const gone = new Date(s.ends_at).getTime() <= Date.now();
@@ -595,10 +584,7 @@ export default function Inbox() {
                               cls: "bg-accent-soft text-accent-pressed",
                               note: "정원이 다 찼어요. 채팅에서 만나요.",
                             }
-                          : s.my_status === "confirmed" && s.gender_mode === "any"
-                            /* 성별 무관 모임엔 "남녀 수" 라는 조건이 없다 */
-                            ? { ...STATUS.confirmed, note: "정원이 차면 모임이 열려요." }
-                            : (STATUS[s.my_status] ?? STATUS.waiting);
+                          : (STATUS[s.my_status] ?? STATUS.waiting);
 
                   /* 관계가 끝난 카드는 링크를 걸지 않는다. 거절당한
                      모임의 상세를 열어봐야 할 이유가 없고, 서버도 이제
@@ -665,10 +651,10 @@ export default function Inbox() {
             </section>
           )}
 
-          {/* 보낸 관심 */}
+          {/* 보낸 채팅 신청 */}
           {sent.length > 0 && (
             <section>
-              <h2 className="mb-2 text-[15px] font-bold">보낸 관심</h2>
+              <h2 className="mb-2 text-[15px] font-bold">보낸 채팅</h2>
               {/* 목록에서 사라진 이유를 여기서 설명한다 — 거절인지
                   7일 만료인지는 일부러 구분하지 않는다 */}
               <p className="mb-2 text-[11.5px] leading-relaxed text-faint">

@@ -35,7 +35,7 @@ function mockMembers(x: Session): SessionMember[] {
   const host = MOCK_PEOPLE.find((p) => p.id === x.host?.id);
   const rest = MOCK_PEOPLE.filter((p) => p.id !== host?.id).slice(
     0,
-    Math.max(0, x.maleJoined + x.femaleJoined - (host ? 1 : 0))
+    Math.max(0, x.joined - (host ? 1 : 0))
   );
   return [...(host ? [host] : []), ...rest].map((p) => ({
     id: p.id,
@@ -121,10 +121,8 @@ export default function SessionDetail() {
 
   const left = slotsLeft(s);
   const full = left.total <= 0;
-  const anyGender = s.genderMode === "any";
-  /* 조기 확정·확정 안내에 쓰는 "2:2로" / "3명으로". 성별 무관 모임에서
-     "2:2" 라고 하면 없는 규칙을 말하게 된다. */
-  const nRo = (n: number) => capacityRo(n, s.genderMode);
+  /* 조기 확정·확정 안내에 쓰는 "3명으로" */
+  const nRo = (n: number) => capacityRo(n);
   // 시작하면 더 못 받는다 (서버도 session_join 에서 막는다).
   // 목데이터에는 startsAt 이 없어서 그때는 늘 false.
   const started = !!s.startsAt && new Date(s.startsAt).getTime() <= Date.now();
@@ -139,23 +137,18 @@ export default function SessionDetail() {
   const missed = started && s.myStatus === "waiting";
   const joined = s.myStatus === "confirmed" || s.myStatus === "waiting";
 
-  /* 조기 확정 — 2:2 로 열었지만 남녀 수가 맞으면 그 인원으로 확정한다.
-     성비가 맞고(남 = 여), 한 명 이상이고, 아직 꽉 차지 않았을 때만. */
-  /* 지금 확정된 인원. 성비 모임은 짝이 맞는 쪽 수, 무관 모임은 머릿수다.
-     서버(session_matched)와 같은 셈이어야 한다. */
-  const matched = anyGender
-    ? s.maleJoined + s.femaleJoined
-    : Math.min(s.maleJoined, s.femaleJoined);
-  const canEarlyConfirm = anyGender
-    ? matched >= 2 && !full
-    : s.maleJoined === s.femaleJoined && matched >= 1 && !full;
+  /* 조기 확정 — 정원은 못 채웠지만 지금 인원으로 가자는 제안.
+     둘 이상이고 아직 꽉 차지 않았을 때만. 서버(session_propose_confirm)와
+     같은 셈이어야 한다. */
+  const matched = s.joined;
+  const canEarlyConfirm = matched >= 2 && !full;
   const proposed = !!s.earlyConfirmAt;
   const iAmGuest = s.myStatus === "confirmed" && !s.iAmHost;
 
   const ERRORS: Record<string, string> = {
     not_host: "호스트만 확정할 수 있어요",
     not_open: "이미 확정된 모임이에요",
-    not_balanced: "남녀 수가 맞아야 확정할 수 있어요",
+    not_balanced: "두 명 이상이어야 확정할 수 있어요",
     already_full: "이미 정원이 다 찼어요",
     no_proposal: "호스트가 확정 제안을 거뒀어요",
     not_member: "확정된 참가자만 할 수 있어요",
@@ -212,18 +205,14 @@ export default function SessionDetail() {
     alert(
       r.confirmed
         ? `모임이 확정됐어요! 🎉\n${capacityRo(
-            r.capacity ?? matched,
-            r.gender_mode ?? s.genderMode
+            r.capacity ?? matched
           )} 진행하고, 모임 채팅방이 열렸어요.`
         : "받았어요. 남은 참가자를 기다리고 있어요."
     );
     load();
   };
 
-  const badges = [
-    ...Array.from({ length: s.maleJoined }, (_, i) => ({ g: "m", key: `m${i}` })),
-    ...Array.from({ length: s.femaleJoined }, (_, i) => ({ g: "f", key: `f${i}` })),
-  ];
+  const badges = Array.from({ length: s.joined }, (_, i) => `c${i}`);
 
   /* 호스트: 모임 삭제. 알림은 여기서 부탁한다 */
   const onDelete = async () => {
@@ -306,7 +295,7 @@ export default function SessionDetail() {
       alert(
         profile
           ? "프로필을 먼저 완성해주세요 (대표 사진·구력)"
-          : "먼저 프로필을 만들어주세요 (성비 매칭의 기본 정보예요)"
+          : "먼저 프로필을 만들어주세요 (모임 조건을 맞추는 기본 정보예요)"
       );
       router.push("/profile/new");
       return;
@@ -377,10 +366,7 @@ export default function SessionDetail() {
         </p>
         <div className="mt-3 flex flex-col gap-1 text-[13.5px]">
           <p>{levelRangeLabel(s.levelMin, s.levelMax)}</p>
-          <p className="text-muted">
-            {capacityLabel(s.capacity, s.genderMode)}
-            {anyGender && " · 성별 무관"}
-          </p>
+          <p className="text-muted">{capacityLabel(s.capacity)}</p>
         </div>
         {s.note && (
           <p className="mt-3 rounded-lg bg-surface2 px-3.5 py-3 text-[13.5px] leading-relaxed">
@@ -397,7 +383,7 @@ export default function SessionDetail() {
         <h2 className="text-[15px] font-bold">
           참가 현황{" "}
           <span className="font-normal text-muted">
-            {s.maleJoined + s.femaleJoined}/{totalSeats(s.capacity, s.genderMode)}
+            {s.joined}/{totalSeats(s.capacity)}
           </span>
         </h2>
         <div className="mt-3 flex flex-wrap gap-1.5">
@@ -426,16 +412,16 @@ export default function SessionDetail() {
                   </span>
                 </Link>
               ))
-            : badges.map((b) => (
+            : badges.map((key) => (
                 <span
-                  key={b.key}
+                  key={key}
                   className="rounded-lg bg-surface2 px-3 py-1.5 text-[12.5px] font-medium text-ink"
                 >
-                  {b.g === "m" ? "남" : "여"} 확정
+                  확정
                 </span>
               ))}
 
-          {!dead && anyGender &&
+          {!dead &&
             Array.from({ length: left.total }, (_, i) => (
               <span
                 key={`ea${i}`}
@@ -444,37 +430,17 @@ export default function SessionDetail() {
                 모집중
               </span>
             ))}
-          {!dead && !anyGender &&
-            Array.from({ length: Math.max(0, left.male) }, (_, i) => (
-            <span
-              key={`em${i}`}
-              className="rounded-lg border border-dashed border-line px-3 py-1.5 text-[12.5px] text-faint"
-            >
-              남 모집중
-            </span>
-          ))}
-          {!dead && !anyGender &&
-            Array.from({ length: Math.max(0, left.female) }, (_, i) => (
-            <span
-              key={`ef${i}`}
-              className="rounded-lg border border-dashed border-line px-3 py-1.5 text-[12.5px] text-faint"
-            >
-              여 모집중
-            </span>
-          ))}
         </div>
       </section>
 
-      {/* 조기 확정 — 자리가 남아도 성비가 맞으면 그 인원으로 갈 수 있다 */}
+      {/* 조기 확정 — 자리가 남아도 지금 인원으로 갈 수 있다 */}
       {s.iAmHost && !dead && canEarlyConfirm && !proposed && (
         <section className="mt-6 rounded-xl bg-accent-soft p-5">
           <p className="text-[14.5px] font-bold">
             {nRo(matched)} 확정할까요?
           </p>
           <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted">
-            {anyGender
-              ? "자리를 더 기다리지 않고 지금 인원으로 모임을 열 수 있어요."
-              : "지금 남녀 수가 맞아요. 자리를 더 기다리지 않고 이 인원으로 모임을 열 수 있어요."}{" "}
+            자리를 더 기다리지 않고 지금 인원으로 모임을 열 수 있어요.
             참가자가 받으면 확정되고 채팅방이 열려요.
           </p>
           <button
@@ -512,7 +478,7 @@ export default function SessionDetail() {
             호스트가 {nRo(matched)} 하자고 해요
           </p>
           <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted">
-            {capacityRo(s.capacity, s.genderMode)} 열린 모임인데, 자리를 더
+            {capacityRo(s.capacity)} 열린 모임인데, 자리를 더
             기다리지 않고 지금 인원으로 진행하자는 제안이에요. 받으면 바로
             확정되고 채팅방이 열려요.
           </p>
@@ -591,7 +557,7 @@ export default function SessionDetail() {
           {/* 방은 호스트 말고 한 명이라도 확정되면 열린다 (확정 2명 이상).
              정원이 차기를 기다리지 않는다 — 시간·장소를 맞추는 게 방의
              쓸모라, 맞출 사람이 생긴 시점에 열려 있어야 한다. */}
-          {s.maleJoined + s.femaleJoined >= 2 && (
+          {s.joined >= 2 && (
             <Link
               href="/chat#session"
               className="block rounded-xl border border-line py-3.5 text-center text-[14px] font-semibold text-ink"
@@ -657,7 +623,7 @@ export default function SessionDetail() {
               confirmed 로 뭉개는 탓에 여기서는 구분조차 못 했다.
 
               "확정" 이 두 가지를 뜻하는 것도 그대로다 — 내 자리가 잡혔다 ·
-              모임이 성사됐다. 성비가 안 맞으면 자리는 잡혀도 모임은 아직
+              모임이 성사됐다. 정원이 안 차면 자리는 잡혀도 모임은 아직
               안 열린다. */}
           {s.cancelled
             ? "취소된 모임이에요"
@@ -672,9 +638,7 @@ export default function SessionDetail() {
                     ? "승인 대기 중 · 호스트가 확인하면 알려드려요"
                     : s.status === "confirmed"
                       ? "모임이 확정됐어요"
-                      : anyGender
-                        ? "자리 잡았어요 · 정원이 차면 확정돼요"
-                        : "자리 잡았어요 · 성비가 맞으면 확정돼요"
+                      : "자리 잡았어요 · 정원이 차면 확정돼요"
                   : busy
                     ? "신청 중…"
                     : started

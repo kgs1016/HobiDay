@@ -42,9 +42,9 @@ const when = (iso: string) => {
   return sameDay ? hm : `${d.getMonth() + 1}/${d.getDate()}`;
 };
 
-/** 방이 어떻게 열렸는지 — 모임에서 만났거나, 관심 수락으로 연결됐거나 */
+/** 방이 어떻게 열렸는지 — 모임에서 만났거나, 채팅 신청 수락으로 연결됐거나 */
 const origin = (c: Chat) =>
-  c.gym ? `${c.gym}에서 만났어요` : "관심을 수락해서 연결됐어요";
+  c.gym ? `${c.gym}에서 만났어요` : "채팅 신청을 수락해서 연결됐어요";
 
 const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -59,14 +59,11 @@ function endedNotice(c: SessionChat): string | null {
     : null;
 }
 
-/** 모임방 부제 — "토 8/31 · 15:00 · 2:2" (성별 무관 모임은 "4명") */
+/** 모임방 부제 — "토 8/31 · 15:00 · 4명" */
 const sessionSub = (c: SessionChat) => {
   const d = new Date(c.starts_at);
   const hm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-  return `${DAYS[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()} · ${hm} · ${capacityLabel(
-    c.capacity,
-    c.gender_mode
-  )}`;
+  return `${DAYS[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()} · ${hm} · ${capacityLabel(c.capacity)}`;
 };
 
 type Tab = "request" | "session";
@@ -193,7 +190,7 @@ export default function ChatPage() {
       <div className="flex gap-5 border-b border-line">
         {(
           [
-            ["request", "관심 채팅", unreadOf(chats)],
+            ["request", "1:1 채팅", unreadOf(chats)],
             ["session", "모임 채팅", unreadOf(rooms)],
           ] as const
         ).map(([key, label, badge]) => (
@@ -289,7 +286,7 @@ export default function ChatPage() {
           <CarabinerIllust size={64} />
           <p className="mt-3 text-[15px] font-semibold">아직 연결된 상대가 없어요</p>
           <p className="text-[13px] leading-relaxed text-muted">
-            보낸 관심을 상대가 수락하면
+            보낸 채팅 신청을 상대가 수락하면
             <br />
             여기서 대화가 시작돼요
           </p>
@@ -737,7 +734,7 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
           <p className="pt-10 text-center text-[13.5px] text-faint">불러오는 중…</p>
         ) : msgs.length === 0 ? (
           <p className="px-6 pt-10 text-center text-[13px] leading-relaxed text-muted">
-            관심을 수락해서 열린 방이에요.
+            채팅 신청을 수락해서 열린 방이에요.
             <br />
             먼저 말을 걸어보세요.
           </p>

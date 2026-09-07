@@ -39,7 +39,7 @@ function badge(s: MyHostedSession) {
       ? { label: "완료", cls: "bg-accent-soft text-accent-pressed" }
       : { label: "무산됨", cls: "bg-surface2 text-muted" };
   // 방은 확정 2명부터 열린다 — 정원이 차기 전에도 이미 열려 있다
-  const chatting = s.m_confirmed + s.f_confirmed >= 2;
+  const chatting = s.confirmed >= 2;
   if (s.status === "confirmed")
     return { label: "확정 · 채팅방 열림", cls: "bg-accent-soft text-accent-pressed" };
   return {
@@ -58,7 +58,7 @@ function Row({ s }: { s: MyHostedSession }) {
         <div className="min-w-0">
           <p className="truncate text-[14.5px] font-semibold">{s.gym}</p>
           <p className="mt-0.5 text-[12.5px] text-muted">
-            {when(s.starts_at)} · {capacityLabel(s.capacity, s.gender_mode)}
+            {when(s.starts_at)} · {capacityLabel(s.capacity)}
           </p>
         </div>
         <span
@@ -69,9 +69,7 @@ function Row({ s }: { s: MyHostedSession }) {
       </div>
       {active && (
         <p className="mt-2 text-[12.5px] text-muted">
-          {s.gender_mode === "any"
-            ? `확정 ${s.m_confirmed + s.f_confirmed} / ${s.capacity}명`
-            : `확정 남 ${s.m_confirmed} · 여 ${s.f_confirmed} / 각 ${s.capacity}명`}
+          {`확정 ${s.confirmed} / ${s.capacity}명`}
           {s.waiting > 0 && (
             <b className="ml-1.5 font-semibold text-ink">대기 {s.waiting}</b>
           )}

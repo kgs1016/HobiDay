@@ -2,7 +2,6 @@
    .env.local 에 키가 없으면 null → 화면은 목데이터로 동작(개발 폴백). */
 
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
-import type { GenderMode } from "./capacity";
 import type { CareerId, LevelId } from "./levels";
 import type { Session } from "./mock";
 import type { MyProfile } from "./myProfile";
@@ -80,15 +79,15 @@ export interface DbSession {
   starts_at: string;
   ends_at: string;
   capacity: number;
-  gender_mode: GenderMode;
   level_min: LevelId;
   level_max: LevelId;
   age_min: number;
   age_max: number;
   note: string | null;
   status: string;
-  m_confirmed: number;
-  f_confirmed: number;
+  /* 확정 인원 (호스트 포함). 성비를 없애면서 m_confirmed/f_confirmed
+     두 칸이 이 한 칸으로 합쳐졌다. */
+  confirmed: number;
   my_status: string | null;
   // 호스트 요약 — 탈퇴한 개설자는 전부 null 로 온다
   host_id: string | null;
@@ -97,7 +96,7 @@ export interface DbSession {
   host_age: number | null;
   host_area: string | null;
   host_level: LevelId | null;
-  // 조기 확정 — 2:2 로 열었지만 성비가 맞는 인원으로 확정하자는 제안
+  // 조기 확정 — 정원은 못 채웠지만 지금 인원으로 확정하자는 제안
   i_am_host: boolean;
   early_confirm_at: string | null;
   my_ack: boolean;
@@ -125,16 +124,12 @@ export function toSession(
     startsAt: r.starts_at,
     endsAt: r.ends_at,
     capacity: r.capacity,
-    /* 컬럼이 없던 시절의 DB 를 만나면 성비 모임으로 읽는다 —
-       그때는 전부 성비 모임이었다 */
-    genderMode: r.gender_mode ?? "balanced",
     levelMin: r.level_min,
     levelMax: r.level_max,
     ageMin: r.age_min,
     ageMax: r.age_max,
     note: r.note ?? undefined,
-    maleJoined: Number(r.m_confirmed),
-    femaleJoined: Number(r.f_confirmed),
+    joined: Number(r.confirmed),
     status: r.status === "open" ? "open" : "confirmed",
     /* Session 의 status 에는 'cancelled' 가 없다(목데이터와 공유하는
        타입이다). 취소를 눌러 담은 자리 — 이게 없으면 취소된 모임이
@@ -277,7 +272,6 @@ export async function createSession(p: {
   startsAt: string; // ISO
   endsAt: string;
   capacity: number;
-  genderMode: GenderMode;
   levelMin: LevelId;
   levelMax: LevelId;
   ageMin: number;
@@ -297,7 +291,6 @@ export async function createSession(p: {
     p_age_max: p.ageMax,
     p_after_meal: false, // 뒤풀이 기능은 접었다 — 컬럼만 남아 있다
     p_note: p.note,
-    p_gender_mode: p.genderMode,
     /* gym master 마이그레이션 전 DB 는 p_gym_id 인자를 모른다 — 값이
        있을 때만 실어서, 옛 DB 에서도 자유입력 생성이 계속 동작하게 한다 */
     ...(p.gymId ? { p_gym_id: p.gymId } : {}),
@@ -359,10 +352,8 @@ export interface MyHostedSession {
   starts_at: string;
   ends_at: string;
   capacity: number;
-  gender_mode: GenderMode;
   status: "open" | "confirmed" | "cancelled" | "done";
-  m_confirmed: number;
-  f_confirmed: number;
+  confirmed: number;
   waiting: number;
 }
 
@@ -395,7 +386,6 @@ export interface MatchRecord {
   ends_at: string;
   capacity: number;
   i_am_host: boolean;
-  gender_mode: GenderMode;
   members: number;
   people: MatchMate[];
 }
@@ -468,7 +458,6 @@ export async function acceptConfirm(id: string) {
     ok?: boolean;
     confirmed?: boolean;
     capacity?: number;
-    gender_mode?: GenderMode;
     waiting?: number;
     /** 확정된 순간 알릴 사람들 (나 제외, 호스트 포함) */
     notify?: string[];
@@ -486,7 +475,6 @@ export interface MySignup {
   starts_at: string;
   ends_at: string;
   capacity: number;
-  gender_mode: GenderMode;
   session_status: string;
   my_status: "waiting" | "confirmed" | "cut";
   host_nickname: string | null;
@@ -499,7 +487,6 @@ export interface HostedRequest {
   gym: string;
   starts_at: string;
   capacity: number;
-  gender_mode: GenderMode;
   created_at: string;
   user_id: string;
   nickname: string;
@@ -513,8 +500,7 @@ export interface HostedRequest {
   mbti: string | null;
   intro: string | null;
   photo: string | null;
-  same_gender_confirmed: number;
-  /** 성별 무관 모임은 성별로 세면 안 된다 — 자리 판단은 이걸로 */
+  /** 자리가 남았는지 판단하는 값 (호스트 포함 확정 인원) */
   confirmed_total: number;
 }
 
@@ -524,7 +510,6 @@ export interface ConfirmProposal {
   gym: string;
   starts_at: string;
   capacity: number;
-  gender_mode: GenderMode;
   early_confirm_at: string;
   host_nickname: string | null;
   host_photo: string | null;
@@ -664,12 +649,10 @@ export interface Room {
     starts_at: string;
     ends_at: string;
     capacity: number;
-    gender_mode: GenderMode;
     note: string | null;
   };
   me: { id: string; gender: "m" | "f"; level: LevelId | null };
-  /** 지금 확정된 인원. 성비 모임은 짝이 맞는 수(n:n 의 n),
-      성별 무관 모임은 그냥 머릿수다. */
+  /** 지금 확정된 인원 (호스트 포함) */
   matched: number;
   people: RoomPerson[];
   videos: RoomVideo[];
@@ -792,7 +775,7 @@ export async function fetchMyVideos() {
 
 export interface Chat {
   match_id: string;
-  /** 관심 수락으로 생긴 방은 모임이 없어서 null */
+  /** 채팅 신청 수락으로 생긴 방은 모임이 없어서 null */
   session_id: string | null;
   gym: string | null;
   partner_id: string;
@@ -1069,8 +1052,8 @@ export const CREDIT_LABELS: Record<string, string> = {
   session_video: "등반 영상",
   profile_complete: "프로필 완성",
   early_bird: "사전 가입 혜택",
-  request_extra: "관심 보내기",
-  request_refund: "관심 반환",
+  request_extra: "채팅 보내기",
+  request_refund: "채팅 반환",
   session_join: "모임 신청",
   session_refund: "모임 신청 반환",
   admin_grant: "운영자 지급",
@@ -1109,7 +1092,7 @@ export async function claimProfileBonus() {
   return data as { ok?: boolean; earned?: number; balance?: number; error?: string };
 }
 
-/* ── 관심 보내기 ── */
+/* ── 채팅 보내기 (1:1 신청) ── */
 
 export interface ReceivedRequest {
   id: string;
@@ -1198,7 +1181,7 @@ export async function fetchInboxCounts() {
   const { data, error } = await sb.rpc("inbox_counts");
   if (error) return null;
   return data as {
-    /** 신청함 배지 = 내가 답해야 하는 것들의 합 (관심 + 모임 신청 + 확정 제안) */
+    /** 신청함 배지 = 내가 답해야 하는 것들의 합 (채팅 신청 + 모임 신청 + 확정 제안) */
     requests: number;
     likes: number;
     hosted: number;
@@ -1232,7 +1215,6 @@ export interface SessionChat {
   status: "open" | "confirmed" | "cancelled" | "done";
   cancelled_at: string | null;
   capacity: number;
-  gender_mode: GenderMode;
   members: number;
   last_body: string | null;
   last_at: string;
@@ -1287,11 +1269,11 @@ export async function markSessionChatRead(sessionId: string) {
 
 /**
  * 사람 찾기 목록.
- * @param me 내 프로필 — 나 자신과 동성은 목록에서 뺀다. 관심은 이성에게만
- *   보낼 수 있고(request_send 가 self · same_gender 로 막는다), 보낼 수 없는
- *   카드를 늘어놓으면 누를 때까지 알 수 없다. 서버에서 걸러 아예 받지 않는다.
+ * 성별로 거르지 않는다 — 이성만 보던 시절의 규칙은 2026-09 에 없앴다.
+ * 같이 클라이밍할 사람을 찾는 것이라 성별이 조건이 될 이유가 없다.
+ * @param me 내 프로필 — 내 카드만 목록에서 뺀다.
  */
-export async function fetchPeople(me?: { id: string; gender: "m" | "f" }) {
+export async function fetchPeople(me?: { id: string }) {
   const sb = getSupabase();
   if (!sb) return null;
   let q = sb
@@ -1303,7 +1285,7 @@ export async function fetchPeople(me?: { id: string; gender: "m" | "f" }) {
     // 사진 없는 카드는 목록에 넣지 않는다 (DB 제약과 이중으로)
     .not("photo", "is", null);
 
-  if (me) q = q.neq("id", me.id).eq("gender", me.gender === "m" ? "f" : "m");
+  if (me) q = q.neq("id", me.id);
 
   const { data, error } = await q
     .order("created_at", { ascending: false })

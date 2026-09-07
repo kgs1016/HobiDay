@@ -62,7 +62,7 @@ export default function Home() {
   // 모임 찾기 필터 — 서버를 다시 부르지 않고 받아온 목록에서 거른다
   const [filter, setFilter] = useState(EMPTY_FILTER);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
-  // 관심 보내기
+  // 채팅 보내기
   const [credits, setCredits] = useState<Credits | null>(null);
   const [sentTo, setSentTo] = useState<Set<string>>(new Set());
   const [counts, setCounts] = useState<Awaited<ReturnType<typeof fetchInboxCounts>>>(null);
@@ -73,7 +73,7 @@ export default function Home() {
   const [reqBusy, setReqBusy] = useState(false);
   // 신고 (신고하면 차단까지 걸려 목록에서도 빠진다)
   const [reportTarget, setReportTarget] = useState<Person | null>(null);
-  // 프로필 상세 — 카드를 누르면 큰 사진과 전체 소개를 보고 관심을 정한다
+  // 프로필 상세 — 카드를 누르면 큰 사진과 전체 소개를 보고 보낼지 정한다
   const [detail, setDetail] = useState<(Person & { intro?: string }) | null>(null);
 
   useEffect(() => {
@@ -111,10 +111,10 @@ export default function Home() {
         return;
       }
 
-      // 사람 찾기는 이성만 — 내 성별을 알아야 걸러서 받을 수 있다
+      // 사람 찾기는 성별로 거르지 않는다 — 내 카드만 뺀다
       const [rows, ppl, gymRows] = await Promise.all([
         fetchSessions(),
-        fetchPeople(prof ? { id: user.id, gender: prof.gender } : undefined),
+        fetchPeople({ id: user.id }),
         fetchGyms(),
       ]);
       if (gymRows) setMasterGyms(gymRows);
@@ -149,9 +149,8 @@ export default function Home() {
   }, []);
 
   const REQ_ERRORS: Record<string, string> = {
-    already: "이미 관심을 보낸 상대예요",
+    already: "이미 채팅을 보낸 상대예요",
     self: "나에게는 보낼 수 없어요",
-    same_gender: "이성에게만 보낼 수 있어요",
     not_public: "상대가 프로필을 내렸어요",
     no_profile: "먼저 내 프로필을 만들어주세요",
   };
@@ -165,7 +164,7 @@ export default function Home() {
     if (r.error === "no_credits") {
       return alert(
         `크레딧이 부족해요.\n` +
-          `관심 1회 = ${r.cost?.toLocaleString()}크레딧 · 지금 ${r.balance?.toLocaleString()}크레딧이에요.\n\n` +
+          `채팅 1회 = ${r.cost?.toLocaleString()}크레딧 · 지금 ${r.balance?.toLocaleString()}크레딧이에요.\n\n` +
           `모임에서 등반 영상을 올리면 +${CREDIT_SESSION_VIDEO}크레딧씩 쌓여요.`
       );
     }
@@ -173,7 +172,7 @@ export default function Home() {
 
     notifyPush(
       reqTarget.id,
-      "💌 새 관심이 도착했어요",
+      "💬 새 채팅 신청이 왔어요",
       reqMsg.trim() || "신청함에서 프로필을 확인해보세요",
       "/inbox"
     );
@@ -182,7 +181,7 @@ export default function Home() {
       setCredits((c) => (c ? { ...c, balance: r.balance! } : c));
     setReqTarget(null);
     alert(
-      `${reqTarget.nickname}님에게 관심을 보냈어요!\n` +
+      `${reqTarget.nickname}님에게 채팅을 보냈어요!\n` +
         (r.spent ? `크레딧 -${r.cost} (남은 ${r.balance})` : "수락하면 채팅이 열려요.")
     );
   };
@@ -230,7 +229,7 @@ export default function Home() {
           </p>
         </section>
         <p className="mx-auto mt-2 max-w-sm px-1 text-[12.5px] text-faint">
-          오픈하면 관심 {Math.floor((credits?.balance ?? 0) / REQUEST_COST)}번을
+          오픈하면 채팅 {Math.floor((credits?.balance ?? 0) / REQUEST_COST)}번을
           보낼 수 있어요
         </p>
 
@@ -241,12 +240,12 @@ export default function Home() {
               <span className="font-medium">모임 찾기</span>
               <span className="text-muted">
                 {" "}
-                — 남녀 반반으로, 또는 성별 상관없이 함께 볼더링
+                — 2~8명이 모여 함께 볼더링
               </span>
             </p>
             <p>
               <span className="font-medium">사람 찾기</span>
-              <span className="text-muted"> — 마음에 드는 사람에게 관심 보내기</span>
+              <span className="text-muted"> — 같이 타고 싶은 사람에게 채팅 보내기</span>
             </p>
             <p>
               <span className="font-medium">등반 영상</span>
@@ -547,7 +546,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* 이성만 걸러 오므로 빈 경우가 생긴다. 아무것도 안 그리면
+          {/* 공개 프로필이 아직 없으면 비어 보인다. 아무것도 안 그리면
               고장난 것처럼 보인다 — 왜 비었는지 말해준다. */}
           {people.length === 0 && (
             <div className="flex flex-col items-center py-14 text-center">
@@ -556,7 +555,7 @@ export default function Home() {
                 아직 볼 수 있는 프로필이 없어요
               </p>
               <p className="mt-1 text-[13px] leading-relaxed text-muted">
-                프로필을 공개한 이성 회원이 생기면 바로 보여요.
+                프로필을 공개한 회원이 생기면 바로 보여요.
               </p>
             </div>
           )}
@@ -599,9 +598,9 @@ export default function Home() {
                     )}
                   </div>
                 </button>
-                {/* 관심 하나로 통일 — 보내면 상대 신청함에 뜨고, 수락하면 채팅이 열린다.
-                    목록에서는 secondary 로 물러난다 — primary CTA 는 프로필
-                    상세 시트의 "관심 보내기" 하나만 강하게 둔다. */}
+                {/* 채팅 신청 하나로 통일 — 보내면 상대 신청함에 뜨고,
+                    수락하면 채팅이 열린다. 목록에서는 secondary 로 물러난다 —
+                    primary CTA 는 상세 시트의 "채팅 보내기" 하나만 강하게 둔다. */}
                 <button
                   disabled={sentTo.has(p.id)}
                   onClick={() => {
@@ -614,7 +613,7 @@ export default function Home() {
                       : "rounded-lg bg-accent-soft px-3.5 py-2 font-semibold text-accent-pressed"
                   }`}
                 >
-                  {sentTo.has(p.id) ? "보냈어요" : "관심"}
+                  {sentTo.has(p.id) ? "보냈어요" : "채팅"}
                 </button>
               </div>
             ))}
@@ -622,7 +621,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* 프로필 상세 — 목록은 한 줄 요약뿐이라, 관심을 정하기 전에
+      {/* 프로필 상세 — 목록은 한 줄 요약뿐이라, 보낼지 정하기 전에
           큰 사진과 전체 소개를 볼 자리가 필요하다 */}
       {detail && (
         <div
@@ -697,15 +696,15 @@ export default function Home() {
                 }`}
               >
                 {sentTo.has(detail.id)
-                  ? "관심을 보냈어요"
-                  : `관심 보내기 · ${REQUEST_COST}크레딧`}
+                  ? "채팅을 보냈어요"
+                  : `채팅 보내기 · ${REQUEST_COST}크레딧`}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 관심 보내기 시트 — 한 줄 메시지를 붙이면 받는 쪽이 맥락을 보고 판단한다 */}
+      {/* 채팅 보내기 시트 — 한 줄 메시지를 붙이면 받는 쪽이 맥락을 보고 판단한다 */}
       {reqTarget && (
         <div
           className="fixed inset-0 z-30 flex items-end bg-black/50"
@@ -716,7 +715,7 @@ export default function Home() {
             onClick={(e) => e.stopPropagation()}
           >
             <p className="text-[16.5px] font-bold">
-              {reqTarget.nickname}님에게 관심 보내기
+              {reqTarget.nickname}님에게 채팅 보내기
             </p>
             <p className="mt-1 text-[12.5px] text-muted">
               한 줄 남기면 수락될 가능성이 높아요.
@@ -728,7 +727,7 @@ export default function Home() {
                 수락 여부와 상관없이 돌려드리지 않아요
               </li>
               <li>
-                · 상대가 거절하거나 보낸 지 7일이 지나면 보낸 관심에서
+                · 상대가 거절하거나 보낸 지 7일이 지나면 보낸 목록에서
                 사라져요
               </li>
             </ul>
@@ -747,7 +746,7 @@ export default function Home() {
               onClick={sendReq}
               className="mt-2 w-full rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
             >
-              {reqBusy ? "보내는 중…" : `관심 보내기 · ${REQUEST_COST}크레딧`}
+              {reqBusy ? "보내는 중…" : `채팅 보내기 · ${REQUEST_COST}크레딧`}
             </button>
             {credits && (
               <p className="mt-1.5 text-center text-[11.5px] text-faint">

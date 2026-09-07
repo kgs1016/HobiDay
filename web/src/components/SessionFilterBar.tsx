@@ -5,13 +5,11 @@
    올라온다. 고른 값은 버튼 안에 그대로 적혀서, 열어보지 않아도 지금
    무슨 조건이 걸려 있는지 보인다.
 
-   시간 · 레벨 · 나이대는 범위로 잡는다. 성비를 고르면 정원 화면이 그에
-   맞춰 바뀐다 — 모임 만들기와 같은 짜임이다. */
+   시간 · 레벨 · 나이대는 범위로 잡는다 — 모임 만들기와 같은 짜임이다. */
 
 import { useState } from "react";
 import Calendar, { monthOf } from "@/components/Calendar";
 import { LEVELS, type LevelId } from "@/lib/levels";
-import { GENDER_MODES } from "@/lib/capacity";
 import {
   AGE_BANDS,
   AGE_FROM,
@@ -23,21 +21,17 @@ import {
   EMPTY_FILTER,
   activeFilterCount,
   seatChoices,
-  withGenderMode,
   ymd,
   type SessionFilter,
 } from "@/lib/sessionFilter";
 
-/* 성비와 정원은 한 버튼이다. 정원의 선택지가 성비를 따라가므로 따로
-   두면 "성비를 먼저 골라야 한다" 를 말로 설명해야 한다 — 한 화면에
-   위아래로 놓으면 순서가 그냥 보인다. */
-type Facet = "gym" | "date" | "time" | "crew" | "level" | "age";
+type Facet = "gym" | "date" | "time" | "seats" | "level" | "age";
 
 const TITLES: Record<Facet, string> = {
   gym: "짐",
   date: "날짜",
   time: "시간",
-  crew: "성비 · 정원",
+  seats: "정원",
   level: "레벨",
   age: "나이대",
 };
@@ -67,19 +61,10 @@ function chipLabel(f: SessionFilter, k: Facet): string {
       if (!f.timeFrom && !f.timeTo) return "시간";
       if (f.timeFrom && f.timeTo) return `${f.timeFrom}~${f.timeTo}`;
       return f.timeFrom ? `${f.timeFrom}~` : `~${f.timeTo}`;
-    case "crew": {
-      const mode = f.genderMode
-        ? GENDER_MODES.find((m) => m.id === f.genderMode)!.label
-        : "";
-      const opts = seatChoices(f.genderMode);
-      const seats =
-        f.seats.length === 0
-          ? ""
-          : f.seats.length === 1
-            ? opts.find((o) => o.seats === f.seats[0])!.label
-            : `정원 ${f.seats.length}`;
-      if (mode && seats) return `${mode} · ${seats}`;
-      return mode || seats || "성비 · 정원";
+    case "seats": {
+      if (f.seats.length === 0) return "정원";
+      if (f.seats.length === 1) return `${f.seats[0]}명`;
+      return `정원 ${f.seats.length}`;
     }
     case "level":
       if (!f.levelMin || !f.levelMax) return "레벨";
@@ -182,14 +167,14 @@ export default function SessionFilterBar({
     gym: { gyms: [] },
     date: { dateFrom: "", dateTo: "" },
     time: { timeFrom: "", timeTo: "" },
-    crew: { genderMode: null, seats: [] },
+    seats: { seats: [] },
     level: { levelMin: null, levelMax: null },
     age: { ageFrom: null, ageTo: null },
   };
 
   const today = ymd(new Date());
   const lastAge = AGE_BANDS[AGE_BANDS.length - 1].to;
-  const seatOpts = seatChoices(f.genderMode);
+  const seatOpts = seatChoices();
 
   return (
     <>
@@ -422,27 +407,8 @@ export default function SessionFilterBar({
               </>
             )}
 
-            {open === "crew" && (
+            {open === "seats" && (
               <>
-                <p className="mt-4 text-[12px] font-medium text-muted">성비</p>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {GENDER_MODES.map((m) => (
-                    <Opt
-                      key={m.id}
-                      on={f.genderMode === m.id}
-                      onClick={() =>
-                        onChange(
-                          withGenderMode(f, f.genderMode === m.id ? null : m.id)
-                        )
-                      }
-                    >
-                      {m.label}
-                    </Opt>
-                  ))}
-                </div>
-
-                {/* 선택지가 위에서 고른 성비를 따라간다. 반반이면 홀수가
-                    아예 안 나온다 — 3명을 고를 수 있으면 결과가 언제나 0이다 */}
                 <p className="mt-4 text-[12px] font-medium text-muted">정원</p>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {seatOpts.map((o) => (

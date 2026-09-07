@@ -21,8 +21,7 @@ export default function SessionCard({
 }) {
   const left = slotsLeft(s);
   const full = left.total <= 0;
-  const total = totalSeats(s.capacity, s.genderMode);
-  const joined = s.maleJoined + s.femaleJoined;
+  const total = totalSeats(s.capacity);
   /* 이미 신청했거나 내가 연 모임이면 목록에서부터 누를 일이 없다.
      cancelled 는 취소한 것이므로 다시 신청할 수 있어야 한다. */
   const mine =
@@ -34,15 +33,7 @@ export default function SessionCard({
           ? "참여 중"
           : null;
 
-  /* 목록에서는 모집 현황만 — 실제 신청은 상세 화면에서 한다.
-     성비 모임은 총원만으로는 어느 자리가 남았는지 알 수 없어서,
-     남은 성별 자리를 글로 덧붙인다. 색(blue/pink)으로 말하지 않는다. */
-  const genderLeft =
-    s.genderMode === "any"
-      ? null
-      : [left.male > 0 && `남 ${left.male}`, left.female > 0 && `여 ${left.female}`]
-          .filter(Boolean)
-          .join(" · ");
+  /* 목록에서는 모집 현황만 — 실제 신청은 상세 화면에서 한다 */
   const slots = mine ? (
     <span
       className={`shrink-0 text-[12px] font-medium ${
@@ -53,14 +44,9 @@ export default function SessionCard({
     </span>
   ) : full ? (
     <span className="shrink-0 text-[12px] text-faint">마감</span>
-  ) : genderLeft ? (
-    <span className="shrink-0 text-[12.5px] text-muted">
-      {joined}/{total} ·{" "}
-      <b className="font-semibold text-ink">{genderLeft}자리</b>
-    </span>
   ) : (
     <span className="shrink-0 text-[12.5px] text-muted">
-      <b className="font-semibold text-ink">{joined}</b> / {total}명
+      <b className="font-semibold text-ink">{s.joined}</b> / {total}명
     </span>
   );
 
@@ -99,14 +85,12 @@ export default function SessionCard({
           {s.date} · {s.start}–{s.end}
         </p>
 
-        {/* 구하는 조건 — 사진 옆 좁은 폭이라 레벨은 짧게.
-            성별 무관 모임만 따로 알린다 (반반이 기본값이라). */}
+        {/* 구하는 조건 — 사진 옆 좁은 폭이라 레벨은 짧게 */}
         <p className="mt-[3px] truncate text-[12.5px] text-muted">
           {s.levelMin === s.levelMax
             ? `L${s.levelMin}`
             : `L${s.levelMin}–L${s.levelMax}`}{" "}
           · {ageRangeLabel(s.ageMin, s.ageMax)}
-          {s.genderMode === "any" && " · 성별 무관"}
         </p>
 
         {/* 호스트 · 모집 현황 */}

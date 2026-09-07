@@ -1,5 +1,5 @@
 /* 데모 모드 — /room?id=demo 로 들어오면 DB 없이 진행 화면을 그대로 본다.
-   혼자서는 성비를 맞출 수 없어 실제 방을 열 수 없으므로,
+   혼자서는 정원을 채울 수 없어 실제 방을 열 수 없으므로,
    화면·문구를 눈으로 검증하려면 이 경로가 필요하다.
 
    실제 UI 컴포넌트를 그대로 쓰고 데이터만 가짜다. */
@@ -85,8 +85,7 @@ export function buildDemoRoom(): Room {
       gym: "더클라임 B홍대 (데모)",
       starts_at: iso(startsAt),
       ends_at: iso(startsAt + 120 * min),
-      capacity: 2,
-      gender_mode: "balanced",
+      capacity: 4,
       note: "끝나고 저녁 먹어요",
     },
     me: { id: "demo-me", gender: "m", level: 3 },

@@ -16,7 +16,7 @@ const TABS = [
 
 export default function BottomNav() {
   const pathname = usePathname();
-  // 탭 배지 — 받은 관심 수 · 안 읽은 메시지 수
+  // 탭 배지 — 받은 채팅 신청 수 · 안 읽은 메시지 수
   const [badges, setBadges] = useState<Record<string, number>>({});
   // 비로그인은 채팅·신청함·내 정보가 전부 빈 화면이라 탭 자체를 감춘다.
   // 키가 없는 개발 폴백(목데이터)에서는 화면을 못 옮기니 그대로 띄운다.

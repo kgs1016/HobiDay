@@ -2,7 +2,6 @@
    실제 스키마 기준은 supabase/migrations/ — PRODUCT.md 의 스케치는 낡았다. */
 
 import type { CareerId, LevelId } from "./levels";
-import type { GenderMode } from "@/lib/capacity";
 
 export type SessionStatus = "open" | "confirmed" | "closed";
 
@@ -21,23 +20,22 @@ export interface Session {
      "이미 시작했나" 같은 판단은 이걸로 한다. 목데이터에는 없다. */
   startsAt?: string;
   endsAt?: string;
-  /* 뜻이 genderMode 를 따라간다 — 반반이면 성별당 인원(1 = 1:1, 2 = 2:2),
-     무관이면 총 인원(2 · 3 · 4명). lib/capacity.ts 참고. */
+  /* 총 인원. 2~8명 — 호스트를 포함한 수다.
+     예전엔 성비 모드에 따라 뜻이 갈렸다 (lib/capacity.ts 참고). */
   capacity: number;
-  genderMode?: GenderMode;
   levelMin: LevelId;
   levelMax: LevelId;
   ageMin: number; // 25 = 20대 중후반 시작점
   ageMax: number;
   note?: string;
-  maleJoined: number;
-  femaleJoined: number;
+  /* 확정된 참가자 수 (호스트 포함). 예전엔 성별로 나눠 셌다. */
+  joined: number;
   status: SessionStatus;
   isAway?: boolean; // 내 홈짐과 다른 짐 (🗺 원정)
   /* 모임을 연 사람. 참가자와 달리 확정 전에도 공개한다.
      개설자가 탈퇴하면 host_id 가 null 이 되므로 없을 수 있다. */
   host?: SessionHost;
-  /* 조기 확정 — 2:2 로 열었지만 남녀 수가 맞으면 그 인원으로 확정하자는 제안.
+  /* 조기 확정 — 정원은 못 채웠지만 지금 인원으로 확정하자는 제안.
      호스트가 걸고 게스트가 받는다. */
   iAmHost?: boolean;
   earlyConfirmAt?: string | null;
@@ -78,14 +76,13 @@ export const MOCK_SESSIONS: Session[] = [
     date: "토 8/1",
     start: "15:00",
     end: "17:00",
-    capacity: 2,
+    capacity: 4,
     levelMin: 2,
     levelMax: 3,
     ageMin: 27,
     ageMax: 33,
     note: "끝나고 저녁 같이 먹어요",
-    maleJoined: 2,
-    femaleJoined: 1,
+    joined: 3,
     status: "open",
     host: { id: "p1", nickname: "서연", age: 27, area: "연남동", level: 3 },
   },
@@ -95,14 +92,13 @@ export const MOCK_SESSIONS: Session[] = [
     date: "일 8/2",
     start: "11:00",
     end: "13:00",
-    capacity: 2,
+    capacity: 4,
     levelMin: 1,
     levelMax: 2,
     ageMin: 24,
     ageMax: 29,
     note: "볼더링 처음이어도 환영! 같이 워밍업부터",
-    maleJoined: 1,
-    femaleJoined: 1,
+    joined: 2,
     status: "open",
     host: { id: "p3", nickname: "하은", age: 31, area: "상수동", level: 2 },
   },
@@ -112,13 +108,12 @@ export const MOCK_SESSIONS: Session[] = [
     date: "토 8/1",
     start: "19:00",
     end: "21:00",
-    capacity: 2,
+    capacity: 4,
     levelMin: 3,
     levelMax: 4,
     ageMin: 28,
     ageMax: 36,
-    maleJoined: 2,
-    femaleJoined: 2,
+    joined: 4,
     status: "confirmed",
     isAway: true,
     host: { id: "p2", nickname: "지훈", age: 29, area: "망원동", level: 3 },
@@ -129,14 +124,13 @@ export const MOCK_SESSIONS: Session[] = [
     date: "수 8/5",
     start: "19:30",
     end: "21:00",
-    capacity: 2,
+    capacity: 4,
     levelMin: 2,
     levelMax: 3,
     ageMin: 25,
     ageMax: 32,
     note: "퇴근하고 한 판!",
-    maleJoined: 0,
-    femaleJoined: 1,
+    joined: 1,
     status: "open",
     host: { id: "p4", nickname: "민지", age: 26, area: "연희동", level: 4 },
   },
@@ -147,14 +141,12 @@ export const MOCK_SESSIONS: Session[] = [
     start: "10:00",
     end: "12:00",
     capacity: 3,
-    genderMode: "any",
     levelMin: 1,
     levelMax: 2,
     ageMin: 24,
     ageMax: 33,
     note: "성별 상관없이 셋이서 가볍게",
-    maleJoined: 2,
-    femaleJoined: 0,
+    joined: 2,
     status: "open",
     host: { id: "p2", nickname: "지훈", age: 29, area: "망원동", level: 2 },
   },
@@ -167,15 +159,7 @@ export const MOCK_PEOPLE: Person[] = [
   { id: "p4", nickname: "민지", age: 26, gender: "f", level: 4, careerId: 6, height: 170, homeGym: "더클라임 강남점", mbti: "INTP", area: "연희동" },
 ];
 
+/** 남은 자리. 성비가 없어진 뒤로는 셀 것이 하나뿐이다 */
 export function slotsLeft(s: Session) {
-  const joined = s.maleJoined + s.femaleJoined;
-  /* 성별 무관 모임에는 "남 자리 / 여 자리" 라는 게 없다. 총 자리만 센다 —
-     성별로 나눠 보여주면 없는 규칙을 있는 것처럼 말하게 된다. */
-  if (s.genderMode === "any")
-    return { male: 0, female: 0, total: Math.max(0, s.capacity - joined) };
-  return {
-    male: s.capacity - s.maleJoined,
-    female: s.capacity - s.femaleJoined,
-    total: Math.max(0, s.capacity * 2 - joined),
-  };
+  return { total: Math.max(0, s.capacity - s.joined) };
 }

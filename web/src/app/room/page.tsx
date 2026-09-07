@@ -170,7 +170,7 @@ export default function Room() {
           </h1>
           <p className="text-[12px] text-muted">
             {hhmm(room.session.starts_at)}–{hhmm(room.session.ends_at)} ·{" "}
-            {capacityLabel(room.matched, room.session.gender_mode)}
+            {capacityLabel(room.matched)}
           </p>
         </div>
       </header>
@@ -191,11 +191,7 @@ export default function Room() {
 
         {others.length === 0 ? (
           <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
-            아직 다른 참가자가 확정되지 않았어요.{" "}
-            {room.session.gender_mode === "any"
-              ? "자리가 차면"
-              : "성비가 맞으면"}{" "}
-            여기에 보여요.
+            아직 다른 참가자가 확정되지 않았어요. 자리가 차면 여기에 보여요.
           </p>
         ) : (
           <div className="mt-3 flex flex-col gap-3">

@@ -1,7 +1,7 @@
 "use client";
 
 /* 안전 설정 — 차단 목록 확인·해제.
-   차단은 사람 찾기·채팅·관심·모임 전부에서 양방향으로 막힌다. */
+   차단은 사람 찾기·채팅·모임 전부에서 양방향으로 막힌다. */
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -52,7 +52,7 @@ export default function Safety() {
       <section>
         <p className="text-[15px] font-bold">차단한 사람</p>
         <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted">
-          차단하면 사람 찾기·채팅·관심·모임 어디에서도 서로 보이지 않아요.
+          차단하면 사람 찾기·채팅·모임 어디에서도 서로 보이지 않아요.
           상대에게는 알려지지 않아요.
         </p>
       </section>
