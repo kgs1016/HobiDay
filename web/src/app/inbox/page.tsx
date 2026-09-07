@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { careerLabel, level } from "@/lib/levels";
-import { AvatarFallback } from "@/components/icons";
+import { AvatarFallback, ChevronRightIcon } from "@/components/icons";
 import { ChalkBagIllust } from "@/components/illustrations";
 import { notifyPush } from "@/lib/nativePush";
 import {
@@ -603,13 +603,18 @@ export default function Inbox() {
                   /* 관계가 끝난 카드는 링크를 걸지 않는다. 거절당한
                      모임의 상세를 열어봐야 할 이유가 없고, 서버도 이제
                      그 문을 닫았다 — 링크를 두면 "찾을 수 없어요" 로
-                     떨어진다. 아직 자리가 걸려 있거나 실제로 다녀온
-                     모임만 열어본다. */
+                     떨어진다.
+
+                     승인 대기 중인 신청도 연다. 신청을 무르는 버튼이
+                     상세에만 있어서, 여기서 링크를 막으면 호스트가 답을
+                     줄 때까지 취소할 길이 없었다. 시작 시각이 지나면
+                     크론이 곧 거절로 바꾸고 서버가 문을 닫으므로,
+                     시작 전까지만 연다. */
                   const openable =
                     !cancelled &&
-                    mine &&
-                    s.my_status !== "cut" &&
-                    !(gone && s.session_status !== "confirmed");
+                    (mine
+                      ? !(gone && s.session_status !== "confirmed")
+                      : s.my_status === "waiting" && !running && !gone);
                   const body = (
                     <>
                       <div className="flex items-start justify-between gap-2">
@@ -621,11 +626,18 @@ export default function Inbox() {
                             {when(s.starts_at)} · 호스트 {s.host_nickname ?? "—"}
                           </p>
                         </div>
-                        <span
-                          className={`shrink-0 rounded-md px-2.5 py-1 text-[11.5px] font-medium ${st.cls}`}
-                        >
-                          {st.label}
-                        </span>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <span
+                            className={`rounded-md px-2.5 py-1 text-[11.5px] font-medium ${st.cls}`}
+                          >
+                            {st.label}
+                          </span>
+                          {/* 눌러서 열리는 카드라는 표시 — 여기서 현황을
+                              보고 신청을 무른다 */}
+                          {openable && (
+                            <ChevronRightIcon size={16} className="text-faint" />
+                          )}
+                        </div>
                       </div>
                       {st.note && (
                         <p className="mt-2 text-[12.5px] text-faint">{st.note}</p>
