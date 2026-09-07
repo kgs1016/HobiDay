@@ -729,16 +729,12 @@ export default function Home() {
             <p className="mt-1 text-[12.5px] text-muted">
               한 줄 남기면 수락될 가능성이 높아요.
             </p>
-            {/* 보내고 나서 알면 늦다 — 누르기 전에 다 말해준다 */}
-            <ul className="mt-2.5 flex flex-col gap-1 rounded-lg bg-surface2 px-3.5 py-3 text-[11.5px] leading-relaxed text-muted">
-              <li>
-                · <b className="font-semibold text-ink">보내면 크레딧이 바로 쓰여요.</b>{" "}
-                수락 여부와 상관없이 돌려드리지 않아요
-              </li>
-              <li>
-                · 거절되면 알려드려요 · 거절돼도 다시 보낼 수 있어요
-              </li>
-            </ul>
+            {/* 돈 얘기는 누르기 전에 한다. 나머지(거절 알림·재신청)는
+                겪으면 아는 것이라 여기서 설명하지 않는다. */}
+            <p className="mt-2.5 rounded-lg bg-surface2 px-3.5 py-3 text-[11.5px] leading-relaxed text-muted">
+              <b className="font-semibold text-ink">보내면 크레딧이 바로 쓰여요.</b>{" "}
+              수락 여부와 상관없이 돌려드리지 않아요
+            </p>
             <textarea
               value={reqMsg}
               onChange={(e) => setReqMsg(e.target.value.slice(0, 200))}

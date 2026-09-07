@@ -54,12 +54,9 @@ const STATUS: Record<string, { label: string; cls: string; note?: string }> = {
     cls: "bg-accent-soft text-accent-pressed",
     note: "정원이 차면 모임이 열려요.",
   },
-  cut: {
-    label: "거절됨",
-    cls: "bg-surface2 text-muted",
-    /* 거절은 문을 닫지 않는다 — 시작 전이면 카드를 눌러 다시 신청한다 */
-    note: "다시 신청할 수 있어요.",
-  },
+  /* 거절은 문을 닫지 않는다 — 시작 전이면 카드를 눌러 다시 신청한다.
+     그 말을 화면에 적지는 않는다 (눌러보면 신청 버튼이 있다). */
+  cut: { label: "거절됨", cls: "bg-surface2 text-muted" },
 };
 
 type Tab = "received" | "sent";
@@ -680,11 +677,6 @@ export default function Inbox() {
           {sent.length > 0 && (
             <section>
               <h2 className="mb-2 text-[15px] font-bold">보낸 채팅</h2>
-              {/* 목록에서 사라지는 때를 미리 알려둔다. 결과가 온 건 알림함에
-                  남으니 여기서 하루면 충분하다. */}
-              <p className="mb-2 text-[11.5px] leading-relaxed text-faint">
-                답이 오면 하루, 답이 없으면 7일 뒤 목록에서 사라져요.
-              </p>
               <div className="flex flex-col gap-2">
                 {sent.map((r) => (
                   <div
