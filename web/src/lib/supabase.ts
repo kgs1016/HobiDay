@@ -85,9 +85,10 @@ export interface DbSession {
   age_max: number;
   note: string | null;
   status: string;
-  /* 확정 인원 (호스트 포함). 성비를 없애면서 m_confirmed/f_confirmed
-     두 칸이 이 한 칸으로 합쳐졌다. */
-  confirmed: number;
+  /* 확정 인원. 모임을 연 사람이 자기 모임의 첫 확정자라 언제나 1 이상이다.
+     성비를 없애면서 m_confirmed/f_confirmed 두 칸이 이 한 칸으로 합쳐졌다.
+     아직 마이그레이션 전인 DB 는 이 칸을 안 내려주므로 optional 로 둔다. */
+  confirmed?: number;
   my_status: string | null;
   // 호스트 요약 — 탈퇴한 개설자는 전부 null 로 온다
   host_id: string | null;
@@ -129,7 +130,9 @@ export function toSession(
     ageMin: r.age_min,
     ageMax: r.age_max,
     note: r.note ?? undefined,
-    joined: Number(r.confirmed),
+    /* 마이그레이션 전 DB 가 confirmed 를 안 주면 Number(undefined) = NaN 이
+       되어 "NaN/4자리" 가 그대로 화면에 찍혔다. 0 으로 받아둔다. */
+    joined: Number(r.confirmed ?? 0),
     status: r.status === "open" ? "open" : "confirmed",
     /* Session 의 status 에는 'cancelled' 가 없다(목데이터와 공유하는
        타입이다). 취소를 눌러 담은 자리 — 이게 없으면 취소된 모임이
