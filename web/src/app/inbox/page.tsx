@@ -9,10 +9,8 @@ import { ChalkBagIllust } from "@/components/illustrations";
 import { notifyPush } from "@/lib/nativePush";
 import {
   hasSupabase,
-  acceptConfirm,
   approveSignup,
   currentUser,
-  fetchConfirmProposals,
   fetchHostedRequests,
   fetchMySignups,
   fetchReceivedRequests,
@@ -22,14 +20,11 @@ import {
   rejectSignup,
   respondRequest,
   signedPhotoUrls,
-  withdrawConfirm,
-  type ConfirmProposal,
   type HostedRequest,
   type MySignup,
   type ReceivedRequest,
   type SentRequest,
 } from "@/lib/supabase";
-import { capacityRo } from "@/lib/capacity";
 
 const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -49,11 +44,9 @@ const STATUS: Record<string, { label: string; cls: string; note?: string }> = {
     cls: "bg-surface2 text-muted",
     note: "호스트가 확인하면 알려드릴게요.",
   },
-  confirmed: {
-    label: "자리 확정",
-    cls: "bg-accent-soft text-accent-pressed",
-    note: "정원이 차면 모임이 열려요.",
-  },
+  /* 호스트가 받아주면 그 순간 둘이 되어 모임도 확정된다.
+     자리 확정과 모임 확정이 더는 갈리지 않는다. */
+  confirmed: { label: "자리 확정", cls: "bg-accent-soft text-accent-pressed" },
   /* 거절은 문을 닫지 않는다 — 시작 전이면 카드를 눌러 다시 신청한다.
      그 말을 화면에 적지는 않는다 (눌러보면 신청 버튼이 있다). */
   cut: { label: "거절됨", cls: "bg-surface2 text-muted" },
@@ -93,7 +86,6 @@ export default function Inbox() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [tab, setTab] = useState<Tab>("received");
 
-  const [proposals, setProposals] = useState<ConfirmProposal[]>([]);
   const [hosted, setHosted] = useState<HostedRequest[]>([]);
   const [received, setReceived] = useState<ReceivedRequest[]>([]);
   const [signups, setSignups] = useState<MySignup[]>([]);
@@ -107,15 +99,13 @@ export default function Inbox() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const [pr, ho, re, si, se, sc] = await Promise.all([
-      fetchConfirmProposals(),
+    const [ho, re, si, se, sc] = await Promise.all([
       fetchHostedRequests(),
       fetchReceivedRequests(),
       fetchMySignups(),
       fetchSentRequests(),
       fetchSentChanges(),
     ]);
-    setProposals(pr ?? []);
     setHosted(ho ?? []);
     setReceived(re ?? []);
     setSignups(si ?? []);
@@ -125,7 +115,6 @@ export default function Inbox() {
     const paths = [
       ...(ho ?? []).map((x) => x.photo),
       ...(re ?? []).map((x) => x.photo),
-      ...(pr ?? []).map((x) => x.host_photo),
       ...(si ?? []).map((x) => x.host_photo),
     ].filter(Boolean) as string[];
     if (paths.length) setPhotos(await signedPhotoUrls(paths));
@@ -233,34 +222,6 @@ export default function Inbox() {
     load();
   };
 
-  /* 조기 확정 제안 받기·미루기 */
-  const decideProposal = async (p: ConfirmProposal, ok: boolean) => {
-    setBusy(p.session_id);
-    if (!ok) {
-      await withdrawConfirm(p.session_id);
-      setBusy(null);
-      return load();
-    }
-    const r = await acceptConfirm(p.session_id);
-    setBusy(null);
-    if (r.error) {
-      const msg: Record<string, string> = {
-        not_balanced: "그 사이 인원이 어긋났어요",
-        no_proposal: "호스트가 제안을 거뒀어요",
-        not_open: "이미 확정된 모임이에요",
-      };
-      return alert(msg[r.error] ?? `실패: ${r.error}`);
-    }
-    if (r.confirmed) {
-      alert(
-        `모임이 확정됐어요! 🎉\n${capacityRo(
-          r.capacity ?? p.matched
-        )} 진행하고, 모임 채팅방이 열렸어요.`
-      );
-    }
-    load();
-  };
-
   if (authed === false)
     return (
       <main className="px-4">
@@ -279,7 +240,7 @@ export default function Inbox() {
       </main>
     );
 
-  const receivedCount = proposals.length + hosted.length + received.length;
+  const receivedCount = hosted.length + received.length;
 
   /* 보낸 신청 탭을 열면 여기까지 본 것으로 친다. 배지는 기다리지 않고
      바로 0 이 된다 — 탭이 열렸는데 숫자가 남아 있으면 안 지워진 것처럼
@@ -337,58 +298,6 @@ export default function Inbox() {
           />
         ) : (
           <div className="flex flex-col gap-6 py-4 pb-6">
-            {/* 호스트의 조기 확정 제안 — 답 한 번에 모임이 열린다 */}
-            {proposals.length > 0 && (
-              <section>
-                <h2 className="mb-2 text-[15px] font-bold">
-                  모임 확정 제안{" "}
-                  <span className="font-normal text-muted">{proposals.length}</span>
-                </h2>
-                <div className="flex flex-col gap-2">
-                  {proposals.map((p) => (
-                    <div
-                      key={p.session_id}
-                      className="rounded-xl border border-line bg-surface p-4"
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <Avatar url={p.host_photo ? photos[p.host_photo] : undefined} />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[15px] font-semibold">{p.gym}</p>
-                          <p className="mt-0.5 text-[12.5px] text-muted">
-                            {when(p.starts_at)} · 호스트 {p.host_nickname ?? "—"}
-                          </p>
-                        </div>
-                      </div>
-                      <p className="mt-2.5 text-[12.5px] leading-relaxed text-muted">
-                        {capacityRo(p.capacity)} 열린 모임인데, 자리를 더
-                        기다리지 않고{" "}
-                        <b className="font-semibold text-ink">
-                          {capacityRo(p.matched)} 진행
-                        </b>
-                        하자는 제안이에요. 받으면 바로 확정되고 채팅방이 열려요.
-                      </p>
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        <button
-                          disabled={busy === p.session_id}
-                          onClick={() => decideProposal(p, false)}
-                          className="rounded-xl border border-line py-2.5 text-[13px] font-medium text-muted disabled:opacity-50"
-                        >
-                          더 기다릴래요
-                        </button>
-                        <button
-                          disabled={busy === p.session_id}
-                          onClick={() => decideProposal(p, true)}
-                          className="rounded-xl bg-accent py-2.5 text-[13px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
-                        >
-                          {busy === p.session_id ? "처리 중…" : "좋아요, 확정할게요"}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
             {/* 내가 연 모임에 온 신청 */}
             {hosted.length > 0 && (
               <section>
@@ -551,9 +460,8 @@ export default function Inbox() {
               <div className="flex flex-col gap-2">
                 {signups.map((s) => {
                   /* 내 신청 상태만 보면 모임이 어느 단계인지가 빠진다.
-                     그래서 이미 끝난 모임을 "정원이 차면 모임이 열려요"
-                     라고 안내하고 있었다. 모임 쪽을 먼저 본다 —
-                     모임 상세 화면과 같은 순서다. */
+                     그래서 이미 끝난 모임을 아직 열릴 것처럼 안내하고
+                     있었다. 모임 쪽을 먼저 본다 — 모임 상세와 같은 순서다. */
                   const cancelled = s.session_status === "cancelled";
                   const gone = new Date(s.ends_at).getTime() <= Date.now();
                   const running =
@@ -575,12 +483,12 @@ export default function Inbox() {
                               note: "매칭 기록에서 다시 볼 수 있어요.",
                             }
                           : {
-                              /* 정원을 못 채운 채 끝난 모임. 매칭 기록은
-                                 성사된 모임만 담으므로 여기서 "다시 볼 수
-                                 있어요" 라고 하면 거짓말이 된다. */
+                              /* 혼자인 채로 끝난 모임. 매칭 기록은 성사된
+                                 모임만 담으므로 여기서 "다시 볼 수 있어요"
+                                 라고 하면 거짓말이 된다. */
                               label: "열리지 못했어요",
                               cls: "bg-surface2 text-muted",
-                              note: "정원이 다 차지 않아 모임이 열리지 못했어요.",
+                              note: "아무도 오지 않아 모임이 열리지 못했어요.",
                             }
                       : running
                         ? mine && s.session_status === "confirmed"
@@ -591,21 +499,21 @@ export default function Inbox() {
                             }
                           : mine
                             ? {
-                                /* 정원을 못 채운 채 시작 시각이 지났다.
+                                /* 혼자인 채로 시작 시각이 지났다.
                                    끝나면 "열리지 못했어요" 로 넘어가는데,
                                    그 전까지만 "진행 중" 이라고 말하고
                                    있었다. 같은 모임을 세 시간 사이에 두
                                    가지로 말한 셈이다. */
                                 label: "열리지 못했어요",
                                 cls: "bg-surface2 text-muted",
-                                note: "정원이 다 차지 않아 모임이 열리지 못했어요.",
+                                note: "아무도 오지 않아 모임이 열리지 못했어요.",
                               }
                             : STATUS.cut
                         : mine && s.session_status === "confirmed"
                           ? {
                               label: "모임 확정",
                               cls: "bg-accent-soft text-accent-pressed",
-                              note: "정원이 다 찼어요. 채팅에서 만나요.",
+                              note: "채팅에서 만나요.",
                             }
                           : (STATUS[s.my_status] ?? STATUS.waiting);
 

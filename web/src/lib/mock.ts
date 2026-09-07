@@ -20,8 +20,8 @@ export interface Session {
      "이미 시작했나" 같은 판단은 이걸로 한다. 목데이터에는 없다. */
   startsAt?: string;
   endsAt?: string;
-  /* 총 인원. 2~8명 — 호스트를 포함한 수다.
-     예전엔 성비 모드에 따라 뜻이 갈렸다 (lib/capacity.ts 참고). */
+  /* 최대 정원. 2~8명 — 호스트를 포함한 수다. 채워야 하는 수가 아니라
+     여기까지만 받는다는 뜻이다 (둘만 모여도 모임은 열린다). */
   capacity: number;
   levelMin: LevelId;
   levelMax: LevelId;
@@ -35,11 +35,7 @@ export interface Session {
   /* 모임을 연 사람. 참가자와 달리 확정 전에도 공개한다.
      개설자가 탈퇴하면 host_id 가 null 이 되므로 없을 수 있다. */
   host?: SessionHost;
-  /* 조기 확정 — 정원은 못 채웠지만 지금 인원으로 확정하자는 제안.
-     호스트가 걸고 게스트가 받는다. */
   iAmHost?: boolean;
-  earlyConfirmAt?: string | null;
-  myAck?: boolean;
   /* 이 모임에 대한 내 신청 상태 — waiting · confirmed · cancelled.
      신청한 적이 없으면 null. 목록 카드가 버튼을 끄는 데 쓴다. */
   myStatus?: string | null;

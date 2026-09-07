@@ -29,7 +29,7 @@ const isEnded = (s: MyHostedSession) =>
   new Date(s.ends_at).getTime() < Date.now();
 
 /* 끝난 모임은 성사됐는지에 따라 결과가 갈린다. 예전엔 시간부터 보고
-   둘 다 "지난 모임" 으로 보여줘서, 실제로 만난 모임인지 정원을 못 채워
+   둘 다 "지난 모임" 으로 보여줘서, 실제로 만난 모임인지 아무도 안 와서
    무산된 모임인지 구분이 안 됐다. */
 function badge(s: MyHostedSession) {
   if (s.status === "cancelled")
@@ -38,7 +38,7 @@ function badge(s: MyHostedSession) {
     return s.status === "confirmed"
       ? { label: "완료", cls: "bg-accent-soft text-accent-pressed" }
       : { label: "무산됨", cls: "bg-surface2 text-muted" };
-  // 방은 확정 2명부터 열린다 — 정원이 차기 전에도 이미 열려 있다
+  // 둘이면 그 순간 확정이고 방도 열린다
   const chatting = s.confirmed >= 2;
   if (s.status === "confirmed")
     return { label: "확정 · 채팅방 열림", cls: "bg-accent-soft text-accent-pressed" };
@@ -69,7 +69,7 @@ function Row({ s }: { s: MyHostedSession }) {
       </div>
       {active && (
         <p className="mt-2 text-[12.5px] text-muted">
-          {`확정 ${s.confirmed} / ${s.capacity}명`}
+          {`확정 ${s.confirmed} / 최대 ${s.capacity}명`}
           {s.waiting > 0 && (
             <b className="ml-1.5 font-semibold text-ink">대기 {s.waiting}</b>
           )}

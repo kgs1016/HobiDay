@@ -8,11 +8,10 @@ import { notifyPush } from "@/lib/nativePush";
 import { level, levelRangeLabel } from "@/lib/levels";
 import { isProfileComplete } from "@/lib/profileGate";
 import { MOCK_PEOPLE, MOCK_SESSIONS, slotsLeft, type Session } from "@/lib/mock";
-import { capacityLabel, capacityRo, totalSeats } from "@/lib/capacity";
+import { capacityLabel, totalSeats } from "@/lib/capacity";
 import { AvatarFallback, ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 import {
   hasSupabase,
-  acceptConfirm,
   cancelSignup,
   currentUser,
   deleteSession,
@@ -20,10 +19,8 @@ import {
   fetchSessionMembers,
   fetchMyProfileDb,
   joinSession,
-  proposeConfirm,
   signedPhotoUrls,
   toSession,
-  withdrawConfirm,
   type SessionMember,
 } from "@/lib/supabase";
 
@@ -121,8 +118,6 @@ export default function SessionDetail() {
 
   const left = slotsLeft(s);
   const full = left.total <= 0;
-  /* 조기 확정·확정 안내에 쓰는 "3명으로" */
-  const nRo = (n: number) => capacityRo(n);
   // 시작하면 더 못 받는다 (서버도 session_join 에서 막는다).
   // 목데이터에는 startsAt 이 없어서 그때는 늘 false.
   const started = !!s.startsAt && new Date(s.startsAt).getTime() <= Date.now();
@@ -136,81 +131,6 @@ export default function SessionDetail() {
      "승인 대기 중" 이라고 해서, 같은 신청이 두 화면에서 다르게 보였다. */
   const missed = started && s.myStatus === "waiting";
   const joined = s.myStatus === "confirmed" || s.myStatus === "waiting";
-
-  /* 조기 확정 — 정원은 못 채웠지만 지금 인원으로 가자는 제안.
-     둘 이상이고 아직 꽉 차지 않았을 때만. 서버(session_propose_confirm)와
-     같은 셈이어야 한다. */
-  const matched = s.joined;
-  const canEarlyConfirm = matched >= 2 && !full;
-  const proposed = !!s.earlyConfirmAt;
-  const iAmGuest = s.myStatus === "confirmed" && !s.iAmHost;
-
-  const ERRORS: Record<string, string> = {
-    not_host: "호스트만 확정할 수 있어요",
-    not_open: "이미 확정된 모임이에요",
-    not_balanced: "두 명 이상이어야 확정할 수 있어요",
-    already_full: "이미 정원이 다 찼어요",
-    no_proposal: "호스트가 확정 제안을 거뒀어요",
-    not_member: "확정된 참가자만 할 수 있어요",
-  };
-
-  const propose = async () => {
-    setBusy(true);
-    const r = await proposeConfirm(s.id);
-    setBusy(false);
-    if (r.error) return alert(ERRORS[r.error] ?? `실패: ${r.error}`);
-    // 받아야만 성사되는 제안이라, 도착을 모르면 병목이 된다
-    if (r.notify?.length)
-      notifyPush(
-        r.notify,
-        "🤝 모임 확정 제안",
-        `${s.gym} 모임을 지금 인원으로 확정하자는 제안이 왔어요`,
-        "/inbox"
-      );
-    alert(
-      `${nRo(matched)} 확정하자고 보냈어요.\n상대가 받으면 모임이 완성되고 채팅방이 열려요.`
-    );
-    load();
-  };
-
-  const withdraw = async () => {
-    setBusy(true);
-    await withdrawConfirm(s.id);
-    setBusy(false);
-    load();
-  };
-
-  const accept = async () => {
-    setBusy(true);
-    const r = await acceptConfirm(s.id);
-    setBusy(false);
-    if (r.error) return alert(ERRORS[r.error] ?? `실패: ${r.error}`);
-    if (r.confirmed) {
-      // 확정의 순간 — 호스트 포함, 나 빼고 전원에게 알린다 (서버가 목록을 준다)
-      if (r.notify?.length)
-        notifyPush(
-          r.notify,
-          "🎉 모임이 확정됐어요",
-          `${s.gym} 모임이 확정되고 채팅방이 열렸어요`,
-          "/chat#session"
-        );
-    } else if (s.host?.id) {
-      notifyPush(
-        s.host.id,
-        "✅ 확정 제안을 수락했어요",
-        `${s.gym} 모임의 확정 제안을 수락한 사람이 있어요`,
-        `/session?id=${s.id}`
-      );
-    }
-    alert(
-      r.confirmed
-        ? `모임이 확정됐어요! 🎉\n${capacityRo(
-            r.capacity ?? matched
-          )} 진행하고, 모임 채팅방이 열렸어요.`
-        : "받았어요. 남은 참가자를 기다리고 있어요."
-    );
-    load();
-  };
 
   const badges = Array.from({ length: s.joined }, (_, i) => `c${i}`);
 
@@ -433,80 +353,6 @@ export default function SessionDetail() {
         </div>
       </section>
 
-      {/* 조기 확정 — 자리가 남아도 지금 인원으로 갈 수 있다 */}
-      {s.iAmHost && !dead && canEarlyConfirm && !proposed && (
-        <section className="mt-6 rounded-xl bg-accent-soft p-5">
-          <p className="text-[14.5px] font-bold">
-            {nRo(matched)} 확정할까요?
-          </p>
-          <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted">
-            자리를 더 기다리지 않고 지금 인원으로 모임을 열 수 있어요.
-            참가자가 받으면 확정되고 채팅방이 열려요.
-          </p>
-          <button
-            onClick={propose}
-            disabled={busy}
-            className="mt-3 w-full rounded-xl bg-accent py-3 text-[14px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
-          >
-            {busy ? "보내는 중…" : `${nRo(matched)} 확정 제안하기`}
-          </button>
-        </section>
-      )}
-
-      {s.iAmHost && !dead && proposed && (
-        <section className="mt-6 rounded-xl border border-line p-5">
-          <p className="text-[14.5px] font-bold">
-            참가자의 답을 기다리는 중…
-          </p>
-          <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted">
-            {nRo(matched)} 확정하자고 보냈어요. 받으면 바로 모임이
-            완성돼요.
-          </p>
-          <button
-            onClick={withdraw}
-            disabled={busy}
-            className="mt-3 w-full rounded-xl border border-line py-3 text-[13.5px] font-medium text-muted disabled:opacity-50"
-          >
-            제안 거두기
-          </button>
-        </section>
-      )}
-
-      {iAmGuest && !dead && proposed && !s.myAck && (
-        <section className="mt-6 rounded-xl bg-accent-soft p-5">
-          <p className="text-[14.5px] font-bold">
-            호스트가 {nRo(matched)} 하자고 해요
-          </p>
-          <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted">
-            {capacityRo(s.capacity)} 열린 모임인데, 자리를 더
-            기다리지 않고 지금 인원으로 진행하자는 제안이에요. 받으면 바로
-            확정되고 채팅방이 열려요.
-          </p>
-          <div className="mt-3 flex gap-2">
-            <button
-              onClick={withdraw}
-              disabled={busy}
-              className="flex-1 rounded-xl border border-line bg-surface py-3 text-[13.5px] font-medium text-muted disabled:opacity-50"
-            >
-              더 기다릴래요
-            </button>
-            <button
-              onClick={accept}
-              disabled={busy}
-              className="flex-1 rounded-xl bg-accent py-3 text-[13.5px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
-            >
-              {busy ? "처리 중…" : "좋아요, 확정할게요"}
-            </button>
-          </div>
-        </section>
-      )}
-
-      {iAmGuest && proposed && s.myAck && (
-        <p className="mt-6 rounded-xl border border-line px-5 py-4 text-center text-[12.5px] leading-relaxed text-muted">
-          확정에 동의했어요. 남은 참가자의 답을 기다리는 중이에요.
-        </p>
-      )}
-
       {/* 호스트 — 눌러서 프로필 전체 보기 */}
       {s.host && (
         <section className="mt-6 border-t border-line pt-5">
@@ -554,9 +400,8 @@ export default function SessionDetail() {
 
       {s.myStatus === "confirmed" && (
         <div className="mt-6 flex flex-col gap-2">
-          {/* 방은 호스트 말고 한 명이라도 확정되면 열린다 (확정 2명 이상).
-             정원이 차기를 기다리지 않는다 — 시간·장소를 맞추는 게 방의
-             쓸모라, 맞출 사람이 생긴 시점에 열려 있어야 한다. */}
+          {/* 둘이 되면 모임이 확정되고 방도 함께 열린다. 최대 정원은
+             상한이지 채워야 하는 수가 아니다. */}
           {s.joined >= 2 && (
             <Link
               href="/chat#session"
@@ -623,8 +468,8 @@ export default function SessionDetail() {
               confirmed 로 뭉개는 탓에 여기서는 구분조차 못 했다.
 
               "확정" 이 두 가지를 뜻하는 것도 그대로다 — 내 자리가 잡혔다 ·
-              모임이 성사됐다. 정원이 안 차면 자리는 잡혀도 모임은 아직
-              안 열린다. */}
+              모임이 성사됐다. 둘이 되는 순간 둘이 같아져서, 자리가 잡혔는데
+              모임은 아직인 상태가 이제는 없다. */}
           {s.cancelled
             ? "취소된 모임이에요"
             : missed
@@ -638,7 +483,7 @@ export default function SessionDetail() {
                     ? "승인 대기 중 · 호스트가 확인하면 알려드려요"
                     : s.status === "confirmed"
                       ? "모임이 확정됐어요"
-                      : "자리 잡았어요 · 정원이 차면 확정돼요"
+                      : "자리 잡았어요"
                   : busy
                     ? "신청 중…"
                     : started

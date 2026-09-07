@@ -97,10 +97,7 @@ export interface DbSession {
   host_age: number | null;
   host_area: string | null;
   host_level: LevelId | null;
-  // 조기 확정 — 정원은 못 채웠지만 지금 인원으로 확정하자는 제안
   i_am_host: boolean;
-  early_confirm_at: string | null;
-  my_ack: boolean;
 }
 
 export function toSession(
@@ -141,8 +138,6 @@ export function toSession(
     isAway: myHomeGym ? r.gym !== myHomeGym : false,
     myStatus: r.my_status,
     iAmHost: r.i_am_host ?? (!!myId && r.host_id === myId),
-    earlyConfirmAt: r.early_confirm_at ?? null,
-    myAck: r.my_ack ?? false,
     host: r.host_nickname
       ? {
           id: r.host_id!,
@@ -338,7 +333,7 @@ export async function joinSession(id: string) {
   if (!sb) return { error: "no_client" };
   const { data, error } = await sb.rpc("session_join", { p_session: id });
   if (error) return { error: error.message };
-  // chat_opened — 내 신청으로 정원이 차서 모임 채팅방이 막 열렸다
+  // chat_opened — 내 신청으로 둘이 되어 모임 채팅방이 막 열렸다
   return data as {
     status?: string;
     chat_opened?: boolean;
@@ -431,43 +426,6 @@ export async function cancelSignup(id: string) {
   };
 }
 
-/* ── 조기 확정 ──
-   2:2 로 열었는데 남 1 · 여 1 에서 멈춘 모임을, 그 인원으로 확정한다.
-   호스트가 걸고 게스트가 받아야 성립한다. */
-
-export async function proposeConfirm(id: string) {
-  const sb = getSupabase();
-  if (!sb) return { error: "no_client" };
-  const { data, error } = await sb.rpc("session_propose_confirm", { p_session: id });
-  if (error) return { error: error.message };
-  // notify — 제안을 받아야 하는 게스트들. 클라이언트가 push 를 부탁한다
-  return data as { ok?: boolean; matched?: number; notify?: string[]; error?: string };
-}
-
-export async function withdrawConfirm(id: string) {
-  const sb = getSupabase();
-  if (!sb) return { error: "no_client" };
-  const { data, error } = await sb.rpc("session_withdraw_confirm", { p_session: id });
-  if (error) return { error: error.message };
-  return data as { ok?: boolean; error?: string };
-}
-
-export async function acceptConfirm(id: string) {
-  const sb = getSupabase();
-  if (!sb) return { error: "no_client" };
-  const { data, error } = await sb.rpc("session_accept_confirm", { p_session: id });
-  if (error) return { error: error.message };
-  return data as {
-    ok?: boolean;
-    confirmed?: boolean;
-    capacity?: number;
-    waiting?: number;
-    /** 확정된 순간 알릴 사람들 (나 제외, 호스트 포함) */
-    notify?: string[];
-    error?: string;
-  };
-}
-
 /* ── 신청함 ──
    호스트 승인제 — 신청은 대기로 들어가고 호스트가 받아야 확정된다. */
 
@@ -507,18 +465,6 @@ export interface HostedRequest {
   confirmed_total: number;
 }
 
-/** 호스트가 걸어둔 조기 확정 제안 */
-export interface ConfirmProposal {
-  session_id: string;
-  gym: string;
-  starts_at: string;
-  capacity: number;
-  early_confirm_at: string;
-  host_nickname: string | null;
-  host_photo: string | null;
-  matched: number;
-}
-
 export async function fetchMySignups() {
   const sb = getSupabase();
   if (!sb) return null;
@@ -533,14 +479,6 @@ export async function fetchHostedRequests() {
   const { data, error } = await sb.rpc("my_hosted_requests");
   if (error) return null;
   return data as HostedRequest[];
-}
-
-export async function fetchConfirmProposals() {
-  const sb = getSupabase();
-  if (!sb) return null;
-  const { data, error } = await sb.rpc("my_confirm_proposals");
-  if (error) return null;
-  return data as ConfirmProposal[];
 }
 
 export async function approveSignup(sessionId: string, userId: string) {
@@ -1196,7 +1134,6 @@ export async function fetchInboxCounts() {
     requests: number;
     likes: number;
     hosted: number;
-    proposals: number;
     sent_today: number;
     daily_limit: number;
     unread_messages: number;

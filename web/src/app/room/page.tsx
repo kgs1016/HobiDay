@@ -20,7 +20,7 @@ import {
   type Room,
   type RoomPerson,
 } from "@/lib/supabase";
-import { capacityLabel } from "@/lib/capacity";
+import { headcountLabel } from "@/lib/capacity";
 
 /* 워밍업 가이드 — 시작 직후가 가장 어색한 구간이라
    같이 할 거리를 주면 아이스브레이킹·부상예방·클린이 배려가 한 번에 해결된다. */
@@ -170,7 +170,7 @@ export default function Room() {
           </h1>
           <p className="text-[12px] text-muted">
             {hhmm(room.session.starts_at)}–{hhmm(room.session.ends_at)} ·{" "}
-            {capacityLabel(room.matched)}
+            {headcountLabel(room.matched)}
           </p>
         </div>
       </header>

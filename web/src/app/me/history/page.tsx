@@ -18,7 +18,7 @@ import {
   type MatchRecord,
   type MatchMate,
 } from "@/lib/supabase";
-import { capacityLabel } from "@/lib/capacity";
+import { headcountLabel } from "@/lib/capacity";
 
 const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -87,7 +87,7 @@ function Card({
         <div className="min-w-0">
           <p className="truncate text-[14.5px] font-semibold">{r.gym}</p>
           <p className="mt-0.5 text-[12.5px] text-muted">
-            {when(r.starts_at)} · {capacityLabel(r.capacity)}
+            {when(r.starts_at)} · {headcountLabel(r.members)}
           </p>
         </div>
         {r.i_am_host && (

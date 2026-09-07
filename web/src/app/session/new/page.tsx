@@ -147,7 +147,8 @@ export default function NewSession() {
     in90.setDate(in90.getDate() + 90);
     return { min: ymd(new Date(now)), max: ymd(in90) };
   })();
-  /* 정원 = 호스트를 포함한 총 인원 (2~8명) */
+  /* 최대 정원 = 호스트를 포함해 여기까지만 받는다 (2~8명).
+     채워야 하는 수가 아니다 — 둘만 모여도 모임은 열린다. */
   const [capacity, setCapacity] = useState(4);
   const [levelMin, setLevelMin] = useState<LevelId>(2);
   const [levelMax, setLevelMax] = useState<LevelId>(3);
@@ -251,10 +252,10 @@ export default function NewSession() {
       return alert("모임 시간이 너무 임박했어요. 지금부터 30분 뒤부터 열 수 있어요");
     if (r.error === "past") return alert("이미 지난 시각이에요. 시간을 다시 골라주세요");
     if (r.error === "too_far") return alert("모임은 90일 안쪽으로만 열 수 있어요");
-    if (r.error === "bad_capacity") return alert("정원을 다시 골라주세요");
+    if (r.error === "bad_capacity") return alert("최대 정원을 다시 골라주세요");
     if (r.error === "bad_gym") return alert("암장을 다시 선택해주세요");
     if (r.error) return alert(`등록 실패: ${r.error}`);
-    alert("모임을 열었어요! 정원이 차면 확정돼요.");
+    alert("모임을 열었어요!");
     router.push("/");
   };
 
@@ -348,8 +349,8 @@ export default function NewSession() {
           <p className="mt-1.5 text-[12px] text-muted">1.5~2시간을 권장해요</p>
         </Field>
 
-        {/* 정원은 호스트를 포함한 총 인원이다 */}
-        <Field label="정원">
+        {/* 호스트를 포함한 수다 */}
+        <Field label="최대 정원">
           <div className="flex flex-wrap gap-1.5">
             {CAPACITY_CHOICES.map((c) => (
               <Chip key={c} active={capacity === c} onClick={() => setCapacity(c)}>
