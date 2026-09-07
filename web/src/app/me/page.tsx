@@ -13,7 +13,6 @@ import { loadMyProfile } from "@/lib/myProfile";
 import { unregisterPush } from "@/lib/nativePush";
 import {
   CREDIT_LABELS,
-  CREDIT_SESSION_VIDEO,
   REQUEST_COST,
   getSupabase,
   hasSupabase,
@@ -22,7 +21,7 @@ import {
   fetchAppFlags,
   fetchCredits,
   fetchMyProfileDb,
-  fetchMyVideos,
+  fetchMyVideoCount,
   signedPhotoUrls,
   type Credits,
 } from "@/lib/supabase";
@@ -74,13 +73,13 @@ export default function Me() {
       setEmail(user.email ?? null);
       const [prof, vids, cr, flags] = await Promise.all([
         fetchMyProfileDb(),
-        fetchMyVideos(),
+        fetchMyVideoCount(),
         fetchCredits(),
         fetchAppFlags(),
       ]);
       if (flags) setLocked(!flags.sessions_open && !flags.people_open);
       setProfile(prof);
-      setVideoCount(vids?.length ?? 0);
+      setVideoCount(vids);
       setCredits(cr);
       setLoading(false);
       if (prof?.photo)
@@ -203,7 +202,7 @@ export default function Me() {
           <div className="border-b border-line py-1">
             {credits.history.length === 0 ? (
               <p className="py-3 text-[12.5px] leading-relaxed text-muted">
-                아직 내역이 없어요. 모임에서 등반 영상을 올리면 쌓여요.
+                아직 내역이 없어요.
               </p>
             ) : (
               credits.history.map((h, i) => (
@@ -226,15 +225,21 @@ export default function Me() {
             )}
             <p className="pb-3 pt-1 text-[11.5px] leading-relaxed text-faint">
               채팅 보내기 {REQUEST_COST}크레딧 — 보내는 순간 쓰여요 · 모임 신청
-              무료 · 등반 영상 인증 +{CREDIT_SESSION_VIDEO}
+              무료
             </p>
           </div>
         )}
 
-        <div className="flex items-center justify-between py-3.5">
+        <Link
+          href="/me/videos"
+          className="flex items-center justify-between py-3.5"
+        >
           <span className="text-[15px]">내 영상</span>
-          <span className="text-[15px] font-semibold">{videoCount}</span>
-        </div>
+          <span className="flex items-center gap-1.5">
+            <span className="text-[15px] font-semibold">{videoCount}</span>
+            <ChevronRightIcon size={15} className="text-faint" />
+          </span>
+        </Link>
       </section>
 
       {/* 메뉴 */}

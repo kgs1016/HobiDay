@@ -76,6 +76,15 @@ export async function fetchFeedbackVideos(before?: VideoSummary): Promise<VideoS
   return data ?? [];
 }
 
+/** 내가 올린 것만 — 내 정보의 "내 영상" 이 읽는다. 목록과 같은 모양이다. */
+export async function fetchMyFeedbackVideos(before?: VideoSummary): Promise<VideoSummary[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+  const { data, error } = await sb.rpc("my_video_posts", { p_before: before?.created_at ?? null, p_before_id: before?.id ?? null });
+  if (error) throw new Error("영상을 불러오지 못했어요. 다시 시도해주세요");
+  return data ?? [];
+}
+
 export async function setVideoLike(id: string, liked: boolean): Promise<{ error?: string; liked?: boolean; like_count?: number }> {
   const sb = getSupabase();
   if (!sb) return { error: "no_auth" };

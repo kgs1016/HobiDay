@@ -559,158 +559,18 @@ export async function upsertMyProfileDb(p: MyProfile, isPublic: boolean) {
   return { error: error?.message };
 }
 
-/* ── 모임 진행 (F 화면) ── */
+/* ── 내 영상 — 커뮤니티에 올린 것들 ── */
 
-/** 확정된 참가자. 모임 목록은 블라인드지만 확정자끼리는 프로필이 열린다. */
-export interface RoomPerson {
-  id: string;
-  nickname: string;
-  age: number;
-  gender: "m" | "f";
-  level: LevelId | null;
-  career: CareerId | null;
-  height: number | null;
-  home_gym: string;
-  area: string;
-  mbti: string;
-  intro: string | null;
-  photo: string | null;
-  is_me: boolean;
-}
+/* 예전에는 모임 진행 화면에 올린 "등반 인증" 영상을 셌다. 그 화면과
+   session_videos 표를 지우면서(20260908160000), 내 정보의 "내 영상" 은
+   커뮤니티 영상 피드백에 올린 글을 가리키게 됐다. */
 
-export interface RoomVideo {
-  id: string;
-  video_url: string;
-  created_at: string;
-}
-
-export interface Room {
-  session: {
-    id: string;
-    gym: string;
-    starts_at: string;
-    ends_at: string;
-    capacity: number;
-    note: string | null;
-  };
-  me: { id: string; gender: "m" | "f"; level: LevelId | null };
-  /** 지금 확정된 인원 (호스트 포함) */
-  matched: number;
-  people: RoomPerson[];
-  videos: RoomVideo[];
-  selection_open: boolean;
-}
-
-export type RoomError = "no_profile" | "not_found" | "not_confirmed";
-
-export async function fetchRoom(
-  id: string
-): Promise<{ room?: Room; error?: RoomError | string }> {
+export async function fetchMyVideoCount(): Promise<number> {
   const sb = getSupabase();
-  if (!sb) return { error: "no_client" };
-  const { data, error } = await sb.rpc("session_room", { p_session: id });
-  if (error) return { error: error.message };
-  const d = data as Room & { error?: string };
-  if (d.error) return { error: d.error };
-  return { room: d };
-}
-
-/** 영상 경로를 모임에 등록한다 (크레딧은 모임당 1회) */
-export async function addSessionVideo(id: string, path: string) {
-  const sb = getSupabase();
-  if (!sb) return { error: "no_client" };
-  const { data, error } = await sb.rpc("session_video_add", {
-    p_session: id,
-    p_video: path,
-  });
-  if (error) return { error: error.message };
-  return data as { ok?: boolean; error?: string; earned?: number; balance?: number };
-}
-
-export async function deleteSessionVideo(videoId: string) {
-  const sb = getSupabase();
-  if (!sb) return;
-  await sb.rpc("session_video_delete", { p_video: videoId });
-}
-
-export async function submitSelection(id: string, chosen: string[]) {
-  const sb = getSupabase();
-  if (!sb) return { error: "no_client" };
-  const { data, error } = await sb.rpc("selection_submit", {
-    p_session: id,
-    p_chosen: chosen,
-  });
-  if (error) return { error: error.message };
-  return data as { ok?: boolean; count?: number; error?: string };
-}
-
-/** 상호선택된 상대만 내려온다. 짝사랑은 서버가 아예 보내지 않는다. */
-export async function fetchMatches(id: string) {
-  const sb = getSupabase();
-  if (!sb) return null;
-  const { data, error } = await sb.rpc("my_matches", { p_session: id });
-  if (error) return null;
-  return data as {
-    id: string;
-    nickname: string;
-    age: number;
-    level: LevelId | null;
-    career: CareerId | null;
-    home_gym: string;
-    area: string;
-    mbti: string;
-    intro: string | null;
-  }[];
-}
-
-/* ── 미션 영상 (Storage) ── */
-
-const VIDEO_BUCKET = "mission-videos";
-export const VIDEO_MAX_BYTES = 50 * 1024 * 1024; // 버킷 설정과 같은 값
-
-/** 경로 규칙: {user_id}/{session_id}/{시각}.{확장자}
- *  첫 폴더가 업로더 uuid 라서 스토리지 정책이 남의 칸 쓰기를 막는다.
- *  한 모임에 여러 개 올릴 수 있어야 하므로 파일명에 시각을 넣는다. */
-export async function uploadSessionVideo(
-  sessionId: string,
-  file: File
-): Promise<{ path?: string; error?: string }> {
-  const sb = getSupabase();
-  const user = await currentUser();
-  if (!sb || !user) return { error: "no_auth" };
-  if (file.size > VIDEO_MAX_BYTES) return { error: "too_large" };
-
-  const ext = file.name.split(".").pop()?.toLowerCase() || "mp4";
-  const path = `${user.id}/${sessionId}/${Date.now()}.${ext}`;
-
-  const { error } = await sb.storage
-    .from(VIDEO_BUCKET)
-    .upload(path, file, { contentType: file.type || undefined });
-  if (error) return { error: error.message };
-  return { path };
-}
-
-/** 비공개 버킷이라 재생은 서명 URL 로만 된다 (기본 1시간) */
-export async function signedVideoUrl(path: string, seconds = 3600) {
-  const sb = getSupabase();
-  if (!sb) return null;
-  const { data } = await sb.storage.from(VIDEO_BUCKET).createSignedUrl(path, seconds);
-  return data?.signedUrl ?? null;
-}
-
-export async function fetchMyVideos() {
-  const sb = getSupabase();
-  if (!sb) return null;
-  const { data, error } = await sb.rpc("my_videos");
-  if (error) return null;
-  return data as {
-    id: string;
-    session_id: string;
-    video_url: string;
-    created_at: string;
-    gym: string;
-    starts_at: string;
-  }[];
+  if (!sb) return 0;
+  const { data, error } = await sb.rpc("my_video_count");
+  if (error) return 0;
+  return Number(data ?? 0);
 }
 
 /* ── 채팅 ── */
@@ -784,6 +644,14 @@ export async function leaveChat(matchId: string) {
 /* ── 프로필 사진 ── */
 
 const PHOTO_BUCKET = "profile-photos";
+
+/* 탈퇴할 때 쓸어야 하는 버킷들. 첫 폴더가 업로더 uuid 라는 규칙이 같아서
+   한 벌의 코드로 지운다.
+     community-videos  커뮤니티 영상 피드백 (영상 + 썸네일)
+     mission-videos    모임 진행 화면에 올리던 등반 인증. 화면과 표는
+                       없앴지만(20260908160000) 옛 파일이 남아 있어서
+                       계속 쓸어준다. */
+const OWNED_BUCKETS = [PHOTO_BUCKET, "community-videos", "mission-videos"];
 export const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
 
 export async function uploadProfilePhoto(
@@ -935,7 +803,7 @@ export async function deleteAccount(): Promise<{ ok?: true; error?: string }> {
   const user = await currentUser();
   if (!sb || !user) return { error: "no_auth" };
 
-  for (const bucket of [PHOTO_BUCKET, VIDEO_BUCKET]) {
+  for (const bucket of OWNED_BUCKETS) {
     const paths = await listAllPaths(bucket, user.id);
     // remove 는 한 번에 여러 개를 받지만 너무 많으면 요청이 커진다
     for (let i = 0; i < paths.length; i += 100) {
@@ -991,6 +859,7 @@ export async function fetchEarlyBird() {
 /* ── 크레딧 ── */
 
 export const CREDIT_LABELS: Record<string, string> = {
+  // 적립은 없앴지만 지난 원장에 이 이름의 행이 남아 있다
   session_video: "등반 영상",
   profile_complete: "프로필 완성",
   early_bird: "사전 가입 혜택",
@@ -1008,9 +877,9 @@ export const CREDIT_LABELS: Record<string, string> = {
    실제 적립·차감은 전부 서버가 하고, 여기 값은 안내 문구에만 쓴다.
    ⚠️ SQL 의 credit_rule 을 바꾸면 여기도 같이 바꿀 것. */
 export const REQUEST_COST = 10; // request_extra
-// 모임 신청은 무료다 (2026-09-02). session_join·session_refund 라벨은
-// 유료 시절 원장을 읽기 위해 CREDIT_LABELS 에 남아 있다.
-export const CREDIT_SESSION_VIDEO = 2; // session_video (모임당 1회)
+// 모임 신청은 무료다 (2026-09-02). 영상 적립은 없앴다 (2026-09-08).
+// session_join·session_refund·session_video 라벨은 유료·적립 시절 원장을
+// 읽기 위해 CREDIT_LABELS 에 남아 있다.
 
 export interface Credits {
   balance: number;

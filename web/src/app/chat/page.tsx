@@ -11,9 +11,9 @@ import { CarabinerIllust, ShoeIllust } from "@/components/illustrations";
 import { notifyPush } from "@/lib/nativePush";
 import {
   currentUser,
+  fetchSessionMembers,
   fetchChatMessages,
   fetchChats,
-  fetchRoom,
   fetchSessionChatMessages,
   fetchSessionChats,
   hasSupabase,
@@ -25,7 +25,7 @@ import {
   signedPhotoUrls,
   type Chat,
   type ChatMessage,
-  type RoomPerson,
+  type SessionMember,
   type SessionChat,
   type SessionChatMessage,
 } from "@/lib/supabase";
@@ -783,8 +783,8 @@ function SessionThread({
   const [photos, setPhotos] = useState<Record<string, string>>({});
   // 신고 — 단체방이라 누구를 신고할지 먼저 고른다
   const [picking, setPicking] = useState(false);
-  const [members, setMembers] = useState<RoomPerson[] | null>(null);
-  const [target, setTarget] = useState<RoomPerson | null>(null);
+  const [members, setMembers] = useState<SessionMember[] | null>(null);
+  const [target, setTarget] = useState<SessionMember | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
@@ -826,8 +826,13 @@ function SessionThread({
   const openPicker = async () => {
     setPicking(true);
     if (members === null) {
-      const r = await fetchRoom(room.session_id);
-      setMembers(r.room ? r.room.people.filter((p) => !p.is_me) : []);
+      /* 신고 대상은 이름만 있으면 된다. 모임 상세의 참가 현황과 같은
+         명단을 쓴다 — 나만 뺀다. */
+      const [me, list] = await Promise.all([
+        currentUser(),
+        fetchSessionMembers(room.session_id),
+      ]);
+      setMembers(list.filter((p) => p.id !== me?.id));
     }
   };
 

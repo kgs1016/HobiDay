@@ -394,30 +394,20 @@ export default function SessionDetail() {
         </section>
       )}
 
-      {/* 등반 인증 안내는 모임 진행 화면(/room)에 있다 — 상세에서는 뺐다.
-         준비물·비용 안내 세 줄도 같이 지웠다. 신청 전에 보는 화면이라
-         "이 모임에 갈지" 를 정하는 정보만 남긴다. */}
+      {/* 준비물·비용 안내 세 줄은 지웠다. 신청 전에 보는 화면이라
+         "이 모임에 갈지" 를 정하는 정보만 남긴다. 진행 화면(/room)도
+         없앴다 — 참가 현황이 위에 있고, 영상은 커뮤니티로 갔다. */}
 
-      {s.myStatus === "confirmed" && (
-        <div className="mt-6 flex flex-col gap-2">
-          {/* 둘이 되면 모임이 확정되고 방도 함께 열린다. 최대 정원은
-             상한이지 채워야 하는 수가 아니다. */}
-          {s.joined >= 2 && (
-            <Link
-              href="/chat#session"
-              className="block rounded-xl border border-line py-3.5 text-center text-[14px] font-semibold text-ink"
-            >
-              모임 채팅 열기
-            </Link>
-          )}
-          {!dead && (
+      {/* 둘이 되면 모임이 확정되고 방도 함께 열린다. 최대 정원은
+          상한이지 채워야 하는 수가 아니다. */}
+      {s.myStatus === "confirmed" && s.joined >= 2 && (
+        <div className="mt-6">
           <Link
-            href={`/room?id=${s.id}`}
-            className="block rounded-xl border border-line py-3.5 text-center text-[14px] font-semibold text-accent-pressed"
+            href="/chat#session"
+            className="block rounded-xl border border-line py-3.5 text-center text-[14px] font-semibold text-ink"
           >
-            모임 진행 화면 열기
+            모임 채팅 열기
           </Link>
-          )}
         </div>
       )}
 
