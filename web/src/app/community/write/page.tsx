@@ -78,7 +78,7 @@ export default function WritePost() {
         <button
           onClick={submit}
           disabled={!canSubmit}
-          className="rounded-lg bg-accent px-3.5 py-1.5 text-[13.5px] font-semibold text-white active:bg-accent-pressed disabled:opacity-40"
+          className="button-primary rounded-lg px-3.5 py-1.5 text-[13.5px] font-semibold"
         >
           {busy ? "저장 중…" : id ? "저장" : "올리기"}
         </button>

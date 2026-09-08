@@ -1,8 +1,11 @@
-/* 프로필 완성 게이트
-   가입 직후 프로필(사진 포함)을 먼저 채우게 한다. 서로를 신뢰할 수 있는 상태에서만
-   모임·사람을 볼 수 있어야 하고, 사진 없는 카드가 목록에 섞이는 것도 막힌다. */
+/* 기본 회원 정보와 사람 찾기 공개·모임 참여용 프로필을 구분한다. */
 
 import type { MyProfile } from "./myProfile";
+
+export function isBasicProfileComplete(p: MyProfile | null | undefined): boolean {
+  return !!p && !!p.photo?.trim() && !!p.nickname.trim() && (p.gender === "m" || p.gender === "f") &&
+    Number.isInteger(p.age) && p.age >= 19 && p.age <= 60;
+}
 
 /** 사람 찾기 공개·모임 이용에 반드시 있어야 하는 것들 */
 export function missingFields(p: MyProfile): string[] {
@@ -14,5 +17,5 @@ export function missingFields(p: MyProfile): string[] {
 }
 
 export function isProfileComplete(p: MyProfile | null | undefined): boolean {
-  return !!p && missingFields(p).length === 0;
+  return isBasicProfileComplete(p) && !!p && missingFields(p).length === 0;
 }

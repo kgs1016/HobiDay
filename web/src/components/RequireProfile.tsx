@@ -3,17 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { isProfileComplete } from "@/lib/profileGate";
-import { missingFields } from "@/lib/profileGate";
+import { isBasicProfileComplete } from "@/lib/profileGate";
 import { currentUser, fetchMyProfileDb, hasSupabase } from "@/lib/supabase";
 import { ShoeIllust } from "@/components/illustrations";
 
-/* 프로필을 완성해야 앱을 쓸 수 있다.
-   서로 얼굴과 실력을 아는 사람끼리 만나는 게 이 앱의 전제라, 프로필이 없는
-   사람이 목록을 둘러보는 상태 자체가 없어야 한다.
-
-   화면마다 따로 막으면 하나 빠뜨렸을 때 그 길로 다 들어온다. 레이아웃에서
-   한 번에 막는다. */
+/* 앱 이용에는 대표 사진을 포함한 기본 회원 정보가 필요하다.
+   구력과 사람 찾기 공개 여부로 둘러보기를 막지 않는다.
+   모임 만들기·신청 등의 참여 조건은 해당 동작에서 확인한다. */
 
 /* 막으면 안 되는 길:
    로그인·가입·프로필 작성은 당연하고, 내 정보(/me)와 약관·안전 설정도
@@ -52,7 +48,6 @@ export default function RequireProfile({
 
   // null = 확인 중. 깜빡임을 막으려고 이때는 아무것도 그리지 않는다.
   const [ok, setOk] = useState<boolean | null>(null);
-  const [missing, setMissing] = useState<string[]>([]);
 
   useEffect(() => {
     // 공개 경로 여부는 렌더에서 판단한다. 프로필 확인 결과를 덮어쓰지 않는다.
@@ -72,12 +67,11 @@ export default function RequireProfile({
       }
       const p = await fetchMyProfileDb();
       if (!alive) return;
-      if (isProfileComplete(p)) {
+      if (isBasicProfileComplete(p)) {
         completeUid = user.id;
         setOk(true);
       } else {
         completeUid = null; // 캐시가 다른 계정 것이었다면 지운다
-        setMissing(p ? missingFields(p) : []);
         setOk(false);
       }
     })();
@@ -95,36 +89,21 @@ export default function RequireProfile({
       <header className="flex flex-col items-center pt-16 text-center">
         <ShoeIllust size={72} />
         <h1 className="mt-5 text-[20px] font-bold leading-snug tracking-tight">
-          프로필을 완성해야
-          <br />
-          이용할 수 있어요
+          기본 정보를 입력해주세요
         </h1>
       </header>
-
-      {missing.length > 0 && (
-        <section className="mx-auto mt-7 max-w-sm rounded-xl bg-surface2 px-5 py-4">
-          <p className="text-[12.5px] text-faint">아직 빠진 것</p>
-          <ul className="mt-2 flex flex-col gap-1.5">
-            {missing.map((m) => (
-              <li key={m} className="text-[14px] font-medium">
-                · {m}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
 
       <div className="mx-auto mt-5 max-w-sm">
         <Link
           href="/profile/new"
-          className="block rounded-xl bg-accent py-3.5 text-center text-[15px] font-semibold text-white active:bg-accent-pressed"
+          className="button-primary block rounded-xl py-3.5 text-center text-[15px] font-semibold"
         >
-          프로필 완성하러 가기
+          기본 정보 입력
         </Link>
       </div>
 
       <p className="mt-5 text-center text-[12px] text-faint">
-        프로필을 완성하고 함께 등반할 사람을 찾아보세요.
+        사람 찾기에 프로필을 공개하는 것은 선택입니다.
       </p>
     </main>
   );

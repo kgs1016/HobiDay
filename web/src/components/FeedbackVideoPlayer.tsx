@@ -20,7 +20,7 @@ export default function FeedbackVideoPlayer({ path, thumbnail }: { path: string;
     return () => { alive = false; };
   }, [path, thumbnail, attempt, fail]);
   if (error) return <div role="alert" className="mt-4 rounded-xl bg-surface2 p-5 text-sm">
-    <p>{error}</p><button onClick={() => { setError(""); setUrl(""); setAttempt((v) => v + 1); }} className="mt-3 font-semibold text-accent-pressed">다시 불러오기</button>
+    <p>{error}</p><button onClick={() => { setError(""); setUrl(""); setAttempt((v) => v + 1); }} className="mt-3 font-semibold text-accent-strong">다시 불러오기</button>
   </div>;
   return url ? <video key={`${path}-${attempt}`} src={url} poster={poster} controls playsInline preload="metadata" onError={fail}
     className="mt-4 max-h-[65vh] w-full rounded-2xl bg-black" /> : <p className="py-8 text-center text-sm text-faint">영상 불러오는 중…</p>;

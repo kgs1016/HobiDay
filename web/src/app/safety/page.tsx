@@ -76,7 +76,7 @@ export default function Safety() {
               <button
                 onClick={() => unblock(b)}
                 disabled={busy === b.blocked_id}
-                className="shrink-0 rounded-lg border border-line px-3 py-2 text-[12px] font-medium text-muted disabled:opacity-50"
+                className="button-secondary shrink-0 rounded-lg px-3 py-2 text-[12px] font-medium"
               >
                 {busy === b.blocked_id ? "해제 중…" : "차단 해제"}
               </button>

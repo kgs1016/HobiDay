@@ -91,7 +91,7 @@ function Opt({
       type="button"
       onClick={onClick}
       className={`rounded-full border px-3.5 py-2 text-[13px] font-medium transition-colors ${
-        on ? "border-accent bg-accent text-white" : "border-line bg-surface text-muted"
+        on ? "border-accent bg-accent-soft text-accent-strong" : "border-line bg-surface text-muted"
       }`}
     >
       {children}
@@ -189,7 +189,7 @@ export default function SessionFilterBar({
                 onClick={() => setOpen(k)}
                 className={`flex shrink-0 items-center gap-1 rounded-full border px-3 py-1.5 text-[13px] transition-colors ${
                   on
-                    ? "border-accent bg-accent-soft font-medium text-accent-pressed"
+                    ? "border-accent bg-accent-soft font-medium text-accent-strong"
                     : "border-line bg-surface text-muted"
                 }`}
               >
@@ -216,7 +216,7 @@ export default function SessionFilterBar({
             <button
               type="button"
               onClick={() => onChange(EMPTY_FILTER)}
-              className="shrink-0 rounded-full border border-line bg-surface px-3 py-1.5 text-[13px] text-muted"
+              className="button-secondary shrink-0 rounded-full px-3 py-1.5 text-[13px]"
             >
               초기화
             </button>
@@ -268,7 +268,7 @@ export default function SessionFilterBar({
                   <span className="min-w-0">
                     <span
                       className={`block truncate text-[14px] ${
-                        on ? "font-semibold text-accent-pressed" : "text-ink"
+                        on ? "font-semibold text-accent-strong" : "text-ink"
                       }`}
                     >
                       {o.name}
@@ -280,7 +280,7 @@ export default function SessionFilterBar({
                     )}
                   </span>
                   {on && (
-                    <span className="shrink-0 text-[12px] font-medium text-accent-pressed">
+                    <span className="shrink-0 text-[12px] font-medium text-accent-strong">
                       선택됨
                     </span>
                   )}
@@ -305,7 +305,7 @@ export default function SessionFilterBar({
                           onClick={() => setGymRegion(r)}
                           className={`rounded-full border px-3 py-1.5 text-[13px] transition-colors ${
                             gymRegion === r
-                              ? "border-accent bg-accent-soft font-medium text-accent-pressed"
+                              ? "border-accent bg-accent-soft font-medium text-accent-strong"
                               : "border-line bg-surface text-muted"
                           }`}
                         >
@@ -497,7 +497,7 @@ export default function SessionFilterBar({
             <button
               type="button"
               onClick={() => setOpen(null)}
-              className="mt-5 w-full rounded-xl bg-accent py-3.5 text-[14px] font-semibold text-white active:bg-accent-pressed"
+              className="button-primary mt-5 w-full rounded-xl py-3.5 text-[14px] font-semibold"
             >
               확인
             </button>

@@ -74,7 +74,7 @@ export default function UserReviews() {
           {name ? `${name}님의 리뷰` : "플레이어 리뷰"}
         </h1>
         {likes > 0 && (
-          <span className="flex items-center gap-1 text-[13px] font-semibold text-accent-pressed">
+          <span className="flex items-center gap-1 text-[13px] font-semibold text-accent-strong">
             <ThumbIcon size={15} /> {likes}
           </span>
         )}
@@ -93,7 +93,7 @@ export default function UserReviews() {
             <button
               onClick={more}
               disabled={busy}
-              className="mt-2 w-full rounded-xl border border-line py-3 text-[13.5px] font-medium text-muted disabled:opacity-50"
+              className="button-secondary mt-2 w-full rounded-xl py-3 text-[13.5px] font-medium"
             >
               {busy ? "불러오는 중…" : "더 보기"}
             </button>

@@ -47,7 +47,7 @@ const STATUS: Record<string, { label: string; cls: string; note?: string }> = {
   },
   /* 호스트가 받아주면 그 순간 둘이 되어 모임도 확정된다.
      자리 확정과 모임 확정이 더는 갈리지 않는다. */
-  confirmed: { label: "자리 확정", cls: "bg-accent-soft text-accent-pressed" },
+  confirmed: { label: "자리 확정", cls: "bg-accent-soft text-accent-strong" },
   /* 거절은 문을 닫지 않는다 — 시작 전이면 카드를 눌러 다시 신청한다.
      그 말을 화면에 적지는 않는다 (눌러보면 신청 버튼이 있다). */
   cut: { label: "거절됨", cls: "bg-surface2 text-muted" },
@@ -236,7 +236,7 @@ export default function Inbox() {
           <p className="text-[14px] text-muted">로그인하면 신청 내역이 보여요</p>
           <Link
             href="/login"
-            className="rounded-xl bg-accent px-6 py-2.5 text-[14px] font-semibold text-white active:bg-accent-pressed"
+            className="button-primary rounded-xl px-6 py-2.5 text-[14px] font-semibold"
           >
             로그인 하기
           </Link>
@@ -362,14 +362,14 @@ export default function Inbox() {
                           <button
                             disabled={busy === key}
                             onClick={() => decide(h, false)}
-                            className="rounded-xl border border-line py-2.5 text-[13px] font-medium text-muted disabled:opacity-50"
+                            className="button-secondary rounded-xl py-2.5 text-[13px] font-medium"
                           >
                             거절
                           </button>
                           <button
                             disabled={busy === key || noRoom}
                             onClick={() => decide(h, true)}
-                            className="rounded-xl bg-accent py-2.5 text-[13px] font-semibold text-white active:bg-accent-pressed disabled:opacity-40"
+                            className="button-primary rounded-xl py-2.5 text-[13px] font-semibold"
                           >
                             {busy === key ? "처리 중…" : "받기"}
                           </button>
@@ -428,14 +428,14 @@ export default function Inbox() {
                         <button
                           disabled={busy === r.id}
                           onClick={() => respond(r.id, false)}
-                          className="rounded-xl border border-line py-2.5 text-[13px] font-medium text-muted disabled:opacity-50"
+                          className="button-secondary rounded-xl py-2.5 text-[13px] font-medium"
                         >
                           거절
                         </button>
                         <button
                           disabled={busy === r.id}
                           onClick={() => respond(r.id, true)}
-                          className="rounded-xl bg-accent py-2.5 text-[13px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
+                          className="button-primary rounded-xl py-2.5 text-[13px] font-semibold"
                         >
                           {busy === r.id ? "처리 중…" : "수락하고 채팅"}
                         </button>
@@ -479,7 +479,7 @@ export default function Inbox() {
                         : s.session_status === "confirmed"
                           ? {
                               label: "다녀왔어요",
-                              cls: "bg-accent-soft text-accent-pressed",
+                              cls: "bg-accent-soft text-accent-strong",
                               note: "함께한 모임에서 다시 볼 수 있어요.",
                             }
                           : {
@@ -494,7 +494,7 @@ export default function Inbox() {
                         ? mine && s.session_status === "confirmed"
                           ? {
                               label: "오늘 모임이에요",
-                              cls: "bg-accent-soft text-accent-pressed",
+                              cls: "bg-accent-soft text-accent-strong",
                               note: "모임이 진행 중이에요.",
                             }
                           : mine
@@ -512,7 +512,7 @@ export default function Inbox() {
                         : mine && s.session_status === "confirmed"
                           ? {
                               label: "모임 확정",
-                              cls: "bg-accent-soft text-accent-pressed",
+                              cls: "bg-accent-soft text-accent-strong",
                               note: "채팅에서 만나요.",
                             }
                           : (STATUS[s.my_status] ?? STATUS.waiting);
@@ -564,7 +564,7 @@ export default function Inbox() {
                     <Link
                       key={s.id}
                       href={`/session?id=${s.id}`}
-                      className="block rounded-xl border border-line bg-surface p-4 transition-colors active:bg-surface2"
+                      className="button-secondary block rounded-xl p-4 transition-colors active:bg-surface2"
                     >
                       {body}
                     </Link>
@@ -610,7 +610,7 @@ export default function Inbox() {
                     <span
                       className={`shrink-0 rounded-md px-2.5 py-1 text-[11.5px] font-medium ${
                         r.status === "accepted"
-                          ? "bg-accent-soft text-accent-pressed"
+                          ? "bg-accent-soft text-accent-strong"
                           : "bg-surface2 text-muted"
                       }`}
                     >

@@ -121,7 +121,7 @@ export default function Reset() {
           />
           <button
             disabled={busy}
-            className="mt-1 rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
+            className="button-primary mt-1 rounded-xl py-3.5 text-[15px] font-semibold"
           >
             {busy ? "보내는 중…" : "인증번호 받기"}
           </button>
@@ -149,7 +149,7 @@ export default function Reset() {
           <button
             type="submit"
             disabled={busy || otp.length < 6}
-            className="mt-3 w-full rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-40"
+            className="button-primary mt-3 w-full rounded-xl py-3.5 text-[15px] font-semibold"
           >
             {busy ? "확인 중…" : "확인"}
           </button>
@@ -188,7 +188,7 @@ export default function Reset() {
           )}
           <button
             disabled={busy}
-            className="mt-1 rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
+            className="button-primary mt-1 rounded-xl py-3.5 text-[15px] font-semibold"
           >
             {busy ? "변경 중…" : "비밀번호 바꾸기"}
           </button>

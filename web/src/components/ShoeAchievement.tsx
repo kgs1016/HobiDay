@@ -23,7 +23,7 @@ export default function ShoeAchievement({ progress, error = "", onRetry }: {
 
       {error ? <div role="alert" className="py-8 text-center">
         <p className="text-sm text-muted">{error}</p>
-        <button type="button" onClick={onRetry} className="mt-2 min-h-11 px-3 text-sm font-semibold text-accent-pressed">다시 불러오기</button>
+        <button type="button" onClick={onRetry} className="mt-2 min-h-11 px-3 text-sm font-semibold text-accent-strong">다시 불러오기</button>
       </div> : !current || !progress ? <p role="status" className="py-12 text-center text-sm text-faint">기록 불러오는 중…</p> : <>
         <div className="grid grid-cols-[minmax(0,144px)_1fr] items-center gap-3 py-3">
           <ClimbingShoe color={current.id} className="w-full bg-white" />
@@ -50,7 +50,7 @@ export default function ShoeAchievement({ progress, error = "", onRetry }: {
           </>}
         </div>
 
-        <Link href="/me/ascents" className="mt-3 flex min-h-12 items-center justify-center gap-1.5 rounded-xl bg-accent-strong px-4 text-[14px] font-semibold text-white active:brightness-95">
+        <Link href="/me/ascents" className="button-primary mt-3 flex min-h-12 items-center justify-center gap-1.5 rounded-xl px-4 text-[14px] font-semibold">
           <PlusIcon size={17} />완등 기록하기
         </Link>
       </>}

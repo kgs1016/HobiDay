@@ -88,7 +88,7 @@ export default function Calendar({
                   ? // 지난 날 · 범위 밖 — 눌리지 않고, 눌리지 않아 보인다
                     "text-faint/40"
                   : from && c.key >= from && to && c.key <= to
-                    ? "bg-accent font-semibold text-white"
+                    ? "bg-accent-soft font-semibold text-accent-strong ring-1 ring-inset ring-accent"
                     : "text-ink active:bg-surface2"
               }`}
             >

@@ -144,7 +144,7 @@ export default function ReportSheet({
           <button
             onClick={onClose}
             disabled={busy}
-            className="flex-1 rounded-xl border border-line py-3.5 text-[14px] font-medium disabled:opacity-50"
+            className="button-secondary flex-1 rounded-xl py-3.5 text-[14px] font-medium"
           >
             취소
           </button>

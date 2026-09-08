@@ -58,7 +58,7 @@ export default function MyReviews() {
           <p className="text-[14px] text-muted">로그인하면 보여요</p>
           <Link
             href="/login"
-            className="rounded-xl bg-accent px-6 py-2.5 text-[14px] font-semibold text-white active:bg-accent-pressed"
+            className="button-primary rounded-xl px-6 py-2.5 text-[14px] font-semibold"
           >
             로그인 하기
           </Link>

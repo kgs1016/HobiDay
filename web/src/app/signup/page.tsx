@@ -161,7 +161,7 @@ function SignupForm() {
           <button
             type="submit"
             disabled={busy || otp.length < 6}
-            className="mt-3 w-full rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-40"
+            className="button-primary mt-3 w-full rounded-xl py-3.5 text-[15px] font-semibold"
           >
             {busy ? "확인 중…" : "인증하고 가입 완료"}
           </button>
@@ -236,7 +236,7 @@ function SignupForm() {
         )}
         <button
           disabled={busy}
-          className="mt-1 rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
+          className="button-primary mt-1 rounded-xl py-3.5 text-[15px] font-semibold"
         >
           {busy ? "처리 중…" : "가입하기"}
         </button>
@@ -261,7 +261,7 @@ function SignupForm() {
         className="mt-5 block w-full text-center text-[13px] font-medium text-muted"
       >
         이미 계정이 있으신가요?{" "}
-        <span className="font-semibold text-accent-pressed">로그인</span>
+        <span className="font-semibold text-accent-strong">로그인</span>
       </Link>
     </main>
   );
