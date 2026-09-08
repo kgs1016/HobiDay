@@ -86,7 +86,7 @@ checks as (
     from pg_tables
    where schemaname='public'
      and tablename in ('profiles','sessions','signups','messages',
-                       'blocks','reports')
+                       'blocks','reports','gyms')
 
   /* 11. 암장 마스터 — 폐업 35·중복 1 을 내린 뒤 운영 164곳 (20260908200000).
          200 이면 비활성 마이그레이션이 안 올라간 것이고, 그 사이 값이면
