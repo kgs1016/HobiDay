@@ -12,18 +12,14 @@ import type { MyProfile } from "@/lib/myProfile";
 import { loadMyProfile } from "@/lib/myProfile";
 import { unregisterPush } from "@/lib/nativePush";
 import {
-  CREDIT_LABELS,
-  REQUEST_COST,
   getSupabase,
   hasSupabase,
   currentUser,
   deleteAccount,
   fetchAppFlags,
-  fetchCredits,
   fetchMyProfileDb,
   fetchMyVideoCount,
   signedPhotoUrls,
-  type Credits,
 } from "@/lib/supabase";
 
 /* 설정 화면의 한 줄 — 카드를 만들지 않고 행 + divider 로 쌓는다 */
@@ -48,8 +44,6 @@ export default function Me() {
   const [profile, setProfile] = useState<MyProfile | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [videoCount, setVideoCount] = useState(0);
-  const [credits, setCredits] = useState<Credits | null>(null);
-  const [showCredits, setShowCredits] = useState(false);
   const [loading, setLoading] = useState(true);
   const [leaving, setLeaving] = useState(false); // 탈퇴 확인 패널
   const [confirmText, setConfirmText] = useState("");
@@ -71,16 +65,14 @@ export default function Me() {
       }
       setAuthed(true);
       setEmail(user.email ?? null);
-      const [prof, vids, cr, flags] = await Promise.all([
+      const [prof, vids, flags] = await Promise.all([
         fetchMyProfileDb(),
         fetchMyVideoCount(),
-        fetchCredits(),
         fetchAppFlags(),
       ]);
       if (flags) setLocked(!flags.sessions_open && !flags.people_open);
       setProfile(prof);
       setVideoCount(vids);
-      setCredits(cr);
       setLoading(false);
       if (prof?.photo)
         setPhotoUrl((await signedPhotoUrls([prof.photo]))[prof.photo] ?? null);
@@ -178,58 +170,8 @@ export default function Me() {
 
       <ProfileShoe />
 
-      {/* 크레딧 · 내 영상 — 섹션 사이는 얇은 회색 밴드로 구분한다 */}
+      {/* 내 영상 */}
       <section className="border-t-8 border-surface2 px-4">
-        <button
-          onClick={() => setShowCredits((v) => !v)}
-          className="flex w-full items-center justify-between border-b border-line py-3.5 text-left"
-        >
-          <span className="text-[15px]">크레딧</span>
-          <span className="flex items-center gap-1.5">
-            <span className="text-[15px] font-semibold">
-              {(credits?.balance ?? 0).toLocaleString()}
-            </span>
-            <ChevronRightIcon
-              size={15}
-              className={`text-faint transition-transform ${
-                showCredits ? "rotate-90" : ""
-              }`}
-            />
-          </span>
-        </button>
-
-        {showCredits && credits && (
-          <div className="border-b border-line py-1">
-            {credits.history.length === 0 ? (
-              <p className="py-3 text-[12.5px] leading-relaxed text-muted">
-                아직 내역이 없어요.
-              </p>
-            ) : (
-              credits.history.map((h, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between py-2.5"
-                >
-                  <span className="text-[13px] text-muted">
-                    {CREDIT_LABELS[h.reason] ?? h.reason}
-                  </span>
-                  <span
-                    className={`text-[13px] font-semibold ${
-                      h.delta > 0 ? "text-accent-pressed" : "text-muted"
-                    }`}
-                  >
-                    {h.delta > 0 ? `+${h.delta}` : h.delta}
-                  </span>
-                </div>
-              ))
-            )}
-            <p className="pb-3 pt-1 text-[11.5px] leading-relaxed text-faint">
-              채팅 보내기 {REQUEST_COST}크레딧 — 보내는 순간 쓰여요 · 모임 신청
-              무료
-            </p>
-          </div>
-        )}
-
         <Link
           href="/me/videos"
           className="flex items-center justify-between py-3.5"
@@ -279,10 +221,6 @@ export default function Me() {
           <ul className="mt-3 flex flex-col gap-1.5 text-[12.5px] leading-relaxed text-muted">
             <li>· 프로필과 사진·영상이 모두 지워져요</li>
             <li>· 주고받은 대화와 매칭이 사라져요 (상대방 쪽에서도)</li>
-            <li>
-              · 남은 크레딧 {(credits?.balance ?? 0).toLocaleString()}은
-              복구되지 않아요
-            </li>
             <li>· 신청한 모임에서 자동으로 빠져요</li>
           </ul>
           <p className="mt-3 text-[12px] leading-relaxed text-muted">
