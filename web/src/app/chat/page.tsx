@@ -11,6 +11,8 @@ import { level } from "@/lib/levels";
 import ReportSheet from "@/components/ReportSheet";
 import { AvatarFallback, ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 import GymPhoto from "@/components/GymPhoto";
+import PublicShoe from "@/components/PublicShoe";
+import type { PublicShoeAchievement } from "@/lib/shoeProgress";
 import { CarabinerIllust, ShoeIllust } from "@/components/illustrations";
 import { notifyPush } from "@/lib/nativePush";
 import {
@@ -18,6 +20,7 @@ import {
   fetchSessionMembers,
   fetchChatMessages,
   fetchChats,
+  fetchPublicShoeAchievements,
   fetchSessionChatMessages,
   fetchSessionChats,
   hasSupabase,
@@ -566,17 +569,25 @@ function Bubble({
   );
 }
 
-/* 1:1 방에서 제목을 누르면 뜨는 상대 프로필.
-   목록(my_chats)이 이미 내려주는 값만 쓴다 — 프로필 전체를 다시
-   불러오면 방을 열 때마다 요청이 하나 더 붙는데, 여기서 궁금한 건
-   "얼굴이랑 대충 누구였지" 정도다. */
+/* 1:1 상대 프로필. 기본 정보는 채팅 목록을 사용하고,
+   성취 요약은 프로필을 실제로 열었을 때 공개 권한에 맞춰 조회한다. */
 function PartnerSheet({ chat, onClose }: { chat: Chat; onClose: () => void }) {
   const [url, setUrl] = useState<string | null>(null);
+  const [achievement, setAchievement] = useState<PublicShoeAchievement | null>();
 
   useEffect(() => {
     if (!chat.photo) return;
     (async () => setUrl((await signedPhotoUrls([chat.photo!]))[chat.photo!] ?? null))();
   }, [chat.photo]);
+
+  useEffect(() => {
+    let active = true;
+    fetchPublicShoeAchievements([chat.partner_id], chat.session_id ?? undefined).then(
+      summaries => { if (active) setAchievement(summaries?.[chat.partner_id] ?? null); },
+      () => { if (active) setAchievement(null); },
+    );
+    return () => { active = false; };
+  }, [chat.partner_id, chat.session_id]);
 
   const lv = chat.level ? level(chat.level) : null;
 
@@ -618,6 +629,10 @@ function PartnerSheet({ chat, onClose }: { chat: Chat; onClose: () => void }) {
         <p className="mt-3 text-[12.5px] leading-relaxed text-faint">
           {origin(chat)}
         </p>
+
+        {achievement === undefined
+          ? <p role="status" className="mt-4 border-t border-line pt-4 text-[12px] text-muted">성취 불러오는 중…</p>
+          : <PublicShoe achievement={achievement ?? undefined} />}
 
         <button
           onClick={onClose}
@@ -752,7 +767,7 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
       </ChatFrame>
 
       {showProfile && (
-        <PartnerSheet chat={chat} onClose={() => setShowProfile(false)} />
+        <PartnerSheet key={chat.partner_id} chat={chat} onClose={() => setShowProfile(false)} />
       )}
 
       {reporting && (
