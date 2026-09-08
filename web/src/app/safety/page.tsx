@@ -61,9 +61,7 @@ export default function Safety() {
         <p className="pt-12 text-center text-[13.5px] text-faint">불러오는 중…</p>
       ) : blocks.length === 0 ? (
         <p className="px-6 pt-12 text-center text-[13px] leading-relaxed text-muted">
-          차단한 사람이 없어요.
-          <br />
-          불편한 일이 있으면 프로필이나 채팅에서 신고해주세요.
+          차단한 사람이 없어요
         </p>
       ) : (
         <div className="mt-4 flex flex-col divide-y divide-line">

@@ -381,9 +381,6 @@ export default function Home() {
               <p className="mt-4 text-[15px] font-semibold">
                 아직 열린 모임이 없어요
               </p>
-              <p className="mt-1 text-[13px] text-muted">
-                첫 모임을 직접 열어보세요.
-              </p>
               <Link
                 href="/session/new"
                 className="mt-4 rounded-lg bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-white active:bg-accent-pressed"
@@ -477,9 +474,6 @@ export default function Home() {
               <ShoeIllust size={68} />
               <p className="mt-4 text-[15px] font-semibold">
                 아직 볼 수 있는 프로필이 없어요
-              </p>
-              <p className="mt-1 text-[13px] leading-relaxed text-muted">
-                프로필을 공개한 회원이 생기면 바로 보여요.
               </p>
             </div>
           )}

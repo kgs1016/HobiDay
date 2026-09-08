@@ -60,9 +60,6 @@ export default function ChatRequestSheet({
         onClick={(e) => e.stopPropagation()}
       >
         <p className="text-[16.5px] font-bold">{target.nickname}님에게 채팅 보내기</p>
-        <p className="mt-1 text-[12.5px] text-muted">
-          한 줄 남기면 수락될 가능성이 높아요.
-        </p>
         <textarea
           value={msg}
           onChange={(e) => setMsg(e.target.value.slice(0, 200))}

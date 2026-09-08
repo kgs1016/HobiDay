@@ -18,6 +18,7 @@ import {
   deleteAccount,
   fetchAppFlags,
   fetchMyProfileDb,
+  fetchMyVideoCount,
   fetchUserProfile,
   signedPhotoUrls,
 } from "@/lib/supabase";
@@ -45,6 +46,7 @@ export default function Me() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   /* 내 프로필을 남이 보는 모양 그대로 — 추천 수·리뷰 수 */
   const [mine, setMine] = useState<{ id: string; likes: number; reviews: number } | null>(null);
+  const [videoCount, setVideoCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [leaving, setLeaving] = useState(false); // 탈퇴 확인 패널
   const [confirmText, setConfirmText] = useState("");
@@ -66,13 +68,15 @@ export default function Me() {
       }
       setAuthed(true);
       setEmail(user.email ?? null);
-      const [prof, flags, me] = await Promise.all([
+      const [prof, flags, me, vids] = await Promise.all([
         fetchMyProfileDb(),
         fetchAppFlags(),
         fetchUserProfile(user.id),
+        fetchMyVideoCount(),
       ]);
       if (flags) setLocked(!flags.sessions_open && !flags.people_open);
       setProfile(prof);
+      setVideoCount(vids);
       if (me.profile)
         setMine({ id: me.profile.id, likes: me.profile.likes, reviews: me.profile.reviews });
       setLoading(false);
@@ -162,7 +166,7 @@ export default function Me() {
 
       <ProfileShoe />
 
-      {/* 내가 받은 리뷰 — 남의 프로필과 같은 칸. 내 영상은 프로필 수정 아래로 갔다 */}
+      {/* 내가 받은 리뷰 — 남의 프로필과 같은 칸 */}
       {mine && (
         <section className="px-4 pb-2">
           <PlayerReviews userId={mine.id} count={mine.reviews} likes={mine.likes} />
@@ -172,6 +176,14 @@ export default function Me() {
       {/* 메뉴 */}
       <section className="border-t-8 border-surface2 px-4">
         <MenuRow href="/profile/new" label="프로필 수정" />
+        {/* 커뮤니티에 올린 내 영상 */}
+        <Link href="/me/videos" className="flex items-center justify-between border-b border-line py-3.5 text-[15px] last:border-b-0">
+          <span>내 영상</span>
+          <span className="flex items-center gap-1.5">
+            <span className="font-semibold">{videoCount}</span>
+            <ChevronRightIcon size={15} className="text-faint" />
+          </span>
+        </Link>
         {/* 오픈 전 잠금 중엔 모임 화면이 닫혀 있어 눌러도 홈으로 튕긴다 — 숨긴다 */}
         {!locked && <MenuRow href="/session/mine" label="내가 만든 모임" />}
         {/* 끝난 모임은 홈에서도 채팅에서도 사라진다 — 여기가 유일한 통로 */}

@@ -370,10 +370,7 @@ export default function SessionFilterBar({
 
             {open === "time" && (
               <>
-                <p className="mt-4 text-[12.5px] text-muted">
-                  모임이 <b className="text-ink">시작하는</b> 시각 기준이에요.
-                </p>
-                <div className="mt-2 flex items-center gap-2">
+                <div className="mt-4 flex items-center gap-2">
                   <input
                     type="time"
                     value={f.timeFrom}

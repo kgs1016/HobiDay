@@ -87,7 +87,7 @@ export default function GymPicker({
         <div className="mt-2 min-h-0 flex-1 overflow-y-auto">
           {shown.length === 0 ? (
             <p className="pt-10 text-center text-[13px] text-muted">
-              찾는 암장이 없어요. 다른 이름으로 검색해보세요.
+              찾는 암장이 없어요
             </p>
           ) : (
             <div className="flex flex-col divide-y divide-line">

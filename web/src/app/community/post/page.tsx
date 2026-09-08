@@ -152,7 +152,6 @@ export default function PostPage() {
         </header>
         <div className="mt-20 flex flex-col items-center gap-3 text-center">
           <p className="text-[15px] font-semibold">글을 찾을 수 없어요</p>
-          <p className="text-[13px] text-muted">지워졌거나 볼 수 없는 글이에요.</p>
           <Link href={BOARD} className="mt-2 text-[13.5px] font-semibold text-accent-pressed">
             게시판으로
           </Link>

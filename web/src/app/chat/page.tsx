@@ -250,11 +250,6 @@ function ChatContent({
             <p className="mt-3 text-[15px] font-semibold">
               아직 열린 모임 채팅이 없어요
             </p>
-            <p className="text-[13px] leading-relaxed text-muted">
-              호스트가 신청을 받아주면
-              <br />
-              그때부터 참가자끼리 여기서 이야기해요
-            </p>
           </div>
         ) : (
           <div className="flex flex-col divide-y divide-line pb-6">
@@ -302,11 +297,6 @@ function ChatContent({
         <div className="mt-16 flex flex-col items-center gap-1.5 text-center">
           <CarabinerIllust size={64} />
           <p className="mt-3 text-[15px] font-semibold">아직 연결된 상대가 없어요</p>
-          <p className="text-[13px] leading-relaxed text-muted">
-            보낸 채팅 신청을 상대가 수락하면
-            <br />
-            여기서 대화가 시작돼요
-          </p>
         </div>
       ) : (
         <div className="flex flex-col divide-y divide-line pb-6">
@@ -696,8 +686,6 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
           <p className="pt-10 text-center text-[13.5px] text-faint">불러오는 중…</p>
         ) : msgs.length === 0 ? (
           <p className="px-6 pt-10 text-center text-[13px] leading-relaxed text-muted">
-            채팅 신청을 수락해서 열린 방이에요.
-            <br />
             먼저 말을 걸어보세요.
           </p>
         ) : (
@@ -821,9 +809,7 @@ function SessionThread({
         <p className="pt-10 text-center text-[13.5px] text-faint">불러오는 중…</p>
       ) : msgs.length === 0 && !ended ? (
         <p className="px-6 pt-10 text-center text-[13px] leading-relaxed text-muted">
-          같이 갈 사람이 정해져서 열린 방이에요.
-          <br />
-          만날 시간과 장소를 여기서 맞춰보세요.
+          만날 시간과 장소를 맞춰보세요.
         </p>
       ) : (
         <div className="flex flex-col gap-2">

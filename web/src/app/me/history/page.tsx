@@ -170,9 +170,6 @@ export default function MatchHistory() {
         <div className="mt-16 flex flex-col items-center gap-1.5 text-center">
           <HoldIllust size={64} />
           <p className="mt-3 text-[15px] font-semibold">아직 끝난 모임이 없어요</p>
-          <p className="text-[12.5px] leading-relaxed text-muted">
-            성사된 모임이 끝나면 여기에 쌓여요
-          </p>
           <Link
             href="/"
             className="mt-3 rounded-xl bg-accent px-6 py-2.5 text-[14px] font-semibold text-white active:bg-accent-pressed"

@@ -69,9 +69,6 @@ export default function MyReviews() {
         <div className="mt-16 flex flex-col items-center gap-1.5 text-center">
           <HoldIllust size={64} />
           <p className="mt-3 text-[15px] font-semibold">리뷰를 남길 모임이 없어요</p>
-          <p className="text-[12.5px] leading-relaxed text-muted">
-            모임이 끝나고 일주일 동안 여기서 남길 수 있어요
-          </p>
         </div>
       ) : (
         <div className="flex flex-col divide-y divide-line">
