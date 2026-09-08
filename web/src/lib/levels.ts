@@ -37,12 +37,14 @@ export function levelRangeLabel(min: LevelId, max: LevelId): string {
 export type CareerId = 1 | 2 | 3 | 4 | 5 | 6;
 
 export const CAREERS: { id: CareerId; label: string }[] = [
-  { id: 1, label: "3개월 미만" },
-  { id: 2, label: "3~6개월" },
-  { id: 3, label: "6개월~1년" },
-  { id: 4, label: "1~2년" },
-  { id: 5, label: "2~3년" },
-  { id: 6, label: "3년 이상" },
+  /* 2026-09 에 구간을 넓혔다. id 는 그대로라 DB(check 1~6)는 안 바뀐다 —
+     예전에 고른 값은 새 라벨로 읽힌다 (예: 6 "3년 이상" → "5년 이상"). */
+  { id: 1, label: "6개월" },
+  { id: 2, label: "1년" },
+  { id: 3, label: "2년" },
+  { id: 4, label: "3년" },
+  { id: 5, label: "4년" },
+  { id: 6, label: "5년 이상" },
 ];
 
 export const career = (id: CareerId) => CAREERS[id - 1];

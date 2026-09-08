@@ -188,9 +188,6 @@ export default function UserProfile({
           {profile.nickname}
           <span className="ml-1.5 text-[14px] font-normal text-muted">{profile.age}</span>
         </p>
-        <p className="mt-1 text-[13px] text-muted">
-          {[profile.area, lv && lv.name].filter(Boolean).join(" · ")}
-        </p>
         {profile.joined > 0 && (
           <span className="mt-3 rounded-md bg-surface2 px-2.5 py-1 text-[11.5px] font-medium text-muted">
             모임 {profile.joined}번 참여했어요

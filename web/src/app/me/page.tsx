@@ -7,7 +7,6 @@ import ProfileTodo from "@/components/ProfileTodo";
 import ProfileShoe from "@/components/ProfileShoe";
 import { resetProfileGate } from "@/components/RequireProfile";
 import { AvatarFallback, ChevronRightIcon } from "@/components/icons";
-import { careerLabel, level } from "@/lib/levels";
 import type { MyProfile } from "@/lib/myProfile";
 import { loadMyProfile } from "@/lib/myProfile";
 import { unregisterPush } from "@/lib/nativePush";
@@ -132,21 +131,8 @@ export default function Me() {
           <div className="min-w-0 flex-1">
             {profile ? (
               <>
+                {/* 이름과 메일만 — 수정은 아래 "프로필 수정" 으로 */}
                 <p className="text-[17px] font-bold">{profile.nickname}</p>
-                <p className="mt-0.5 text-[13px] text-muted">
-                  {[
-                    careerLabel(profile.careerId) &&
-                      `구력 ${careerLabel(profile.careerId)}`,
-                    profile.homeGym,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </p>
-                <Link href="/profile/new" className="mt-2 inline-flex items-center gap-1.5 text-[12px] text-muted">
-                  등반 수준 <b className="font-semibold text-ink">{profile.level ? level(profile.level).name : "미설정"}</b>
-                  <span className="text-faint">· 직접 선택</span>
-                  <ChevronRightIcon size={12} />
-                </Link>
               </>
             ) : (
               <>
