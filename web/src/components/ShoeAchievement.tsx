@@ -15,7 +15,7 @@ export default function ShoeAchievement({ progress, error = "", onRetry }: {
   const next = result?.next;
 
   return (
-    <section className="border-t border-line px-4 pb-4 pt-5" aria-labelledby="profile-shoe-title">
+    <section className="border-t border-line px-4 pb-1 pt-5" aria-labelledby="profile-shoe-title">
       <div className="flex items-center justify-between gap-2">
         <h2 id="profile-shoe-title" className="text-[15px] font-semibold">내 암벽화</h2>
         <span className="text-[12px] text-muted">완등 기록으로 얻는 성취</span>

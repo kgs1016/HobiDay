@@ -88,7 +88,7 @@ export default function PlayerReviews({
   }, [userId]);
 
   return (
-    <section className="mt-6 border-t border-line pt-4">
+    <section className="mt-2 border-t border-line pt-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-1.5 text-[13px] font-semibold">
           플레이어 리뷰

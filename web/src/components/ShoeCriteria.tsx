@@ -4,7 +4,7 @@ import { SHOE_STAGES, type ShoeColorId } from "@/lib/shoeProgress";
 /** 내 정보와 상대 프로필에서 같은 성취 기준표를 사용한다. */
 export default function ShoeCriteria({ current }: { current?: ShoeColorId }) {
   return (
-      <details className="group mt-4 border-t border-line">
+      <details className="group mt-2">
         <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between text-[13px] font-semibold [&::-webkit-details-marker]:hidden">
           단계 기준표
           <ChevronRightIcon size={15} className="text-faint transition-transform group-open:rotate-90" />
