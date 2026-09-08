@@ -37,5 +37,5 @@ npm run sync       # 네이티브용 — output: 'export' 로 빌드해 android/
 
 - DB 스키마·정책의 현재 기준: `../supabase/migrations/` 의 헤더 주석 + `../supabase/verify.sql`
 - 데이터 접근은 전부 `src/lib/supabase.ts` 를 거친다
-- 금액·정원 같은 값은 서버 `credit_rule()` 과 짝이다 — 한쪽만 바꾸지 말 것
+- 앱 기능은 전면 무료다. 정원·신청 조건을 바꾸면 서버 RPC와 화면을 함께 확인할 것
   (`../supabase/README.md` 의 "주의" 참고)

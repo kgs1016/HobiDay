@@ -10,7 +10,6 @@ import { isProfileComplete } from "@/lib/profileGate";
 import { downscaleImage } from "@/lib/imageResize";
 import {
   PHOTO_MAX_BYTES,
-  claimProfileBonus,
   hasSupabase,
   currentUser,
   fetchMyProfileDb,
@@ -182,11 +181,7 @@ export default function ProfileNew() {
         setBusy(false);
         return alert(`저장 실패: ${r.error}`);
       }
-      // 처음 완성한 경우에만 적립된다 (서버가 중복을 무시)
-      const bonus = await claimProfileBonus();
       setBusy(false);
-      if (bonus?.earned)
-        alert(`프로필 완성! 크레딧 +${bonus.earned}를 받았어요 🎉`);
     } else {
       saveMyProfile(profile);
     }
@@ -323,8 +318,8 @@ export default function ProfileNew() {
           </Field>
         </div>
 
-        <Field label="레벨 (선택 — 편하게 완등하는 수준)">
-          <div className="flex gap-1.5">
+        <Field label="등반 수준 (선택)">
+          <div className="flex flex-wrap gap-1.5">
             {LEVELS.map((l) => (
               <Chip
                 key={l.id}
@@ -332,14 +327,14 @@ export default function ProfileNew() {
                 /* 고른 걸 다시 누르면 해제 — 레벨은 비워둘 수 있다 */
                 onClick={() => setLevel(level === l.id ? null : l.id)}
               >
-                L{l.id}
+                {l.name}
               </Chip>
             ))}
           </div>
           <p className="mt-1.5 text-[12px] text-muted">
             {level
-              ? `L${level} ${LEVELS[level - 1].name} — 더클라임 기준 ${LEVELS[level - 1].colors} (${LEVELS[level - 1].vgrade})`
-              : "아직 감이 없으면 비워둬도 돼요"}
+              ? LEVELS[level - 1].description
+              : "모임에서 함께 탈 수준 · 직접 선택"}
             <button
               type="button"
               onClick={() => setShowLevelGuide((v) => !v)}
@@ -361,15 +356,16 @@ export default function ProfileNew() {
                   }`}
                 >
                   <span className="shrink-0">
-                    L{l.id} {l.name}
+                    {l.name}
                   </span>
                   <span className="text-right text-muted">
-                    {l.colors} · {l.vgrade}
+                    {l.description}
                   </span>
                 </button>
               ))}
             </div>
           )}
+          <p className="mt-2 text-[12px] text-muted">암벽화 성취는 완등 기록으로 별도 계산</p>
         </Field>
 
         <Field label="구력 (클라이밍 시작한 지)">

@@ -144,6 +144,16 @@ export default function AscentsPage() {
           {notice && <p role="status" className="mt-3 text-sm text-accent-pressed">{notice}</p>}
 
           <section className="mt-8 border-t border-line pt-4" aria-labelledby="ascent-list-title">
+            {progress && progress.total > 0 && <div className="mb-5">
+              <h2 className="text-[13px] font-semibold">난이도별 완등</h2>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {Object.entries(progress.grade_counts).filter(([, count]) => count > 0)
+                  .sort(([a], [b]) => (a === "unknown" ? Infinity : Number(a)) - (b === "unknown" ? Infinity : Number(b)))
+                  .map(([grade, count]) => <span key={grade} className="rounded-lg bg-surface2 px-2.5 py-1.5 text-[12px] text-muted">
+                    {grade === "unknown" ? "V등급 모름" : gradeLabel(Number(grade))} <b className="ml-1 font-semibold tabular-nums text-ink">{count}개</b>
+                  </span>)}
+              </div>
+            </div>}
             <h2 id="ascent-list-title" className="text-[15px] font-semibold">기록한 문제</h2>
             {list === null ? <p className="py-6 text-sm text-muted">불러오는 중…</p>
               : list.length === 0 ? <p className="py-6 text-sm text-muted">첫 완등을 기록해보세요</p>

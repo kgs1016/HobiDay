@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryId, useQueryParam } from "@/lib/queryId";
 import { notifyPush } from "@/lib/nativePush";
+import { useNow } from "@/lib/browserState";
 import { level, levelRangeLabel } from "@/lib/levels";
 import { isProfileComplete } from "@/lib/profileGate";
 import { MOCK_PEOPLE, MOCK_SESSIONS, slotsLeft, type Session } from "@/lib/mock";
@@ -46,26 +47,15 @@ function mockMembers(x: Session): SessionMember[] {
   }));
 }
 
-export default function SessionDetail() {
-  const id = useQueryId();
-  const from = useQueryParam("from");
-  const router = useRouter();
-  const [s, setS] = useState<S | null | undefined>(undefined);
-  const [hostPhoto, setHostPhoto] = useState<string | null>(null);
-  /* 확정된 참가자. 서버에 session_members 가 아직 없으면 빈 배열로 오고,
-     그때는 예전처럼 "남 확정 · 여 확정" 익명 칸을 그린다. 화면이 DB 보다
-     먼저 배포돼도 이름 대신 익명 칸이 보일 뿐 아무것도 안 깨진다. */
-  const [members, setMembers] = useState<SessionMember[]>([]);
-  const [memberPhotos, setMemberPhotos] = useState<Record<string, string>>({});
-  const [busy, setBusy] = useState(false);
-
-  const load = async () => {
-    if (!id) return setS(null);
-    if (!hasSupabase()) {
-      const m = MOCK_SESSIONS.find((x) => x.id === id) ?? null;
-      setS(m);
-      setMembers(m ? mockMembers(m) : []);
-      return;
+async function readSessionDetail(id: string | null): Promise<{
+  session: S | null;
+  members: SessionMember[];
+  hostPhoto: string | null;
+  memberPhotos: Record<string, string>;
+}> {
+    if (!id || !hasSupabase()) {
+      const session = MOCK_SESSIONS.find(x => x.id === id) ?? null;
+      return { session, members: session ? mockMembers(session) : [], hostPhoto: null, memberPhotos: {} };
     }
     // 목록에서 찾지 않고 단건으로 받는다. 목록은 "지금 신청할 수 있는
     // 모임" 만 담아서, 시작했거나 취소된 모임은 여기 없다.
@@ -74,25 +64,49 @@ export default function SessionDetail() {
       currentUser(),
       fetchSessionMembers(id),
     ]);
-    setS(row ? toSession(row, undefined, user?.id) : null);
-    setMembers(mem);
     // 얼굴은 비공개 버킷에 있다 — 호스트와 참가자 것을 한 번에 받는다
     const paths = [
       row?.host_photo,
       ...mem.map((m) => m.photo),
     ].filter(Boolean) as string[];
-    if (paths.length) {
-      const urls = await signedPhotoUrls(paths);
-      setMemberPhotos(urls);
-      if (row?.host_photo) setHostPhoto(urls[row.host_photo] ?? null);
-    }
+    const urls = paths.length ? await signedPhotoUrls(paths) : {};
+    return {
+      session: row ? toSession(row, undefined, user?.id) : null,
+      members: mem,
+      memberPhotos: urls,
+      hostPhoto: row?.host_photo ? urls[row.host_photo] ?? null : null,
+    };
+}
+
+export default function SessionDetail() {
+  const id = useQueryId();
+  const from = useQueryParam("from");
+  if (id === undefined) return <main className="px-4 pt-24 text-center text-[13.5px] text-faint">불러오는 중…</main>;
+  // 주소의 모임이 바뀌면 이전 모임의 화면과 진행 중 응답도 함께 정리한다.
+  return <SessionContent key={id ?? ""} id={id} from={from} />;
+}
+
+function SessionContent({ id, from }: { id: string | null; from: string | null | undefined }) {
+  const router = useRouter();
+  const now = useNow();
+  const [detail, setDetail] = useState<Awaited<ReturnType<typeof readSessionDetail>>>();
+  const [busy, setBusy] = useState(false);
+  const s = detail?.session;
+  const members = detail?.members ?? [];
+  const hostPhoto = detail?.hostPhoto ?? null;
+  const memberPhotos = detail?.memberPhotos ?? {};
+
+  const load = async () => {
+    const next = await readSessionDetail(id);
+    setDetail(next);
   };
 
   useEffect(() => {
-    // id 는 첫 렌더에 undefined (주소를 아직 안 읽음) — 읽은 뒤에만 부른다
-    if (id === undefined) return;
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const controller = new AbortController();
+    readSessionDetail(id).then(next => {
+      if (!controller.signal.aborted) setDetail(next);
+    });
+    return () => controller.abort();
   }, [id]);
 
   /* 모임 채팅방에서 제목을 눌러 들어왔으면 그 방으로 돌려보낸다.
@@ -120,8 +134,8 @@ export default function SessionDetail() {
   const full = left.total <= 0;
   // 시작하면 더 못 받는다 (서버도 session_join 에서 막는다).
   // 목데이터에는 startsAt 이 없어서 그때는 늘 false.
-  const started = !!s.startsAt && new Date(s.startsAt).getTime() <= Date.now();
-  const ended = !!s.endsAt && new Date(s.endsAt).getTime() <= Date.now();
+  const started = !!s.startsAt && new Date(s.startsAt).getTime() <= now;
+  const ended = !!s.endsAt && new Date(s.endsAt).getTime() <= now;
   /* 이 화면은 목록에서 떼어낸 뒤로 끝난 모임·취소된 모임도 연다
      (채팅방에서 들어오니까). 그런데 문구는 아직 살아있는 모임만
      염두에 두고 있었다. 상태를 먼저 보고 말한다. */
@@ -383,7 +397,7 @@ export default function SessionDetail() {
               <p className="mt-0.5 truncate text-[12.5px] text-muted">
                 {[
                   s.host.area,
-                  s.host.level && `L${s.host.level} ${level(s.host.level).name}`,
+                  s.host.level && level(s.host.level).name,
                 ]
                   .filter(Boolean)
                   .join(" · ")}

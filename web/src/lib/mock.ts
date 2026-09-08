@@ -63,6 +63,7 @@ export interface Person {
   mbti: string;
   area: string;
   photo?: string;
+  achievement?: import("./shoeProgress").PublicShoeAchievement;
 }
 
 export const MOCK_SESSIONS: Session[] = [
@@ -149,10 +150,10 @@ export const MOCK_SESSIONS: Session[] = [
 ];
 
 export const MOCK_PEOPLE: Person[] = [
-  { id: "p1", nickname: "서연", age: 27, gender: "f", level: 3, careerId: 4, height: 164, homeGym: "써미트클라이밍센터", mbti: "ENFP", area: "연남동" },
-  { id: "p2", nickname: "지훈", age: 29, gender: "m", level: 3, careerId: 2, homeGym: "더클라임 연남점", mbti: "ISTP", area: "망원동" },
-  { id: "p3", nickname: "하은", age: 31, gender: "f", level: 2, careerId: 1, height: 158, homeGym: "더클라임 B홍대점", mbti: "ISFJ", area: "상수동" },
-  { id: "p4", nickname: "민지", age: 26, gender: "f", level: 4, careerId: 6, height: 170, homeGym: "더클라임 강남점", mbti: "INTP", area: "연희동" },
+  { id: "p1", nickname: "서연", age: 27, gender: "f", level: 3, careerId: 4, height: 164, homeGym: "써미트클라이밍센터", mbti: "ENFP", area: "연남동", achievement: { stage: "blue", total: 42 } },
+  { id: "p2", nickname: "지훈", age: 29, gender: "m", level: 3, careerId: 2, homeGym: "더클라임 연남점", mbti: "ISTP", area: "망원동", achievement: { stage: "green", total: 24 } },
+  { id: "p3", nickname: "하은", age: 31, gender: "f", level: 2, careerId: 1, height: 158, homeGym: "더클라임 B홍대점", mbti: "ISFJ", area: "상수동", achievement: { stage: "white", total: 0 } },
+  { id: "p4", nickname: "민지", age: 26, gender: "f", level: 4, careerId: 6, height: 170, homeGym: "더클라임 강남점", mbti: "INTP", area: "연희동", achievement: { stage: "purple", total: 76 } },
 ];
 
 /** 남은 자리. 성비가 없어진 뒤로는 셀 것이 하나뿐이다 */

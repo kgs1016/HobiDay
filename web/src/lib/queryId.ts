@@ -1,6 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
+
+function subscribeLocation(notify: () => void) {
+  window.addEventListener("popstate", notify);
+  window.addEventListener("hashchange", notify);
+  return () => {
+    window.removeEventListener("popstate", notify);
+    window.removeEventListener("hashchange", notify);
+  };
+}
+
+const serverValue = () => undefined;
 
 /** 주소의 ?id= 를 읽는다.
  *
@@ -15,22 +26,18 @@ import { useEffect, useState } from "react";
  *  반환값: undefined = 아직 못 읽음(첫 렌더), null = 없음, string = id
  */
 export function useQueryId(): string | null | undefined {
-  const [id, setId] = useState<string | null | undefined>(undefined);
-
-  useEffect(() => {
-    setId(new URLSearchParams(window.location.search).get("id"));
-  }, []);
-
-  return id;
+  return useQueryParam("id");
 }
 
 /** 같은 방식으로 아무 쿼리 값이나 읽는다 (?room=, ?from= 등) */
 export function useQueryParam(name: string): string | null | undefined {
-  const [v, setV] = useState<string | null | undefined>(undefined);
+  return useSyncExternalStore(
+    subscribeLocation,
+    () => new URLSearchParams(window.location.search).get(name),
+    serverValue,
+  );
+}
 
-  useEffect(() => {
-    setV(new URLSearchParams(window.location.search).get(name));
-  }, [name]);
-
-  return v;
+export function useLocationHash(): string | undefined {
+  return useSyncExternalStore(subscribeLocation, () => window.location.hash, serverValue);
 }

@@ -7,6 +7,7 @@ import { careerLabel, level } from "@/lib/levels";
 import { AvatarFallback, ChevronRightIcon } from "@/components/icons";
 import { ChalkBagIllust } from "@/components/illustrations";
 import { notifyPush } from "@/lib/nativePush";
+import { useNow } from "@/lib/browserState";
 import {
   hasSupabase,
   approveSignup,
@@ -83,6 +84,7 @@ function Empty({ title, sub }: { title: string; sub?: string }) {
 
 export default function Inbox() {
   const router = useRouter();
+  const now = useNow();
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [tab, setTab] = useState<Tab>("received");
 
@@ -334,7 +336,7 @@ export default function Inbox() {
                             </p>
                             <p className="mt-0.5 truncate text-[12.5px] text-muted">
                               {[
-                                h.level && `L${h.level} ${level(h.level).name}`,
+                                h.level && level(h.level).name,
                                 careerLabel(h.career) &&
                                   `구력 ${careerLabel(h.career)}`,
                                 h.home_gym,
@@ -408,7 +410,7 @@ export default function Inbox() {
                           </p>
                           <p className="mt-0.5 truncate text-[12.5px] text-muted">
                             {[
-                              r.level && `L${r.level} ${level(r.level).name}`,
+                              r.level && level(r.level).name,
                               careerLabel(r.career) && `구력 ${careerLabel(r.career)}`,
                               r.home_gym,
                               r.mbti,
@@ -465,9 +467,9 @@ export default function Inbox() {
                      그래서 이미 끝난 모임을 아직 열릴 것처럼 안내하고
                      있었다. 모임 쪽을 먼저 본다 — 모임 상세와 같은 순서다. */
                   const cancelled = s.session_status === "cancelled";
-                  const gone = new Date(s.ends_at).getTime() <= Date.now();
+                  const gone = new Date(s.ends_at).getTime() <= now;
                   const running =
-                    !gone && new Date(s.starts_at).getTime() <= Date.now();
+                    !gone && new Date(s.starts_at).getTime() <= now;
                   const mine = s.my_status === "confirmed";
                   const st = cancelled
                     ? {
@@ -598,7 +600,7 @@ export default function Inbox() {
                         {r.nickname}
                         <span className="ml-1.5 text-[12px] font-normal text-muted">
                           {r.age}
-                          {r.level && ` · L${r.level} ${level(r.level).name}`}
+                          {r.level && ` · ${level(r.level).name}`}
                         </span>
                       </p>
                       <p className="mt-0.5 truncate text-[12.5px] text-muted">

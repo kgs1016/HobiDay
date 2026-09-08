@@ -7,6 +7,7 @@ import { useQueryId, useQueryParam } from "@/lib/queryId";
 import { careerLabel, level } from "@/lib/levels";
 import { MOCK_PEOPLE, MOCK_SESSIONS } from "@/lib/mock";
 import BackButton from "@/components/BackButton";
+import PublicShoe from "@/components/PublicShoe";
 import { AvatarFallback } from "@/components/icons";
 import { ShoeIllust } from "@/components/illustrations";
 import {
@@ -42,6 +43,7 @@ function mockHost(sessionId: string, userId?: string): HostProfile | null {
     intro: null,
     photo: null,
     hosted: MOCK_SESSIONS.filter((x) => x.host?.id === p.id).length,
+    achievement: p.achievement,
   };
 }
 
@@ -151,7 +153,7 @@ export default function SessionHost() {
           </span>
         </p>
         <p className="mt-1 text-[13px] text-muted">
-          {[host.area, lv && `L${host.level} ${lv.name}`]
+          {[host.area, lv && lv.name]
             .filter(Boolean)
             .join(" · ")}
         </p>
@@ -167,9 +169,12 @@ export default function SessionHost() {
         )}
       </section>
 
+      {!hasSupabase() && <p className="mt-4 text-center text-[11.5px] text-faint">미리보기 데이터 · 암벽화 성취도 예시예요</p>}
+      <PublicShoe achievement={host.achievement} />
+
       <section className="mt-6 border-t border-line pt-2">
         {lv && (
-          <Row label="레벨" value={`L${host.level} ${lv.name} (${lv.colors})`} />
+          <Row label="등반 수준" value={`${lv.name} · 직접 선택`} />
         )}
         {host.career && (
           <Row label="구력" value={careerLabel(host.career) ?? "-"} />

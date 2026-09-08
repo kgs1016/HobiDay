@@ -72,9 +72,21 @@ npx supabase migration repair --status applied <버전>
 
 - 마이그레이션은 **몇 번 실행해도 안전하게** 쓴다
   (`create or replace`, `if not exists`, 제약은 `drop ... if exists` 후 재생성)
-- 금액·정원 같은 값이 앱 코드에도 있으면 **양쪽을 함께 바꾼다.**
+- 정원·신청 조건 같은 값이 앱 코드에도 있으면 **양쪽을 함께 바꾼다.**
   한쪽만 바꾸면 화면 문구와 실제 동작이 어긋난다
-  (예: `credit_rule()` ↔ `web/src/lib/supabase.ts` 의 `REQUEST_COST`)
+  (예: `session_has_seat()` ↔ 모임 생성 화면의 최대 인원)
+
+## 무료 전환 후 배포 점검 (2026-09-08)
+
+`20260908210000_all_features_free.sql` 이후 앱 기능은 모두 무료다.
+과거 원장은 `retired.credit_ledger`에 보관하며 앱에서는 접근하지 않는다.
+`tests/all_features_free.sql`로 신청·수락·거절·취소·차단과 권한을 확인하고,
+`verify.sql`의 무료 전환 항목도 함께 확인한다.
+
+현재 원격 이력에는 일부 과거 파일의 적용 표시가 빠져 있다. 함수 정의가
+이미 최신인 경우도 확인됐으므로, `--include-all`로 예전 함수를 다시
+덮어쓰지 말고 원격 정의와 파일을 대조해 이력을 먼저 정리한다.
+예전 크레딧 함수를 되살리면 무료 신청이 실패할 수 있다.
 
 ## schema.sql 은 지웠다
 

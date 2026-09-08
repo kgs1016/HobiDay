@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { slotsLeft, type Session } from "@/lib/mock";
 import { totalSeats } from "@/lib/capacity";
-import { AvatarFallback, PhotoIcon } from "@/components/icons";
+import { AvatarFallback } from "@/components/icons";
+import GymFallback from "@/components/GymFallback";
 import { ageRangeLabel } from "@/lib/meetupOptions";
+import { level, levelRangeShort } from "@/lib/levels";
 
 /* 목록의 한 줄 — 떠 있는 카드가 아니라 feed 의 항목이다.
    테두리·그림자·둥근 컨테이너 없이 사진과 여백, 얇은 divider(부모의
@@ -64,9 +66,7 @@ export default function SessionCard({
           className="h-[84px] w-[84px] shrink-0 rounded-lg object-cover"
         />
       ) : (
-        <span className="flex h-[84px] w-[84px] shrink-0 items-center justify-center rounded-lg bg-surface2 text-faint">
-          <PhotoIcon size={24} />
-        </span>
+        <GymFallback name={s.gym} size={84} />
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -87,9 +87,7 @@ export default function SessionCard({
 
         {/* 구하는 조건 — 사진 옆 좁은 폭이라 레벨은 짧게 */}
         <p className="mt-[3px] truncate text-[12.5px] text-muted">
-          {s.levelMin === s.levelMax
-            ? `L${s.levelMin}`
-            : `L${s.levelMin}–L${s.levelMax}`}{" "}
+          {levelRangeShort(s.levelMin, s.levelMax)}{" "}
           · {ageRangeLabel(s.ageMin, s.ageMax)}
         </p>
 
@@ -110,7 +108,7 @@ export default function SessionCard({
               <p className="truncate text-[12px] text-muted">
                 {[
                   s.host.age ? `${s.host.nickname} ${s.host.age}` : s.host.nickname,
-                  s.host.level && `L${s.host.level}`,
+                  s.host.level && level(s.host.level).name,
                 ]
                   .filter(Boolean)
                   .join(" · ")}

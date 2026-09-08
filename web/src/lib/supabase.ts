@@ -5,6 +5,7 @@ import { createClient, type SupabaseClient, type User } from "@supabase/supabase
 import type { CareerId, LevelId } from "./levels";
 import type { Session } from "./mock";
 import type { MyProfile } from "./myProfile";
+import { parseShoeAchievement, type PublicShoeAchievement } from "./shoeProgress";
 import type {
   Article,
   ArticleKind,
@@ -166,8 +167,7 @@ export async function fetchSessions(): Promise<DbSession[] | null> {
 
 /** 모임 한 건. 목록과 같은 모양이지만 조건이 다르다 — 관계자(호스트·
  *  신청자)는 시작했든 끝났든 취소됐든 언제나 열 수 있다. 참가 취소와
- *  모임 삭제(=환불) 버튼이 상세에만 있어서, 여기가 막히면 낸 크레딧을
- *  돌려받을 길이 없어진다. */
+ *  모임 관리 버튼이 상세에 있으므로, 호스트가 자신의 모임에 접근할 수 있어야 한다. */
 export async function fetchSession(id: string): Promise<DbSession | null> {
   const sb = getSupabase();
   if (!sb) return null;
@@ -194,6 +194,7 @@ export interface HostProfile {
   intro: string | null;
   photo: string | null;
   hosted: number; // 지금까지 연 모임 수
+  achievement?: PublicShoeAchievement;
 }
 
 export async function fetchSessionHost(
@@ -209,7 +210,8 @@ export async function fetchSessionHost(
   const r = data as (HostProfile & { error?: string }) | null;
   if (!r) return { error: "not_found" };
   if (r.error) return { error: r.error };
-  return { host: r };
+  const achievements = await fetchPublicShoeAchievements([r.id], sessionId);
+  return { host: { ...r, achievement: achievements?.[r.id] } };
 }
 
 /* 모임 참여자 한 줄. 호스트도 이 목록에 같이 들어온다 (is_host) —
@@ -259,7 +261,8 @@ export async function fetchSessionMember(
   const r = data as (HostProfile & { error?: string }) | null;
   if (!r) return { error: "not_found" };
   if (r.error) return { error: r.error };
-  return { host: r };
+  const achievements = await fetchPublicShoeAchievements([r.id], sessionId);
+  return { host: { ...r, achievement: achievements?.[r.id] } };
 }
 
 export async function createSession(p: {
@@ -338,8 +341,6 @@ export async function joinSession(id: string) {
     status?: string;
     chat_opened?: boolean;
     error?: string;
-    cost?: number;
-    balance?: number;
   };
 }
 
@@ -410,7 +411,6 @@ export async function deleteSession(id: string) {
 }
 
 /** 참가자가 모임에서 빠진다. 신청은 무료다 (session_join_free) —
- *  유료 시절 신청의 반환만 서버가 원장 집계로 알아서 처리한다.
  *  cancelled — 내가 빠지면서 확정이 1명이 돼 모임 자체가 취소됐다.
  *  notify    — 그때 남아 있던 사람들 */
 export async function cancelSignup(id: string) {
@@ -611,10 +611,11 @@ export async function fetchChats() {
   return data as Chat[];
 }
 
-export async function fetchChatMessages(matchId: string) {
+export async function fetchChatMessages(matchId: string, signal?: AbortSignal) {
   const sb = getSupabase();
   if (!sb) return null;
-  const { data, error } = await sb.rpc("chat_messages", { p_match: matchId });
+  const query = sb.rpc("chat_messages", { p_match: matchId });
+  const { data, error } = await (signal ? query.abortSignal(signal) : query);
   if (error) return null;
   const d = data as ChatMessage[] | { error: string };
   if (!Array.isArray(d)) return null;
@@ -797,7 +798,7 @@ async function listAllPaths(bucket: string, prefix: string): Promise<string[]> {
  *  같이 지워지지 않는다. 그런데 계정을 먼저 지우면 로그인이 끊겨
  *  파일을 지울 권한이 사라진다. 그래서 파일 → 계정 순으로 지운다.
  *
- *  나머지(프로필·신청·매칭·메시지·크레딧)는 DB 의 cascade 가 처리한다. */
+ *  나머지(프로필·신청·매칭·메시지)는 DB 의 cascade 가 처리한다. */
 export async function deleteAccount(): Promise<{ ok?: true; error?: string }> {
   const sb = getSupabase();
   const user = await currentUser();
@@ -848,61 +849,6 @@ export async function fetchAppFlags() {
   return data as AppFlags;
 }
 
-export async function fetchEarlyBird() {
-  const sb = getSupabase();
-  if (!sb) return null;
-  const { data, error } = await sb.rpc("early_bird_status");
-  if (error) return null;
-  return data as { slots: number; taken_m: number; taken_f: number };
-}
-
-/* ── 크레딧 ── */
-
-export const CREDIT_LABELS: Record<string, string> = {
-  // 적립은 없앴지만 지난 원장에 이 이름의 행이 남아 있다
-  session_video: "등반 영상",
-  profile_complete: "프로필 완성",
-  early_bird: "사전 가입 혜택",
-  request_extra: "채팅 보내기",
-  request_refund: "채팅 반환",
-  session_join: "모임 신청",
-  session_refund: "모임 신청 반환",
-  admin_grant: "운영자 지급",
-  // 아래 둘은 로테이션 시절 적립. 지난 원장을 읽으려면 이름이 필요하다.
-  mission_video: "영상 미션",
-  mission_done: "미션 완료",
-};
-
-/* 표시용 금액 — 서버 credit_rule() 과 같은 값이어야 한다.
-   실제 적립·차감은 전부 서버가 하고, 여기 값은 안내 문구에만 쓴다.
-   ⚠️ SQL 의 credit_rule 을 바꾸면 여기도 같이 바꿀 것. */
-export const REQUEST_COST = 10; // request_extra
-// 모임 신청은 무료다 (2026-09-02). 영상 적립은 없앴다 (2026-09-08).
-// session_join·session_refund·session_video 라벨은 유료·적립 시절 원장을
-// 읽기 위해 CREDIT_LABELS 에 남아 있다.
-
-export interface Credits {
-  balance: number;
-  history: { delta: number; reason: string; created_at: string }[];
-}
-
-export async function fetchCredits() {
-  const sb = getSupabase();
-  if (!sb) return null;
-  const { data, error } = await sb.rpc("my_credits");
-  if (error) return null;
-  return data as Credits;
-}
-
-/** 프로필을 처음 완성했을 때 한 번 적립된다 (중복 호출은 서버가 무시) */
-export async function claimProfileBonus() {
-  const sb = getSupabase();
-  if (!sb) return null;
-  const { data, error } = await sb.rpc("claim_profile_bonus");
-  if (error) return null;
-  return data as { ok?: boolean; earned?: number; balance?: number; error?: string };
-}
-
 /* ── 채팅 보내기 (1:1 신청) ── */
 
 export interface ReceivedRequest {
@@ -947,14 +893,8 @@ export async function sendRequest(toId: string, message?: string) {
   if (error) return { error: error.message };
   return data as {
     ok?: boolean;
-    left?: number;
     error?: string;
     status?: string;
-    limit?: number;
-    /** 하루 한도를 넘겨 크레딧으로 보냈는지 */
-    spent?: boolean;
-    cost?: number;
-    balance?: number;
   };
 }
 
@@ -1004,18 +944,18 @@ export async function fetchInboxCounts() {
     requests: number;
     likes: number;
     hosted: number;
-    sent_today: number;
-    daily_limit: number;
     unread_messages: number;
     unread_rooms: number;
   };
 }
 
 /** 방을 열면 호출 — 이 시점 이후 메시지만 안 읽음으로 센다 */
-export async function markChatRead(matchId: string) {
+export async function markChatRead(matchId: string, signal?: AbortSignal) {
   const sb = getSupabase();
-  if (!sb) return;
-  await sb.rpc("chat_mark_read", { p_match: matchId });
+  if (!sb) return false;
+  const query = sb.rpc("chat_mark_read", { p_match: matchId });
+  const { error } = await (signal ? query.abortSignal(signal) : query);
+  return !error;
 }
 
 /* ── 모임 단체 채팅 ──
@@ -1053,12 +993,13 @@ export async function fetchSessionChats() {
   return data as SessionChat[];
 }
 
-export async function fetchSessionChatMessages(sessionId: string) {
+export async function fetchSessionChatMessages(sessionId: string, signal?: AbortSignal) {
   const sb = getSupabase();
   if (!sb) return null;
-  const { data, error } = await sb.rpc("session_chat_messages", {
+  const query = sb.rpc("session_chat_messages", {
     p_session: sessionId,
   });
+  const { data, error } = await (signal ? query.abortSignal(signal) : query);
   if (error) return null;
   const d = data as SessionChatMessage[] | { error: string };
   if (!Array.isArray(d)) return null;
@@ -1077,13 +1018,34 @@ export async function sendSessionChat(sessionId: string, body: string) {
   return data as { ok?: boolean; notify?: string[]; error?: string };
 }
 
-export async function markSessionChatRead(sessionId: string) {
+export async function markSessionChatRead(sessionId: string, signal?: AbortSignal) {
   const sb = getSupabase();
-  if (!sb) return;
-  await sb.rpc("session_chat_mark_read", { p_session: sessionId });
+  if (!sb) return false;
+  const query = sb.rpc("session_chat_mark_read", { p_session: sessionId });
+  const { error } = await (signal ? query.abortSignal(signal) : query);
+  return !error;
 }
 
 /* ── 프로필 목록 ── */
+
+/** 목록 단위로 한 번에 조회한다. 실패/열람 불가는 기록 0개와 구분한다. */
+export async function fetchPublicShoeAchievements(userIds: string[], sessionId?: string): Promise<Record<string, PublicShoeAchievement> | null> {
+  const ids = [...new Set(userIds)];
+  if (!ids.length) return {};
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc("public_climbing_achievements", {
+    p_users: ids, p_session: sessionId ?? null,
+  });
+  if (error || !Array.isArray(data)) return null;
+  const entries: [string, PublicShoeAchievement][] = [];
+  for (const row of data) {
+    const achievement = parseShoeAchievement(row);
+    if (achievement && typeof row.user_id === "string" && ids.includes(row.user_id))
+      entries.push([row.user_id, achievement]);
+  }
+  return Object.fromEntries(entries);
+}
 
 /**
  * 사람 찾기 목록.
@@ -1109,6 +1071,7 @@ export async function fetchPeople(me?: { id: string }) {
     .order("created_at", { ascending: false })
     .limit(50);
   if (error) return null;
+  const achievements = await fetchPublicShoeAchievements(data.map(d => d.id as string));
   return data.map((d) => ({
     id: d.id as string,
     nickname: d.nickname as string,
@@ -1122,6 +1085,7 @@ export async function fetchPeople(me?: { id: string }) {
     area: d.area as string,
     intro: (d.intro ?? undefined) as string | undefined,
     photo: (d.photo ?? undefined) as string | undefined,
+    achievement: achievements?.[d.id as string],
   }));
 }
 

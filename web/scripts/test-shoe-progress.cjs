@@ -8,7 +8,7 @@ const source = fs.readFileSync(path.join(__dirname, '../src/lib/shoeProgress.ts'
 const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
 const moduleExports = {};
 vm.runInNewContext(output, { exports: moduleExports });
-const { shoeProgress, SHOE_STAGES } = moduleExports;
+const { shoeProgress, SHOE_STAGES, parseShoeAchievement } = moduleExports;
 const progress = grade_counts => shoeProgress({ total: Object.values(grade_counts).reduce((a,b) => a+b,0), grade_counts });
 
 assert.equal(progress({}).current.id, 'white');
@@ -24,4 +24,9 @@ assert.equal(progress({ '8': 15 }).current.id, 'black', 'can start at highest qu
 assert.equal(progress({ '8': 15 }).next, null, 'highest rank has no next goal');
 assert.equal(progress({ '8': 14 }).current.id, 'purple', 'correction recomputes rank');
 assert.equal(progress({ '3': 8 }).next.count, 0, 'next stage needs its own grade');
+assert.equal(parseShoeAchievement({ stage: 'blue', total: 42 }).stage, 'blue');
+assert.equal(parseShoeAchievement({ stage: 'white', total: 0 }).total, 0);
+for (const invalid of [null, {}, { stage: 'red', total: 10 }, { stage: 'blue', total: -1 }, { stage: 'white', total: '0' }]) {
+  assert.equal(parseShoeAchievement(invalid), undefined, 'missing or invalid summaries must not become an empty-record badge');
+}
 console.log('PASS: thresholds, mixed grades, unknown grades, highest-stage entry, corrections and next-stage progress');
