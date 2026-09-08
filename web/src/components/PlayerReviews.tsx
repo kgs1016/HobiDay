@@ -114,8 +114,13 @@ export default function PlayerReviews({
       ) : list.length === 0 ? (
         <p className="mt-3 text-[12.5px] text-muted">아직 리뷰가 없어요</p>
       ) : (
-        /* 옆으로 넘기는 카드 — 화면 여백(px-4)을 뚫고 나가게 -mx-4 */
-        <div className="-mx-4 mt-3 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+        /* 옆으로 넘기는 카드 — 화면 여백(px-4)을 뚫고 나가게 -mx-4.
+           overflow-x 만 주면 overflow-y 도 auto 가 되어 세로 스크롤 영역이
+           하나 더 생긴다 — 소수점 높이 차이로 1px 스크롤이 잡히면 카드 아래에
+           스크롤바가 떠다닌다. 세로는 hidden 으로 못박고, 스크롤바는 웹킷까지 감춘다.
+           snap 은 mandatory 가 아니라 proximity — iOS 사파리가 mandatory 를
+           페이지 세로 스크롤에까지 끌어다 붙이는 버그가 있다. */
+        <div className="-mx-4 mt-3 flex snap-x snap-proximity gap-2.5 overflow-x-auto overflow-y-hidden overscroll-x-contain px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {list.map((r) => (
             <div key={r.id} className="w-[78%] shrink-0 snap-start">
               <ReviewCard r={r} photoUrl={r.author_photo ? photos[r.author_photo] : undefined} />
