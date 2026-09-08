@@ -629,7 +629,8 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
       return alert(`전송 실패: ${r.error}`);
     }
     // 실패해도 조용히 — 알림이 전송을 막으면 안 된다
-    notifyPush(chat.partner_id, "💬 새 메시지", body.slice(0, 80), "/chat");
+    // 메시지는 푸시로만 — 알림함에 한 줄씩 쌓이면 알림함이 채팅 사본이 된다
+    notifyPush(chat.partner_id, "💬 새 메시지", body.slice(0, 80), "/chat", { pushOnly: true });
     load();
   };
 
@@ -766,7 +767,8 @@ function SessionThread({
     if (r.error) return alert(`전송 실패: ${r.error}`);
     // 시간·장소를 맞추는 방이라 알림이 없으면 반쪽이다. 실패해도 조용히.
     if (r.notify?.length)
-      notifyPush(r.notify, `💬 ${room.gym}`, body.slice(0, 80), "/chat#session");
+      // 메시지는 푸시로만 (알림함 제외)
+      notifyPush(r.notify, `💬 ${room.gym}`, body.slice(0, 80), "/chat#session", { pushOnly: true });
     load();
   };
 
