@@ -296,9 +296,6 @@ export default function Inbox() {
         receivedCount === 0 ? (
           <Empty
             title="답할 게 없어요"
-            sub={
-              "내 모임에 신청이 오거나\n받은 채팅 신청이 있으면 여기에 쌓여요"
-            }
           />
         ) : (
           <div className="flex flex-col gap-6 py-4 pb-6">
@@ -453,7 +450,6 @@ export default function Inbox() {
       ) : signups.length === 0 && sent.length === 0 ? (
         <Empty
           title="아직 보낸 게 없어요"
-          sub={"모임에 신청하거나 채팅을 보내면\n여기서 진행 상황이 보여요"}
         />
       ) : (
         <div className="flex flex-col gap-7 py-4 pb-6">

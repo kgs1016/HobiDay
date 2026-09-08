@@ -334,7 +334,6 @@ function NewSessionForm({ now }: { now: number }) {
               className={boxCls}
             />
           </div>
-          <p className="mt-1.5 text-[12px] text-muted">1.5~2시간을 권장해요</p>
         </Field>
 
         {/* 호스트를 포함한 수다 */}

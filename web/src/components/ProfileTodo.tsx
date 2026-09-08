@@ -18,9 +18,6 @@ export default function ProfileTodo({ profile }: { profile: MyProfile }) {
         <p className="text-[13px] font-semibold text-ink">
           프로필에 {missing.join(" · ")}이 빠졌어요
         </p>
-        <p className="mt-0.5 text-[12px] text-muted">
-          채워야 사람 찾기에 내 프로필이 보여요
-        </p>
       </div>
       <ChevronRightIcon size={16} className="shrink-0 text-accent" />
     </Link>

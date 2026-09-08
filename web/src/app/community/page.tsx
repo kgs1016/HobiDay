@@ -275,7 +275,7 @@ export default function Community() {
         posts === null ? (
           <p className="pt-16 text-center text-[13.5px] text-faint">불러오는 중…</p>
         ) : posts.length === 0 ? (
-          <Empty title="아직 글이 없어요" sub={"첫 글을 남겨보세요"} />
+          <Empty title="아직 글이 없어요" />
         ) : (
           <div className="pb-6">
             <div className="flex flex-col divide-y divide-line">
@@ -297,10 +297,7 @@ export default function Community() {
       ) : !list ? (
         <p className="pt-16 text-center text-[13.5px] text-faint">불러오는 중…</p>
       ) : list.length === 0 ? (
-        <Empty
-          title="아직 모인 소식이 없어요"
-          sub={"몇 시간마다 새 소식을 가져와요"}
-        />
+        <Empty title="아직 모인 소식이 없어요" />
       ) : tab === "news" ? (
         <div className="flex flex-col divide-y divide-line pb-6">
           {list.map((a) => (

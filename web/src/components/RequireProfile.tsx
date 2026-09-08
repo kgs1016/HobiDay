@@ -99,11 +99,6 @@ export default function RequireProfile({
           <br />
           이용할 수 있어요
         </h1>
-        <p className="mt-3 text-[13.5px] leading-relaxed text-muted">
-          서로 얼굴과 실력을 알고 만나는 서비스예요.
-          <br />
-          모두가 같은 조건이에요.
-        </p>
       </header>
 
       {missing.length > 0 && (
