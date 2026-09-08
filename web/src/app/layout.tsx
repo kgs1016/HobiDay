@@ -7,7 +7,7 @@ import RequireProfile from "@/components/RequireProfile";
 
 export const metadata: Metadata = {
   title: "하비데이 HOBIDAY",
-  description: "취미로 시작해서, 사람으로 끝나는 하루 — 볼더링 세션 매칭",
+  description: "취미로 시작해서, 사람으로 끝나는 하루 — 클라이밍 같이 할 사람 찾기",
   // 홈 화면에 추가했을 때 주소창 없이 앱처럼 뜨게 한다
   appleWebApp: {
     title: "하비데이",

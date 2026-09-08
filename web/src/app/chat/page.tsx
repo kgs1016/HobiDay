@@ -56,7 +56,7 @@ const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
    종료 문구도 공통 시계를 따라 갱신한다. */
 function endedNotice(c: SessionChat, now: number): string | null {
   if (c.status === "cancelled")
-    return "매칭이 취소되었어요. 24시간 뒤에 채팅방이 사라져요.";
+    return "모임이 취소되었어요. 24시간 뒤에 채팅방이 사라져요.";
   return new Date(c.ends_at).getTime() < now
     ? "모임이 종료되었어요. 24시간 뒤에 채팅방이 사라져요."
     : null;

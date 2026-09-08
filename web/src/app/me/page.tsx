@@ -187,7 +187,7 @@ export default function Me() {
         {/* 오픈 전 잠금 중엔 모임 화면이 닫혀 있어 눌러도 홈으로 튕긴다 — 숨긴다 */}
         {!locked && <MenuRow href="/session/mine" label="내가 만든 모임" />}
         {/* 끝난 모임은 홈에서도 채팅에서도 사라진다 — 여기가 유일한 통로 */}
-        {!locked && <MenuRow href="/me/history" label="매칭 기록" />}
+        {!locked && <MenuRow href="/me/history" label="함께한 모임" />}
         {/* 끝난 모임의 리뷰 — 알림을 놓쳐도 일주일 동안 여기서 쓴다 */}
         {!locked && <MenuRow href="/me/reviews" label="리뷰 작성" />}
         <MenuRow href="/safety" label="안전 설정 · 차단 목록" />
@@ -219,7 +219,7 @@ export default function Me() {
           <p className="text-[15px] font-bold">정말 탈퇴할까요?</p>
           <ul className="mt-3 flex flex-col gap-1.5 text-[12.5px] leading-relaxed text-muted">
             <li>· 프로필과 사진·영상이 모두 지워져요</li>
-            <li>· 주고받은 대화와 매칭이 사라져요 (상대방 쪽에서도)</li>
+            <li>· 주고받은 대화와 모임 기록이 사라져요 (상대방 쪽에서도)</li>
             <li>· 신청한 모임에서 자동으로 빠져요</li>
           </ul>
           <p className="mt-3 text-[12px] leading-relaxed text-muted">

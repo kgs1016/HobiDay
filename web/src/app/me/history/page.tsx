@@ -151,7 +151,7 @@ export default function MatchHistory() {
     <main className="px-4 pb-10">
       <header className="flex items-center gap-2 pt-4 pb-2">
         <BackButton fallback="/me" />
-        <h1 className="text-[18px] font-bold tracking-tight">매칭 기록</h1>
+        <h1 className="text-[18px] font-bold tracking-tight">함께한 모임</h1>
       </header>
 
       {authed === false ? (

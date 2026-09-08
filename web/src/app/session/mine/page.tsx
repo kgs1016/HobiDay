@@ -157,7 +157,7 @@ export default function MySessions() {
               <p className="mt-1 text-[11.5px] leading-relaxed text-faint">
                 24시간이 지나면 채팅방과 함께 이 목록에서 사라져요. 성사된 모임은{" "}
                 <Link href="/me/history" className="font-medium underline">
-                  내 정보 &gt; 매칭 기록
+                  내 정보 &gt; 함께한 모임
                 </Link>
                 에 계속 남아요.
               </p>

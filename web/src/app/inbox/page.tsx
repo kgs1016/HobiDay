@@ -480,7 +480,7 @@ export default function Inbox() {
                           ? {
                               label: "다녀왔어요",
                               cls: "bg-accent-soft text-accent-pressed",
-                              note: "매칭 기록에서 다시 볼 수 있어요.",
+                              note: "함께한 모임에서 다시 볼 수 있어요.",
                             }
                           : {
                               /* 혼자인 채로 끝난 모임. 매칭 기록은 성사된

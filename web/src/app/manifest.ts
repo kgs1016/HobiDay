@@ -10,7 +10,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "하비데이 HOBIDAY",
     short_name: "하비데이",
-    description: "취미로 시작해서, 사람으로 끝나는 하루 — 볼더링 모임 매칭",
+    description: "취미로 시작해서, 사람으로 끝나는 하루 — 클라이밍 같이 할 사람 찾기",
     start_url: "/",
     display: "standalone", // 주소창·탭 숨김
     background_color: "#ffffff",
