@@ -80,7 +80,7 @@ export default function ReportSheet({
       notifyPush(
         r.notify,
         "😢 모임이 취소됐어요",
-        "모임이 취소됐어요. 신청 크레딧은 돌려드렸어요.",
+        "모임이 취소됐어요.",
         "/inbox",
         { pushOnly: true }
       );

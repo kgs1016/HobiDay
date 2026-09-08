@@ -51,16 +51,12 @@ export default function RequireProfile({
   const open = OPEN_PATHS.some((p) => pathname.startsWith(p));
 
   // null = 확인 중. 깜빡임을 막으려고 이때는 아무것도 그리지 않는다.
-  const [ok, setOk] = useState<boolean | null>(
-    !hasSupabase() || open || completeUid !== null ? true : null
-  );
+  const [ok, setOk] = useState<boolean | null>(null);
   const [missing, setMissing] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!hasSupabase() || open) {
-      setOk(true);
-      return;
-    }
+    // 공개 경로 여부는 렌더에서 판단한다. 프로필 확인 결과를 덮어쓰지 않는다.
+    if (!hasSupabase() || open) return;
     let alive = true;
     (async () => {
       const user = await currentUser();
@@ -90,6 +86,7 @@ export default function RequireProfile({
     };
   }, [pathname, open]);
 
+  if (!hasSupabase() || open) return <>{children}</>;
   if (ok === null) return null;
   if (ok) return <>{children}</>;
 
@@ -132,7 +129,7 @@ export default function RequireProfile({
       </div>
 
       <p className="mt-5 text-center text-[12px] text-faint">
-        1분이면 끝나요. 완성하면 크레딧도 받아요.
+        프로필을 완성하고 함께 등반할 사람을 찾아보세요.
       </p>
     </main>
   );

@@ -15,7 +15,6 @@ import { careerLabel, level } from "@/lib/levels";
 import { MOCK_GYMS } from "@/lib/meetupOptions";
 import {
   EMPTY_FILTER,
-  activeFilterCount,
   applySessionFilter,
 } from "@/lib/sessionFilter";
 import { loadMyProfile, type MyProfile } from "@/lib/myProfile";
@@ -25,19 +24,15 @@ import {
   fetchSessions,
   fetchPeople,
   fetchMyProfileDb,
-  REQUEST_COST,
   fetchAppFlags,
-  fetchCredits,
   type AppFlags,
   fetchGyms,
   type Gym,
-  fetchInboxCounts,
   fetchNotifications,
   fetchSentRequests,
   sendRequest,
   signedPhotoUrls,
   toSession,
-  type Credits,
 } from "@/lib/supabase";
 import type { GymOption } from "@/components/SessionFilterBar";
 
@@ -62,9 +57,7 @@ export default function Home() {
   const [filter, setFilter] = useState(EMPTY_FILTER);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   // 채팅 보내기
-  const [credits, setCredits] = useState<Credits | null>(null);
   const [sentTo, setSentTo] = useState<Set<string>>(new Set());
-  const [counts, setCounts] = useState<Awaited<ReturnType<typeof fetchInboxCounts>>>(null);
   // 종 아이콘 배지 — 안 읽은 알림 수만 쓴다
   const [unread, setUnread] = useState(0);
   const [reqTarget, setReqTarget] = useState<Person | null>(null);
@@ -76,9 +69,9 @@ export default function Home() {
   const [detail, setDetail] = useState<(Person & { intro?: string }) | null>(null);
 
   useEffect(() => {
-    if (window.location.hash === "#people") setTab("people");
-
     (async () => {
+      await Promise.resolve();
+      if (window.location.hash === "#people") setTab("people");
       if (!hasSupabase()) {
         setMe(loadMyProfile());
         setAuthed(null);
@@ -104,11 +97,7 @@ export default function Home() {
       // 오픈 전에는 모임·사람을 잠근다 (대시보드 app_config 로 켠다)
       const f = await fetchAppFlags();
       setFlags(f);
-      if (f && !f.sessions_open && !f.people_open) {
-        const cr = await fetchCredits();
-        if (cr) setCredits(cr);
-        return;
-      }
+      if (f && !f.sessions_open && !f.people_open) return;
 
       // 사람 찾기는 성별로 거르지 않는다 — 내 카드만 뺀다
       const [rows, ppl, gymRows] = await Promise.all([
@@ -132,15 +121,11 @@ export default function Home() {
       if (ppl) setPeople(ppl);
       if (paths.length > 0) setPhotoUrls(await signedPhotoUrls(paths));
 
-      const [sent, c, cr, notis] = await Promise.all([
+      const [sent, notis] = await Promise.all([
         fetchSentRequests(),
-        fetchInboxCounts(),
-        fetchCredits(),
         fetchNotifications(),
       ]);
       if (sent) setSentTo(new Set(sent.map((s) => s.to_id)));
-      if (c) setCounts(c);
-      if (cr) setCredits(cr);
       if (notis) setUnread(notis.unread);
 
       setReady(true); // 여기까지 와야 목록을 그린다
@@ -163,12 +148,6 @@ export default function Home() {
     const r = await sendRequest(reqTarget.id, reqMsg);
     setReqBusy(false);
 
-    if (r.error === "no_credits") {
-      return alert(
-        `크레딧이 부족해요.\n` +
-          `채팅 1회 = ${r.cost?.toLocaleString()}크레딧 · 지금 ${r.balance?.toLocaleString()}크레딧이에요.`
-      );
-    }
     if (r.error === "already")
       return alert(
         r.status === "accepted"
@@ -184,12 +163,10 @@ export default function Home() {
       "/inbox"
     );
     setSentTo((s) => new Set(s).add(reqTarget.id));
-    if (typeof r.balance === "number")
-      setCredits((c) => (c ? { ...c, balance: r.balance! } : c));
     setReqTarget(null);
     alert(
       `${reqTarget.nickname}님에게 채팅을 보냈어요!\n` +
-        (r.spent ? `크레딧 -${r.cost} (남은 ${r.balance})` : "수락하면 채팅이 열려요.")
+        "수락하면 채팅이 열려요."
     );
   };
 
@@ -228,17 +205,6 @@ export default function Home() {
             </p>
           )}
         </header>
-
-        <section className="mx-auto mt-8 flex max-w-sm items-center justify-between rounded-xl bg-surface2 px-5 py-4">
-          <p className="text-[14px] text-muted">내 크레딧</p>
-          <p className="text-[20px] font-bold">
-            {(credits?.balance ?? 0).toLocaleString()}
-          </p>
-        </section>
-        <p className="mx-auto mt-2 max-w-sm px-1 text-[12.5px] text-faint">
-          오픈하면 채팅 {Math.floor((credits?.balance ?? 0) / REQUEST_COST)}번을
-          보낼 수 있어요
-        </p>
 
         <section className="mx-auto mt-6 max-w-sm rounded-xl bg-surface2 p-5">
           <p className="text-[13.5px] font-semibold">오픈하면 할 수 있는 것</p>
@@ -704,7 +670,7 @@ export default function Home() {
               >
                 {sentTo.has(detail.id)
                   ? "채팅을 보냈어요"
-                  : `채팅 보내기 · ${REQUEST_COST}크레딧`}
+                  : "채팅 보내기"}
               </button>
             </div>
           </div>
@@ -727,12 +693,6 @@ export default function Home() {
             <p className="mt-1 text-[12.5px] text-muted">
               한 줄 남기면 수락될 가능성이 높아요.
             </p>
-            {/* 돈 얘기는 누르기 전에 한다. 나머지(거절 알림·재신청)는
-                겪으면 아는 것이라 여기서 설명하지 않는다. */}
-            <p className="mt-2.5 rounded-lg bg-surface2 px-3.5 py-3 text-[11.5px] leading-relaxed text-muted">
-              <b className="font-semibold text-ink">보내면 크레딧이 바로 쓰여요.</b>{" "}
-              수락 여부와 상관없이 돌려드리지 않아요
-            </p>
             <textarea
               value={reqMsg}
               onChange={(e) => setReqMsg(e.target.value.slice(0, 200))}
@@ -748,13 +708,8 @@ export default function Home() {
               onClick={sendReq}
               className="mt-2 w-full rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
             >
-              {reqBusy ? "보내는 중…" : `채팅 보내기 · ${REQUEST_COST}크레딧`}
+              {reqBusy ? "보내는 중…" : "채팅 보내기"}
             </button>
-            {credits && (
-              <p className="mt-1.5 text-center text-[11.5px] text-faint">
-                보내면 {Math.max(0, credits.balance - REQUEST_COST)}크레딧 남아요
-              </p>
-            )}
             <button
               onClick={() => setReqTarget(null)}
               className="mt-2 w-full py-2 text-[13px] font-medium text-muted"
