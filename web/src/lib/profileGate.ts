@@ -9,9 +9,7 @@ export function missingFields(p: MyProfile): string[] {
   const missing: string[] = [];
   if (!p.photo) missing.push("대표 사진");
   if (!p.careerId) missing.push("구력");
-  // 키는 뒤늦게 필수가 됐다. 이미 가입한 사람은 값이 비어 있어서
-  // 여기에 걸리고, 프로필 화면에서 채우면 풀린다. (MBTI 는 선택)
-  if (!p.height) missing.push("키");
+  // 키·MBTI·동네·홈짐은 선택 (키는 2026-09 에 다시 선택으로)
   return missing;
 }
 

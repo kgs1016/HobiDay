@@ -11,16 +11,13 @@ import { level } from "@/lib/levels";
 import ReportSheet from "@/components/ReportSheet";
 import { AvatarFallback, ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 import GymPhoto from "@/components/GymPhoto";
-import PublicShoe from "@/components/PublicShoe";
-import type { PublicShoeAchievement } from "@/lib/shoeProgress";
-import { CarabinerIllust, ShoeIllust } from "@/components/illustrations";
+import { CarabinerIllust } from "@/components/illustrations";
 import { notifyPush } from "@/lib/nativePush";
 import {
   currentUser,
   fetchSessionMembers,
   fetchChatMessages,
   fetchChats,
-  fetchPublicShoeAchievements,
   fetchSessionChatMessages,
   fetchSessionChats,
   hasSupabase,
@@ -76,13 +73,29 @@ type Tab = "request" | "session";
 
 export default function ChatPage() {
   const room = useQueryParam("room");
+  /* 1:1 방 — 상대 프로필에서 돌아올 때. 방은 상태로만 열려 있어 주소가 없으면 목록에 떨어진다 */
+  const thread = useQueryParam("thread");
   const hash = useLocationHash();
-  if (room === undefined || hash === undefined)
+  if (room === undefined || thread === undefined || hash === undefined)
     return <main className="px-4 pt-24 text-center text-[13.5px] text-faint">불러오는 중…</main>;
-  return <ChatContent initialRoomId={room} initialTab={room || hash === "#session" ? "session" : "request"} />;
+  return (
+    <ChatContent
+      initialRoomId={room}
+      initialThreadId={thread}
+      initialTab={room || hash === "#session" ? "session" : "request"}
+    />
+  );
 }
 
-function ChatContent({ initialRoomId, initialTab }: { initialRoomId: string | null; initialTab: Tab }) {
+function ChatContent({
+  initialRoomId,
+  initialThreadId,
+  initialTab,
+}: {
+  initialRoomId: string | null;
+  initialThreadId: string | null;
+  initialTab: Tab;
+}) {
   const now = useNow();
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -99,11 +112,16 @@ function ChatContent({ initialRoomId, initialTab }: { initialRoomId: string | nu
     if (signal?.aborted) return;
     setChats(list);
     setRooms(group);
+    // 주소로 들어온 1:1 방은 목록을 받은 첫 순간에만 연다
+    if (initialThreadId) {
+      const c = list?.find((x) => x.match_id === initialThreadId);
+      setOpen((cur) => cur ?? c ?? null);
+    }
     if (list?.length) {
       const urls = await signedPhotoUrls(list.map(c => c.photo).filter(Boolean) as string[]);
       if (!signal?.aborted) setPhotoUrls(urls);
     }
-  }, []);
+  }, [initialThreadId]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -121,8 +139,10 @@ function ChatContent({ initialRoomId, initialTab }: { initialRoomId: string | nu
   useEffect(() => {
     if (initialRoomId) {
       window.history.replaceState(window.history.state, "", "/chat#session");
+    } else if (initialThreadId) {
+      window.history.replaceState(window.history.state, "", "/chat");
     }
-  }, [initialRoomId]);
+  }, [initialRoomId, initialThreadId]);
 
   /** 목록 배지는 즉시 지우고, 실제 읽음 처리는 방에서 메시지를 받은 뒤 한 번 한다. */
   const openThread = (c: Chat) => {
@@ -569,86 +589,13 @@ function Bubble({
   );
 }
 
-/* 1:1 상대 프로필. 기본 정보는 채팅 목록을 사용하고,
-   성취 요약은 프로필을 실제로 열었을 때 공개 권한에 맞춰 조회한다. */
-function PartnerSheet({ chat, onClose }: { chat: Chat; onClose: () => void }) {
-  const [url, setUrl] = useState<string | null>(null);
-  const [achievement, setAchievement] = useState<PublicShoeAchievement | null>();
-
-  useEffect(() => {
-    if (!chat.photo) return;
-    (async () => setUrl((await signedPhotoUrls([chat.photo!]))[chat.photo!] ?? null))();
-  }, [chat.photo]);
-
-  useEffect(() => {
-    let active = true;
-    fetchPublicShoeAchievements([chat.partner_id], chat.session_id ?? undefined).then(
-      summaries => { if (active) setAchievement(summaries?.[chat.partner_id] ?? null); },
-      () => { if (active) setAchievement(null); },
-    );
-    return () => { active = false; };
-  }, [chat.partner_id, chat.session_id]);
-
-  const lv = chat.level ? level(chat.level) : null;
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end bg-black/50"
-      onClick={onClose}
-    >
-      {/* 크기·비율은 사람 찾기의 프로필 시트(app/page.tsx)와 맞춘다 */}
-      <div
-        className="mx-auto max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-surface p-5"
-        style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={url}
-            alt={chat.nickname}
-            className="aspect-square w-full rounded-xl object-cover"
-          />
-        ) : (
-          <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-surface2">
-            <ShoeIllust size={88} />
-          </div>
-        )}
-
-        <p className="mt-4 text-[19px] font-bold">
-          {chat.nickname}
-          <span className="ml-2 text-[13.5px] font-normal text-muted">
-            {chat.age}
-          </span>
-        </p>
-        <p className="mt-1 text-[13px] text-muted">
-          {[lv && `등반 수준 · ${lv.name}`, chat.home_gym]
-            .filter(Boolean)
-            .join(" · ")}
-        </p>
-        <p className="mt-3 text-[12.5px] leading-relaxed text-faint">
-          {origin(chat)}
-        </p>
-
-        {achievement === undefined
-          ? <p role="status" className="mt-4 border-t border-line pt-4 text-[12px] text-muted">성취 불러오는 중…</p>
-          : <PublicShoe achievement={achievement ?? undefined} />}
-
-        <button
-          onClick={onClose}
-          className="mt-5 w-full rounded-xl border border-line py-3.5 text-[14px] font-medium"
-        >
-          닫기
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
   const [msgs, setMsgs] = useState<ChatMessage[] | null>(null);
   const [reporting, setReporting] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
+  const router = useRouter();
+  /* 상대 프로필은 어디서 열든 한 화면 — 방 id 를 들려 보내 돌아올 수 있게 한다 */
+  const openProfile = () =>
+    router.push(`/user?id=${chat.partner_id}&m=${chat.match_id}&from=chat`);
   // 상대 말풍선 옆 아바타 — 사진 주소는 캐시돼 있어 재서명이 싸다
   const [partnerPhoto, setPartnerPhoto] = useState<string | undefined>();
   const bottom = useRef<HTMLDivElement>(null);
@@ -717,7 +664,7 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
         sub={[origin(chat), chat.level && level(chat.level).name]
           .filter(Boolean)
           .join(" · ")}
-        onTitle={() => setShowProfile(true)}
+        onTitle={openProfile}
         closedNote={
           chat.partner_left
             ? "상대가 대화방을 나갔어요. 더 이상 메시지를 보낼 수 없어요."
@@ -758,17 +705,13 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
                 key={m.id}
                 m={m}
                 photoUrl={partnerPhoto}
-                onProfile={() => setShowProfile(true)}
+                onProfile={openProfile}
               />
             ))}
             <div ref={bottom} />
           </div>
         )}
       </ChatFrame>
-
-      {showProfile && (
-        <PartnerSheet key={chat.partner_id} chat={chat} onClose={() => setShowProfile(false)} />
-      )}
 
       {reporting && (
         <ReportSheet
@@ -894,7 +837,7 @@ function SessionThread({
                 m.sender_id
                   ? () =>
                       router.push(
-                        `/session/host?id=${room.session_id}&u=${m.sender_id}&from=chat`
+                        `/user?id=${m.sender_id}&s=${room.session_id}&from=chat`
                       )
                   : undefined
               }

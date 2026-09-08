@@ -325,7 +325,7 @@ function SessionContent({ id, from }: { id: string | null; from: string | null |
             ? members.map((m) => (
                 <Link
                   key={m.id}
-                  href={`/session/host?id=${s.id}&u=${m.id}`}
+                  href={`/user?id=${m.id}&s=${s.id}`}
                   className="flex items-center gap-1.5 rounded-lg bg-surface2 py-1 pl-1 pr-2.5 transition-colors active:bg-line"
                 >
                   {m.photo && memberPhotos[m.photo] ? (
@@ -372,7 +372,7 @@ function SessionContent({ id, from }: { id: string | null; from: string | null |
         <section className="mt-6 border-t border-line pt-5">
           <h2 className="text-[15px] font-bold">호스트</h2>
           <Link
-            href={`/session/host?id=${s.id}`}
+            href={`/user?id=${s.host.id}&s=${s.id}`}
             className="mt-3 flex items-center gap-3 rounded-xl transition-colors active:bg-surface2"
           >
             {hostPhoto ? (

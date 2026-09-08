@@ -6,11 +6,10 @@ import { isProfileComplete } from "@/lib/profileGate";
 import SessionCard from "@/components/SessionCard";
 import SessionFilterBar from "@/components/SessionFilterBar";
 import ProfileTodo from "@/components/ProfileTodo";
-import PublicShoe, { ShoeBadge } from "@/components/PublicShoe";
-import ReportSheet from "@/components/ReportSheet";
+import { ShoeBadge } from "@/components/PublicShoe";
+import ChatRequestSheet from "@/components/ChatRequestSheet";
 import { AvatarFallback, BellIcon, PlusIcon, SearchIcon } from "@/components/icons";
 import { HoldIllust, ShoeIllust } from "@/components/illustrations";
-import { notifyPush } from "@/lib/nativePush";
 import { MOCK_SESSIONS, MOCK_PEOPLE, type Session, type Person } from "@/lib/mock";
 import { careerLabel, level } from "@/lib/levels";
 import { MOCK_GYMS } from "@/lib/meetupOptions";
@@ -32,7 +31,6 @@ import {
   type Gym,
   fetchNotifications,
   fetchSentRequests,
-  sendRequest,
   signedPhotoUrls,
   toSession,
 } from "@/lib/supabase";
@@ -66,12 +64,6 @@ export default function Home() {
   // 종 아이콘 배지 — 안 읽은 알림 수만 쓴다
   const [unread, setUnread] = useState(0);
   const [reqTarget, setReqTarget] = useState<Person | null>(null);
-  const [reqMsg, setReqMsg] = useState("");
-  const [reqBusy, setReqBusy] = useState(false);
-  // 신고 (신고하면 차단까지 걸려 목록에서도 빠진다)
-  const [reportTarget, setReportTarget] = useState<Person | null>(null);
-  // 프로필 상세 — 카드를 누르면 큰 사진과 전체 소개를 보고 보낼지 정한다
-  const [detail, setDetail] = useState<(Person & { intro?: string }) | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -136,45 +128,6 @@ export default function Home() {
       setReady(true); // 여기까지 와야 목록을 그린다
     })();
   }, []);
-
-  /* already 는 이제 두 경우뿐이다 — 답을 기다리는 중이거나, 이미 채팅이
-     열려 있거나. 거절당한 상대에게는 다시 보낼 수 있다(request_send 가
-     거절된 행을 치운다). */
-  const REQ_ERRORS: Record<string, string> = {
-    already: "이미 보낸 채팅 신청이 있어요",
-    self: "나에게는 보낼 수 없어요",
-    not_public: "상대가 프로필을 내렸어요",
-    no_profile: "먼저 내 프로필을 만들어주세요",
-  };
-
-  const sendReq = async () => {
-    if (!reqTarget) return;
-    setReqBusy(true);
-    const r = await sendRequest(reqTarget.id, reqMsg);
-    setReqBusy(false);
-
-    if (r.error === "already")
-      return alert(
-        r.status === "accepted"
-          ? "이미 채팅이 열려 있어요"
-          : "이미 보낸 채팅 신청이 답을 기다리고 있어요"
-      );
-    if (r.error) return alert(REQ_ERRORS[r.error] ?? `실패: ${r.error}`);
-
-    notifyPush(
-      reqTarget.id,
-      "💬 새 채팅 신청이 왔어요",
-      reqMsg.trim() || "신청함에서 프로필을 확인해보세요",
-      "/inbox"
-    );
-    setSentTo((s) => new Set(s).add(reqTarget.id));
-    setReqTarget(null);
-    alert(
-      `${reqTarget.nickname}님에게 채팅을 보냈어요!\n` +
-        "수락하면 채팅이 열려요."
-    );
-  };
-
 
   // 오픈 전 대기 화면 — 가입·프로필은 끝냈고 기능만 잠긴 상태.
   // authed 를 함께 보는 이유: 로그인도 안 한 사람에게 "가입 완료!" 가 뜨면
@@ -538,10 +491,10 @@ export default function Home() {
           <div className="flex flex-col divide-y divide-line">
             {shownPeople.map((p) => (
               <div key={p.id} className="flex items-center gap-4 py-4">
-                {/* 사진·정보를 누르면 상세 — 관심을 보내기 전에 크게 본다.
-                    신고는 상세 시트에서 한다. */}
-                <button
-                  onClick={() => setDetail(p)}
+                {/* 사진·정보를 누르면 프로필 화면 — 어디서 열든 같은 화면이다.
+                    신고는 거기서 한다. */}
+                <Link
+                  href={`/user?id=${p.id}&from=people`}
                   className="flex min-w-0 flex-1 items-center gap-4 text-left"
                 >
                   {p.photo && photoUrls[p.photo] ? (
@@ -573,16 +526,13 @@ export default function Home() {
                       </p>
                     )}
                   </div>
-                </button>
+                </Link>
                 {/* 채팅 신청 하나로 통일 — 보내면 상대 신청함에 뜨고,
                     수락하면 채팅이 열린다. 목록에서는 secondary 로 물러난다 —
                     primary CTA 는 상세 시트의 "채팅 보내기" 하나만 강하게 둔다. */}
                 <button
                   disabled={sentTo.has(p.id)}
-                  onClick={() => {
-                    setReqTarget(p);
-                    setReqMsg("");
-                  }}
+                  onClick={() => setReqTarget(p)}
                   className={`shrink-0 text-[12.5px] ${
                     sentTo.has(p.id)
                       ? "py-2 font-medium text-faint"
@@ -597,143 +547,11 @@ export default function Home() {
         </div>
       )}
 
-      {/* 프로필 상세 — 목록은 한 줄 요약뿐이라, 보낼지 정하기 전에
-          큰 사진과 전체 소개를 볼 자리가 필요하다 */}
-      {detail && (
-        <div
-          className="fixed inset-0 z-30 flex items-end bg-black/50"
-          onClick={() => setDetail(null)}
-        >
-          <div
-            className="mx-auto max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-surface p-5"
-            style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {detail.photo && photoUrls[detail.photo] ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={photoUrls[detail.photo]}
-                alt={detail.nickname}
-                className="aspect-square w-full rounded-xl object-cover"
-              />
-            ) : (
-              <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-surface2">
-                <ShoeIllust size={88} />
-              </div>
-            )}
-
-            <p className="mt-4 text-[19px] font-bold">
-              {detail.nickname}
-              <span className="ml-2 text-[13.5px] font-normal text-muted">
-                {[detail.age, detail.height && `${detail.height}cm`, detail.area]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </span>
-            </p>
-            <p className="mt-1 text-[13px] text-muted">
-              {[
-                detail.level &&
-                  `등반 수준 · ${level(detail.level).name}`,
-                careerLabel(detail.careerId) &&
-                  `구력 ${careerLabel(detail.careerId)}`,
-                detail.homeGym,
-                detail.mbti,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-            <PublicShoe achievement={detail.achievement} />
-            {detail.intro && (
-              <p className="mt-3 rounded-lg bg-surface2 px-3.5 py-3 text-[13.5px] leading-relaxed">
-                &ldquo;{detail.intro}&rdquo;
-              </p>
-            )}
-
-            <div className="mt-5 flex gap-2">
-              <button
-                onClick={() => {
-                  setReportTarget(detail);
-                  setDetail(null);
-                }}
-                className="rounded-xl border border-line px-4 py-3.5 text-[13px] font-medium text-muted"
-              >
-                신고
-              </button>
-              <button
-                disabled={sentTo.has(detail.id)}
-                onClick={() => {
-                  setReqTarget(detail);
-                  setReqMsg("");
-                  setDetail(null);
-                }}
-                className={`flex-1 rounded-xl py-3.5 text-[14.5px] font-semibold ${
-                  sentTo.has(detail.id)
-                    ? "bg-surface2 text-faint"
-                    : "bg-accent text-white active:bg-accent-pressed"
-                }`}
-              >
-                {sentTo.has(detail.id)
-                  ? "채팅을 보냈어요"
-                  : "채팅 보내기"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 채팅 보내기 시트 — 한 줄 메시지를 붙이면 받는 쪽이 맥락을 보고 판단한다 */}
       {reqTarget && (
-        <div
-          className="fixed inset-0 z-30 flex items-end bg-black/50"
-          onClick={() => setReqTarget(null)}
-        >
-          <div
-            className="mx-auto w-full max-w-md rounded-t-2xl bg-surface p-5 pb-8"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="text-[16.5px] font-bold">
-              {reqTarget.nickname}님에게 채팅 보내기
-            </p>
-            <p className="mt-1 text-[12.5px] text-muted">
-              한 줄 남기면 수락될 가능성이 높아요.
-            </p>
-            <textarea
-              value={reqMsg}
-              onChange={(e) => setReqMsg(e.target.value.slice(0, 200))}
-              rows={3}
-              placeholder={`예: 같은 ${reqTarget.homeGym} 다니네요! 주말에 같이 타요`}
-              className="mt-3 w-full resize-none rounded-lg bg-surface2 px-3.5 py-3 text-[16px] text-ink placeholder:text-faint focus:outline-none"
-            />
-            <p className="mt-1 text-right text-[11.5px] text-faint">
-              {reqMsg.length}/200
-            </p>
-            <button
-              disabled={reqBusy}
-              onClick={sendReq}
-              className="mt-2 w-full rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
-            >
-              {reqBusy ? "보내는 중…" : "채팅 보내기"}
-            </button>
-            <button
-              onClick={() => setReqTarget(null)}
-              className="mt-2 w-full py-2 text-[13px] font-medium text-muted"
-            >
-              취소
-            </button>
-          </div>
-        </div>
-      )}
-
-      {reportTarget && (
-        <ReportSheet
-          targetId={reportTarget.id}
-          nickname={reportTarget.nickname}
-          context="profile"
-          onClose={() => setReportTarget(null)}
-          onDone={() =>
-            // 차단까지 걸렸으니 목록에서 바로 뺀다 — 새로고침을 기다리게 하지 않는다
-            setPeople((prev) => prev.filter((x) => x.id !== reportTarget.id))
-          }
+        <ChatRequestSheet
+          target={reqTarget}
+          onClose={() => setReqTarget(null)}
+          onSent={() => setSentTo((s) => new Set(s).add(reqTarget.id))}
         />
       )}
     </main>

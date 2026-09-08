@@ -43,7 +43,7 @@ function Mate({
 }) {
   return (
     <Link
-      href={`/session/host?id=${sessionId}&u=${m.id}`}
+      href={`/user?id=${m.id}&s=${sessionId}`}
       className="flex items-center gap-2 rounded-full bg-surface2 py-1 pl-1 pr-3 transition-colors active:bg-line"
     >
       {url ? (

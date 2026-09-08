@@ -177,10 +177,9 @@ export default function ProfileNew() {
     if (!nickname.trim()) return alert("닉네임을 입력해주세요");
     if (!n || n < 19 || n > 60) return alert("나이를 확인해주세요");
     if (!careerId) return alert("구력을 선택해주세요");
-    if (!height) return alert("키를 입력해주세요");
-    if (Number(height) < 130 || Number(height) > 220)
+    if (height && (Number(height) < 130 || Number(height) > 220))
       return alert("키를 확인해주세요 (130~220cm)");
-    // 동네·홈짐·MBTI 는 선택 — 채우고 싶은 사람만
+    // 키·동네·홈짐·MBTI 는 선택 — 채우고 싶은 사람만
 
     const profile = buildProfile();
 
@@ -395,7 +394,7 @@ export default function ProfileNew() {
           </div>
         </Field>
 
-        <Field label="키">
+        <Field label="키 (선택)">
           <input
             value={height}
             onChange={(e) => setHeight(e.target.value.replace(/\D/g, "").slice(0, 3))}
@@ -403,9 +402,6 @@ export default function ProfileNew() {
             placeholder="예: 168"
             className={inputCls}
           />
-          <p className="mt-1.5 text-[12px] text-muted">
-            검색 필터로는 쓰이지 않아요.
-          </p>
         </Field>
 
         <Field label="홈짐 (선택)">

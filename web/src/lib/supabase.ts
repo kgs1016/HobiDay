@@ -179,8 +179,8 @@ export async function fetchSession(id: string): Promise<DbSession | null> {
   return (data as DbSession | null) ?? null;
 }
 
-/** 모임을 연 사람이 프로필에 적은 것들. 프로필 id 가 아니라 모임 id 로 받는다 */
-export interface HostProfile {
+/** 상대 프로필 — 어디서 열든 같은 화면이 쓴다 (user_profile) */
+export interface UserProfile {
   id: string;
   nickname: string;
   gender: "m" | "f";
@@ -188,30 +188,43 @@ export interface HostProfile {
   area: string;
   level: LevelId | null;
   career: CareerId | null;
+  /** 키(cm) — 선택 입력 */
   height: number | null;
   home_gym: string;
   mbti: string | null;
   intro: string | null;
   photo: string | null;
-  hosted: number; // 지금까지 연 모임 수
+  /** 사람 찾기에 공개 중인가 — 채팅 보내기 버튼을 보일지 정한다 */
+  is_public: boolean;
+  /** 모임 맥락(sessionId)으로 열었을 때만 값이 있다 */
+  is_host: boolean | null;
+  /** 실제로 열린 모임에 호스트 또는 확정 참가자로 다녀온 수 */
+  joined: number;
   achievement?: PublicShoeAchievement;
 }
 
-export async function fetchSessionHost(
-  sessionId: string
-): Promise<{ host?: HostProfile; error?: string }> {
+/* 볼 수 있는 사이는 서버(profile_visible)가 정한다 — 공개 프로필, 1:1
+   채팅 상대, 같은 모임에 확정으로 있던 사람, 그리고 sessionId 를 넘기면
+   그 모임의 호스트·참여자. userId 없이 sessionId 만 넘기면 호스트다. */
+export async function fetchUserProfile(
+  userId: string | null,
+  sessionId?: string | null
+): Promise<{ profile?: UserProfile; error?: string }> {
   const sb = getSupabase();
   if (!sb) return { error: "no_client" };
-  const { data, error } = await sb.rpc("session_host", { p_session: sessionId });
+  const { data, error } = await sb.rpc("user_profile", {
+    p_user: userId,
+    p_session: sessionId ?? null,
+  });
   if (error) {
-    console.error("session_host", error);
+    console.error("user_profile", error);
     return { error: error.message };
   }
-  const r = data as (HostProfile & { error?: string }) | null;
+  const r = data as (UserProfile & { error?: string }) | null;
   if (!r) return { error: "not_found" };
   if (r.error) return { error: r.error };
-  const achievements = await fetchPublicShoeAchievements([r.id], sessionId);
-  return { host: { ...r, achievement: achievements?.[r.id] } };
+  const achievements = await fetchPublicShoeAchievements([r.id], sessionId ?? undefined);
+  return { profile: { ...r, achievement: achievements?.[r.id] } };
 }
 
 /* 모임 참여자 한 줄. 호스트도 이 목록에 같이 들어온다 (is_host) —
@@ -240,29 +253,6 @@ export async function fetchSessionMembers(
     return [];
   }
   return (data as SessionMember[] | null) ?? [];
-}
-
-/* 참여자 한 사람의 프로필. session_host 를 사람 단위로 넓힌 것이라
-   같은 모양으로 돌아온다 (호스트를 넘겨도 된다). */
-export async function fetchSessionMember(
-  sessionId: string,
-  userId: string
-): Promise<{ host?: HostProfile; error?: string }> {
-  const sb = getSupabase();
-  if (!sb) return { error: "no_client" };
-  const { data, error } = await sb.rpc("session_member", {
-    p_session: sessionId,
-    p_user: userId,
-  });
-  if (error) {
-    console.error("session_member", error);
-    return { error: error.message };
-  }
-  const r = data as (HostProfile & { error?: string }) | null;
-  if (!r) return { error: "not_found" };
-  if (r.error) return { error: r.error };
-  const achievements = await fetchPublicShoeAchievements([r.id], sessionId);
-  return { host: { ...r, achievement: achievements?.[r.id] } };
 }
 
 export async function createSession(p: {
