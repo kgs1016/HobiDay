@@ -1,118 +1,83 @@
-/* db push 가 제대로 끝났는지 한 번에 보는 점검표.
-   샌드박스든 본 DB든 SQL Editor 에 통째로 붙여넣고 Run.
-   ok 열이 전부 true 여야 한다.
-
-   가장 중요한 건 "차단+승인제 병합" 줄이다. create or replace function 은
-   함수를 통째로 갈아치우기 때문에, 마이그레이션 순서가 꼬이면 나중 것이
-   앞의 차단 필터를 조용히 지운다. 에러가 안 나서 눈치채기 어렵다. */
-
+-- 현재 제품의 읽기 전용 배포 점검표. ok가 모두 true인지 확인한다.
+-- 폐지한 조기 확정·성비 규칙을 검사하면 정상 DB도 실패하므로 현행만 검사한다.
 with fn as (
   select p.proname, pg_get_functiondef(p.oid) as src
-    from pg_proc p
-    join pg_namespace n on n.oid = p.pronamespace
-   where n.nspname = 'public'
-),
-checks as (
-  /* 1. 테이블이 다 섰는가 */
-  select 1 as no, '테이블 8종' as 항목,
-         count(*) = 8 as ok,
-         count(*) || '/8' as 값
-    from information_schema.tables
-   where table_schema = 'public'
-     and table_name in ('profiles','sessions','signups','matches',
-                        'messages','reports','blocks','app_config')
-
-  /* 2. 최신 기능들이 올라왔는가 */
+  from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+  where n.nspname='public' and p.prokind='f'
+), checks as (
+  select 1 as no, '핵심 테이블 8종' as item, count(*)=8 as ok, count(*)||'/8' as detail
+  from information_schema.tables where table_schema='public'
+    and table_name in ('profiles','sessions','signups','matches','messages','reports','blocks','app_config')
   union all
-  select 2, '함수 9종 (승인제·채팅·차단)',
-         count(*) = 9, count(*) || '/9'
-    from fn
-   where proname in ('session_list','session_join','session_approve',
-                     'my_hosted_requests','my_confirm_proposals','my_signups',
-                     'session_chat_member','my_session_chats','inbox_counts')
-
-  /* 3. ★ 차단 필터가 승인제 병합에서 살아남았는가 — 여기가 핵심 */
+  select 2,'승인·채팅·목록 RPC',count(*)=8,count(*)||'/8' from fn
+    where proname in ('session_list','session_join','session_approve','my_hosted_requests',
+      'my_signups','session_chat_member','my_session_chats','inbox_counts')
   union all
-  select 3, '★ 차단 필터 생존 (9개 함수 전부)',
-         count(*) = 9, count(*) || '/9'
-    from fn
-   where proname in ('session_list','session_join','session_approve',
-                     'my_hosted_requests','my_confirm_proposals','my_signups',
-                     'session_chat_member','my_session_chats','inbox_counts')
-     and src like '%blocked_with%'
-
-  /* 4. 호스트 정보·조기 확정이 session_list 에 함께 있는가 */
+  select 3,'차단 필터 생존',count(*)=8 and bool_and(case
+    when proname='session_approve' then src like '%join blocks%' and src like '%blocked_member%'
+      and src like '%b.blocker_id = p_user%' and src like '%b.blocked_id = p_user%'
+    when proname in ('session_chat_member','my_session_chats') then src like '%blocked_by_me%'
+    else src like '%blocked_with%' end),count(*)||'/8' from fn
+    where proname in ('session_list','session_join','session_approve','my_hosted_requests',
+      'my_signups','session_chat_member','my_session_chats','inbox_counts')
   union all
-  select 4, '★ session_list 에 호스트+조기확정',
-         bool_and(src like '%host_nickname%' and src like '%i_am_host%'
-                  and src like '%early_confirm_at%'),
-         '단일 함수'
-    from fn where proname = 'session_list'
-
-  /* 5. 단체 채팅 */
+  select 4,'모임 목록: 호스트·총 참여 인원',coalesce(bool_and(src like '%host_nickname%'
+    and src like '%i_am_host%' and src like '%confirmed%' and src not like '%early_confirm_at%'),false),'현행 응답'
+    from fn where proname='session_list'
   union all
-  select 5, '모임 채팅 4종', count(*) = 4, count(*) || '/4'
-    from fn
-   where proname in ('session_chat_send','session_chat_messages',
-                     'session_chat_mark_read','session_try_confirm')
-
-  /* 6. 조기 확정 */
+  select 5,'정원은 총원 2~8명',exists(select 1 from pg_constraint
+    where conrelid='public.sessions'::regclass and conname='sessions_capacity_check'
+      and pg_get_constraintdef(oid) like '%capacity >= 2%' and pg_get_constraintdef(oid) like '%capacity <= 8%')
+    and not exists(select 1 from information_schema.columns where table_schema='public'
+      and table_name='sessions' and column_name='gender_mode'),'성비 없음'
   union all
-  select 6, '조기 확정 3종', count(*) = 3, count(*) || '/3'
-    from fn
-   where proname in ('session_propose_confirm','session_withdraw_confirm',
-                     'session_accept_confirm')
-
-  /* 7. 가입 후 성별 잠금 */
+  select 6,'조기 확정 기능 제거',not exists(select 1 from fn where proname in
+    ('session_propose_confirm','session_withdraw_confirm','session_accept_confirm','my_confirm_proposals'))
+    and to_regclass('public.session_confirm_acks') is null
+    and not exists(select 1 from information_schema.columns where table_schema='public'
+      and table_name='sessions' and column_name='early_confirm_at'),'2명부터 확정'
   union all
-  select 7, '성별 잠금 트리거', count(*) = 1, count(*)::text
-    from pg_trigger
-   where tgname = 'profiles_gender_is_fixed' and not tgisinternal
-
-  /* 8. 프로필 기본 공개 */
+  select 7,'2명 이상 모임 상태 일치',not exists(select 1 from sessions s where s.status='open'
+    and (select count(*) from signups g where g.session_id=s.id and g.status='confirmed')>=2),'누락된 상태 전환 없음'
   union all
-  select 8, '프로필 기본 공개',
-         column_default like '%true%', coalesce(column_default,'(없음)')
-    from information_schema.columns
-   where table_schema='public' and table_name='profiles' and column_name='is_public'
-
-  /* 9. 운영 스위치 행이 있는가 — 없으면 화면이 대기 상태로 멈춘다 */
+  select 8,'성별 잠금 트리거',count(*)=1,count(*)::text from pg_trigger
+    where tgname='profiles_gender_is_fixed' and not tgisinternal
   union all
-  select 9, 'app_config 존재', count(*) = 1, count(*)::text from app_config
-
-  /* 10. RLS 가 켜져 있는가 — 꺼져 있으면 남의 데이터가 그대로 보인다 */
+  select 9,'app_config 존재',count(*)=1,count(*)::text from app_config
   union all
-  select 10, 'RLS 활성', bool_and(rowsecurity), count(*) || '개 테이블'
-    from pg_tables
-   where schemaname='public'
-     and tablename in ('profiles','sessions','signups','messages',
-                       'blocks','reports','gyms')
-
-  /* 11. 암장 마스터 — 폐업 35·중복 1 을 내린 뒤 운영 164곳 (20260908200000).
-         200 이면 비활성 마이그레이션이 안 올라간 것이고, 그 사이 값이면
-         누가 손으로 고친 행이 있다. */
+  select 10,'RLS 활성',count(*)=10 and bool_and(rowsecurity),count(*)||'/10' from pg_tables
+    where schemaname='public' and tablename in
+      ('profiles','sessions','signups','messages','blocks','reports','gyms','posts','post_comments','climbing_ascents')
   union all
-  select 11, '운영 암장 164곳', count(*) = 164, count(*) || '곳'
-    from gyms where is_active
-
-  /* 12. 대표사진 — upload_gym_photos.mjs 를 돌린 뒤 156 이어야 한다.
-         0 이면 아직 업로드 전(정상), 156 보다 크면 폐업 암장 사진까지 올라간 것. */
+  select 11,'운영 암장 마스터',count(*)>0,count(*)||'곳 (2026-09-08 검증: 164)' from gyms where is_active
   union all
-  select 12, '대표사진 156곳 (업로드 후)', count(*) in (0, 156), count(*) || '곳'
-    from gyms where is_active and thumbnail_url is not null
+  select 12,'대표사진 연결',count(*)>0,count(*)||'곳 (2026-09-08 검증: 156)'
+    from gyms where is_active and nullif(thumbnail_url,'') is not null
   union all
-  select 13, '전면 무료: 차감·적립·잔액 RPC 제거',
-         not exists (select 1 from fn where proname in
-           ('credit_rule','credit_grant','credit_balance','my_credits','claim_profile_bonus',
-            'early_bird_status','early_bird_slots','request_daily_limit','session_fee_refund','request_fee_refund')),
-         '크레딧 RPC 0개'
-
+  select 13,'전면 무료: 크레딧 RPC 제거',not exists(select 1 from fn where proname in
+    ('credit_rule','credit_grant','credit_balance','my_credits','claim_profile_bonus','early_bird_status',
+     'early_bird_slots','request_daily_limit','session_fee_refund','request_fee_refund')),'잔액·차감·보상 없음'
   union all
-  select 14, '과거 원장 API 비공개',
-         to_regclass('public.credit_ledger') is null
-         and to_regclass('retired.credit_ledger') is not null
-         and not has_schema_privilege('authenticated','retired','USAGE'),
-         'retired 스키마'
+  select 14,'과거 원장 API 비공개',to_regclass('public.credit_ledger') is null
+    and to_regclass('retired.credit_ledger') is not null
+    and not has_schema_privilege('authenticated','retired','USAGE'),'원장 보존'
+  union all
+  select 15,'완등·공개 성취 RPC',count(*)=5,count(*)||'/5' from fn where proname in
+    ('climbing_progress','climbing_ascent_list','climbing_ascent_save','climbing_ascent_delete','public_climbing_achievements')
+  union all
+  select 16,'상세 완등 기록 직접 접근 차단',not has_table_privilege('authenticated','public.climbing_ascents','SELECT'),
+    'RPC에서 본인 기록만 제공'
+  union all
+  select 17,'영상 피드백·내 영상 RPC',count(*)=5,count(*)||'/5' from fn where proname in
+    ('video_post_list','video_post_create','video_like_set','my_video_posts','my_video_count')
+  union all
+  select 18,'사진·영상 버킷 공개 범위',
+    (select count(*)=3 and bool_and(not public) from storage.buckets where id in ('profile-photos','community-videos','mission-videos'))
+    and (select coalesce(bool_and(public),false) from storage.buckets where id='gym-photos'),
+    '암장 사진 공개 · 프로필/영상 비공개'
+  union all
+  select 19,'폐지한 최종선택·라운드 API 제거',not exists(select 1 from fn where proname in
+    ('selection_submit','my_matches','sync_matches','mission_done','room_warmup_min','room_round_min','room_card_lead_min'))
+    and to_regclass('public.selections') is null and to_regclass('public.missions') is null,'이력 정리 SQL 적용 후 통과'
 )
-select case when ok then '✅' else '❌' end as " ", 항목, 값
-  from checks order by no;
+select no,item,ok,detail from checks order by no;

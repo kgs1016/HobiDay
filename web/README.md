@@ -8,6 +8,7 @@
 ```bash
 npm install
 npm run dev        # http://localhost:3000
+npm run check      # 린트·타입·기능 검사 (전체 빌드 없음)
 ```
 
 Supabase 키는 `.env.local` 에 넣는다 (git 에 안 올라간다):
@@ -24,6 +25,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 ## 빌드가 두 가지다
 
+수정은 개발 서버로 확인하며 모아둔다. 사용자가 일괄 배포를 요청하면 아래 두 단계를 실행한다.
+`web/out`을 제공하는 정적 미리보기는 소스 수정이 즉시 반영되지 않는다.
+
 ```bash
 npm run build      # 웹 배포용 (Vercel) — export 아님
 npm run sync       # 네이티브용 — output: 'export' 로 빌드해 android/ios 에 반영
@@ -36,6 +40,7 @@ npm run sync       # 네이티브용 — output: 'export' 로 빌드해 android/
 ## 어디가 기준인가
 
 - DB 스키마·정책의 현재 기준: `../supabase/migrations/` 의 헤더 주석 + `../supabase/verify.sql`
+- 현행 제품과 통합 점검: `../docs/current-product.md`, `../docs/integration-audit-2026-09-08.md`
 - 데이터 접근은 전부 `src/lib/supabase.ts` 를 거친다
 - 앱 기능은 전면 무료다. 정원·신청 조건을 바꾸면 서버 RPC와 화면을 함께 확인할 것
   (`../supabase/README.md` 의 "주의" 참고)

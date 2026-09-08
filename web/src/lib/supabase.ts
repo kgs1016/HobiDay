@@ -681,13 +681,16 @@ export async function uploadProfilePhoto(
      프로필 저장은 나중이라, 골라만 놓고 저장 안 하면 옛 경로가 살아 있다.
      그 파일은 다음번 업로드 때 참조가 풀린 뒤 지워진다. */
   try {
-    const { data: row } = await sb
+    const { data: row, error: profileError } = await sb
       .from("profiles")
       .select("photo")
       .eq("id", user.id)
       .maybeSingle();
+    // 현재 사진을 확인하지 못한 경우에는 기존 파일을 지우지 않는다.
+    if (profileError) return { path };
     const keep = new Set([path, row?.photo].filter(Boolean));
-    const { data: files } = await sb.storage.from(PHOTO_BUCKET).list(user.id);
+    const { data: files, error: listError } = await sb.storage.from(PHOTO_BUCKET).list(user.id);
+    if (listError) return { path };
     const old = (files ?? [])
       .map((f) => `${user.id}/${f.name}`)
       .filter((p) => !keep.has(p));

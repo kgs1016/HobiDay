@@ -11,7 +11,7 @@ export interface Session {
   gym: string;
   /* Gym Master 연결 (gyms.id). 옛 모임과 목데이터에는 없다 */
   gymId?: string;
-  /* 암장 대표사진 — 사진 수집 전까지는 없다. 없으면 카드가 placeholder */
+  /* 암장 대표사진 — 없거나 불러오지 못하면 대체 표시 */
   gymThumb?: string;
   date: string; // "토 8/1"
   start: string; // "15:00"
@@ -69,7 +69,8 @@ export interface Person {
 export const MOCK_SESSIONS: Session[] = [
   {
     id: "s1",
-    gym: "더클라임 B홍대점",
+    gym: "더클라임 사당점",
+    gymThumb: "https://loigwslmwvltdurjttpe.supabase.co/storage/v1/object/public/gym-photos/HBD-GYM-0021.jpg",
     date: "토 8/1",
     start: "15:00",
     end: "17:00",
@@ -80,12 +81,13 @@ export const MOCK_SESSIONS: Session[] = [
     ageMax: 33,
     note: "끝나고 저녁 같이 먹어요",
     joined: 3,
-    status: "open",
+    status: "confirmed",
     host: { id: "p1", nickname: "서연", age: 27, area: "연남동", level: 3 },
   },
   {
     id: "s2",
     gym: "더클라임 연남점",
+    gymThumb: "https://loigwslmwvltdurjttpe.supabase.co/storage/v1/object/public/gym-photos/HBD-GYM-0051.jpg",
     date: "일 8/2",
     start: "11:00",
     end: "13:00",
@@ -96,12 +98,13 @@ export const MOCK_SESSIONS: Session[] = [
     ageMax: 29,
     note: "볼더링 처음이어도 환영! 같이 워밍업부터",
     joined: 2,
-    status: "open",
+    status: "confirmed",
     host: { id: "p3", nickname: "하은", age: 31, area: "상수동", level: 2 },
   },
   {
     id: "s3",
     gym: "홍대클라이밍센터",
+    gymThumb: "https://loigwslmwvltdurjttpe.supabase.co/storage/v1/object/public/gym-photos/HBD-GYM-0057.jpg",
     date: "토 8/1",
     start: "19:00",
     end: "21:00",
@@ -118,6 +121,7 @@ export const MOCK_SESSIONS: Session[] = [
   {
     id: "s4",
     gym: "써미트클라이밍센터",
+    gymThumb: "https://loigwslmwvltdurjttpe.supabase.co/storage/v1/object/public/gym-photos/HBD-GYM-0055.jpg",
     date: "수 8/5",
     start: "19:30",
     end: "21:00",
@@ -134,6 +138,7 @@ export const MOCK_SESSIONS: Session[] = [
   {
     id: "s5",
     gym: "더클라임 강남점",
+    gymThumb: "https://loigwslmwvltdurjttpe.supabase.co/storage/v1/object/public/gym-photos/HBD-GYM-0002.jpg",
     date: "목 8/6",
     start: "10:00",
     end: "12:00",
@@ -144,7 +149,7 @@ export const MOCK_SESSIONS: Session[] = [
     ageMax: 33,
     note: "성별 상관없이 셋이서 가볍게",
     joined: 2,
-    status: "open",
+    status: "confirmed",
     host: { id: "p2", nickname: "지훈", age: 29, area: "망원동", level: 2 },
   },
 ];
@@ -152,7 +157,7 @@ export const MOCK_SESSIONS: Session[] = [
 export const MOCK_PEOPLE: Person[] = [
   { id: "p1", nickname: "서연", age: 27, gender: "f", level: 3, careerId: 4, height: 164, homeGym: "써미트클라이밍센터", mbti: "ENFP", area: "연남동", achievement: { stage: "blue", total: 42 } },
   { id: "p2", nickname: "지훈", age: 29, gender: "m", level: 3, careerId: 2, homeGym: "더클라임 연남점", mbti: "ISTP", area: "망원동", achievement: { stage: "green", total: 24 } },
-  { id: "p3", nickname: "하은", age: 31, gender: "f", level: 2, careerId: 1, height: 158, homeGym: "더클라임 B홍대점", mbti: "ISFJ", area: "상수동", achievement: { stage: "white", total: 0 } },
+  { id: "p3", nickname: "하은", age: 31, gender: "f", level: 2, careerId: 1, height: 158, homeGym: "더클라임 사당점", mbti: "ISFJ", area: "상수동", achievement: { stage: "white", total: 0 } },
   { id: "p4", nickname: "민지", age: 26, gender: "f", level: 4, careerId: 6, height: 170, homeGym: "더클라임 강남점", mbti: "INTP", area: "연희동", achievement: { stage: "purple", total: 76 } },
 ];
 

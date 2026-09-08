@@ -2,7 +2,7 @@ import Link from "next/link";
 import { slotsLeft, type Session } from "@/lib/mock";
 import { totalSeats } from "@/lib/capacity";
 import { AvatarFallback } from "@/components/icons";
-import GymFallback from "@/components/GymFallback";
+import GymPhoto from "@/components/GymPhoto";
 import { ageRangeLabel } from "@/lib/meetupOptions";
 import { level, levelRangeShort } from "@/lib/levels";
 
@@ -17,8 +17,7 @@ export default function SessionCard({
   session: Session;
   /* 사진 버킷이 비공개라 서명 URL 을 목록에서 한 번에 받아 넘긴다 */
   hostPhotoUrl?: string;
-  /* 클라이밍짐 사진 — 아직 데이터가 없어 자리만 잡아둔다.
-     URL 이 넘어오면 그대로 그려진다. */
+  /* 암장 마스터의 공개 대표사진 URL. 없거나 로딩 실패 시 대체 표시. */
   gymPhotoUrl?: string;
 }) {
   const left = slotsLeft(s);
@@ -58,16 +57,7 @@ export default function SessionCard({
       className="flex gap-3.5 py-4 transition-colors active:bg-surface2"
     >
       {/* 클라이밍짐 사진 */}
-      {gymPhotoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={gymPhotoUrl}
-          alt=""
-          className="h-[84px] w-[84px] shrink-0 rounded-lg object-cover"
-        />
-      ) : (
-        <GymFallback name={s.gym} size={84} />
-      )}
+      <GymPhoto src={gymPhotoUrl} name={s.gym} size={84} />
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* 장소 */}

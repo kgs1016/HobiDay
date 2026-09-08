@@ -155,7 +155,13 @@ async function checkClock() {
 }
 
 (async () => {
+  const { findGym, matchesSearch } = load('homeSearch.ts');
+  const gyms = [{ name: '더클라임 연남점', aliases: ['The Climb Yeonnam'] }];
+  assert.equal(findGym(gyms, 'theclimb yeonnam'), gyms[0], 'gym aliases ignore case and spacing');
+  assert.equal(matchesSearch('연남 서연', ['더클라임 연남점', '서연']), true, 'all search words may match different visible fields');
+  assert.equal(matchesSearch('연남 지훈', ['더클라임 연남점', '서연']), false, 'unmatched search words filter out the row');
+  assert.equal(matchesSearch('  ', [undefined, null]), true, 'clearing search restores every row');
   await checkPolling();
   await checkClock();
-  console.log('PASS: serialized polling, queued refresh, cancellation, background/resume, failure recovery, unchanged rows, shared clock and cleanup');
+  console.log('PASS: gym alias search, combined search terms, serialized polling, queued refresh, cancellation, background/resume, failure recovery, unchanged rows, shared clock and cleanup');
 })().catch(error => { console.error(error); process.exitCode = 1; });

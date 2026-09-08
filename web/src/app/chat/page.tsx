@@ -10,7 +10,7 @@ import { usePolling } from "@/lib/usePolling";
 import { level } from "@/lib/levels";
 import ReportSheet from "@/components/ReportSheet";
 import { AvatarFallback, ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
-import GymFallback from "@/components/GymFallback";
+import GymPhoto from "@/components/GymPhoto";
 import { CarabinerIllust, ShoeIllust } from "@/components/illustrations";
 import { notifyPush } from "@/lib/nativePush";
 import {
@@ -241,16 +241,7 @@ function ChatContent({ initialRoomId, initialTab }: { initialRoomId: string | nu
                 onClick={() => openSession(c)}
                 className="flex items-center gap-3.5 py-3.5 text-left transition-colors active:bg-surface2"
               >
-                {c.gym_thumb ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={c.gym_thumb}
-                    alt=""
-                    className="h-12 w-12 shrink-0 rounded-full object-cover"
-                  />
-                ) : (
-                  <GymFallback name={c.gym} size={48} shape="circle" />
-                )}
+                <GymPhoto src={c.gym_thumb} name={c.gym} size={48} shape="circle" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[15px] font-semibold">
                     {c.gym}
