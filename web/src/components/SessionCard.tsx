@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { slotsLeft, type Session } from "@/lib/mock";
 import { totalSeats } from "@/lib/capacity";
-import { AvatarFallback, PhotoIcon } from "@/components/icons";
+import { AvatarFallback } from "@/components/icons";
+import GymFallback from "@/components/GymFallback";
 import { ageRangeLabel } from "@/lib/meetupOptions";
 
 /* 목록의 한 줄 — 떠 있는 카드가 아니라 feed 의 항목이다.
@@ -64,9 +65,7 @@ export default function SessionCard({
           className="h-[84px] w-[84px] shrink-0 rounded-lg object-cover"
         />
       ) : (
-        <span className="flex h-[84px] w-[84px] shrink-0 items-center justify-center rounded-lg bg-surface2 text-faint">
-          <PhotoIcon size={24} />
-        </span>
+        <GymFallback name={s.gym} size={84} />
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">

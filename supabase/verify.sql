@@ -86,7 +86,20 @@ checks as (
     from pg_tables
    where schemaname='public'
      and tablename in ('profiles','sessions','signups','messages',
-                       'blocks','reports')
+                       'blocks','reports','gyms')
+
+  /* 11. 암장 마스터 — 폐업 35·중복 1 을 내린 뒤 운영 164곳 (20260908200000).
+         200 이면 비활성 마이그레이션이 안 올라간 것이고, 그 사이 값이면
+         누가 손으로 고친 행이 있다. */
+  union all
+  select 11, '운영 암장 164곳', count(*) = 164, count(*) || '곳'
+    from gyms where is_active
+
+  /* 12. 대표사진 — upload_gym_photos.mjs 를 돌린 뒤 156 이어야 한다.
+         0 이면 아직 업로드 전(정상), 156 보다 크면 폐업 암장 사진까지 올라간 것. */
+  union all
+  select 12, '대표사진 156곳 (업로드 후)', count(*) in (0, 156), count(*) || '곳'
+    from gyms where is_active and thumbnail_url is not null
   union all
   select 13, '전면 무료: 차감·적립·잔액 RPC 제거',
          not exists (select 1 from fn where proname in
