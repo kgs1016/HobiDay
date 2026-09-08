@@ -49,7 +49,7 @@ function Chip({
       onClick={onClick}
       className={`rounded-full border px-3.5 py-2 text-[13px] font-medium transition-colors ${
         active
-          ? "border-accent bg-accent text-white"
+          ? "border-accent bg-accent-soft text-accent-strong"
           : "border-line bg-surface text-muted"
       }`}
     >
@@ -262,7 +262,7 @@ function NewSessionForm({ now }: { now: number }) {
               <button
                 type="button"
                 onClick={() => setPicking(true)}
-                className="flex w-full items-center justify-between rounded-lg border border-line bg-surface px-3.5 py-3 text-left"
+                className="button-secondary flex w-full items-center justify-between rounded-lg px-3.5 py-3 text-left"
               >
                 <span
                   className={`text-[16px] ${selected ? "text-ink" : "text-faint"}`}
@@ -410,7 +410,7 @@ function NewSessionForm({ now }: { now: number }) {
           <button
             type="submit"
             disabled={busy || !!blocked}
-            className="w-full rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
+            className="button-primary w-full rounded-xl py-3.5 text-[15px] font-semibold"
           >
             {busy ? "등록 중…" : "모임 등록하기"}
           </button>

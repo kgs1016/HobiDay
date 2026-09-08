@@ -75,7 +75,7 @@ export default function GymPicker({
               onClick={() => setRegion(r)}
               className={`rounded-full border px-3 py-1.5 text-[13px] transition-colors ${
                 region === r
-                  ? "border-accent bg-accent-soft font-medium text-accent-pressed"
+                  ? "border-accent bg-accent-soft font-medium text-accent-strong"
                   : "border-line bg-surface text-muted"
               }`}
             >
@@ -111,7 +111,7 @@ export default function GymPicker({
 
         <button
           onClick={onClose}
-          className="mt-3 w-full shrink-0 rounded-xl border border-line py-3 text-[14px] font-medium"
+          className="button-secondary mt-3 w-full shrink-0 rounded-xl py-3 text-[14px] font-medium"
         >
           닫기
         </button>

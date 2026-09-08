@@ -106,7 +106,7 @@ export default function Login() {
         />
         <button
           disabled={busy}
-          className="mt-1 rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
+          className="button-primary mt-1 rounded-xl py-3.5 text-[15px] font-semibold"
         >
           {busy ? "처리 중…" : "로그인"}
         </button>
@@ -137,7 +137,7 @@ export default function Login() {
         className="mt-5 block w-full text-center text-[13px] font-medium text-muted"
       >
         계정이 없으신가요?{" "}
-        <span className="font-semibold text-accent-pressed">회원가입</span>
+        <span className="font-semibold text-accent-strong">회원가입</span>
       </Link>
     </main>
   );

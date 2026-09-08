@@ -418,7 +418,7 @@ function SessionContent({ id, from }: { id: string | null; from: string | null |
         <div className="mt-6">
           <Link
             href="/chat#session"
-            className="block rounded-xl border border-line py-3.5 text-center text-[14px] font-semibold text-ink"
+            className="button-secondary block rounded-xl py-3.5 text-center text-[14px] font-semibold"
           >
             모임 채팅 열기
           </Link>
@@ -461,8 +461,8 @@ function SessionContent({ id, from }: { id: string | null; from: string | null |
             dead || s.iAmHost || full || started
               ? "bg-surface2 text-faint"
               : joined
-                ? "bg-accent-soft text-accent-pressed"
-                : "bg-accent text-white active:bg-accent-pressed disabled:opacity-70"
+                ? "bg-accent-soft text-accent-strong"
+                : "button-primary"
           }`}
           onClick={onJoin}
         >

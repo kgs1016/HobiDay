@@ -16,8 +16,10 @@ export interface MyProfile {
   homeGym: string;
   mbti: string;
   intro?: string;
-  /** 대표 사진 — 스토리지 경로. 사람 찾기에 공개할 때 필수 */
+  /** 대표 사진 — 스토리지 경로. 기본 정보 등록 시 필수 */
   photo?: string;
+  /** 사람 찾기 공개는 직접 선택한다. 저장된 선택이 없으면 비공개. */
+  isPublic?: boolean;
 }
 
 const KEY = "hobiday.myProfile";

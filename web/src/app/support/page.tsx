@@ -40,7 +40,7 @@ export default function Support() {
         <p>
           <a
             href="mailto:1212ntnt@naver.com"
-            className="font-semibold text-accent-pressed underline underline-offset-2"
+            className="font-semibold text-accent-strong underline underline-offset-2"
           >
             1212ntnt@naver.com
           </a>

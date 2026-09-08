@@ -41,7 +41,7 @@ export function ReviewCard({
           </p>
         </div>
         {r.liked && (
-          <span className="flex shrink-0 items-center gap-0.5 text-[11px] font-medium text-accent-pressed">
+          <span className="flex shrink-0 items-center gap-0.5 text-[11px] font-medium text-accent-strong">
             <ThumbIcon size={13} /> 추천
           </span>
         )}
@@ -94,7 +94,7 @@ export default function PlayerReviews({
           플레이어 리뷰
           {count > 0 && <span className="font-normal text-muted">{count}</span>}
           {likes !== undefined && (
-            <span className="ml-1 flex items-center gap-0.5 text-[12px] text-accent-pressed">
+            <span className="ml-1 flex items-center gap-0.5 text-[12px] text-accent-strong">
               <ThumbIcon size={13} /> {likes}
             </span>
           )}
@@ -129,7 +129,7 @@ export default function PlayerReviews({
           {count > list.length && (
             <Link
               href={`/user/reviews?id=${userId}`}
-              className="flex w-[40%] shrink-0 snap-start items-center justify-center rounded-xl border border-line text-[13px] font-medium text-muted"
+              className="button-secondary flex w-[40%] shrink-0 snap-start items-center justify-center rounded-xl text-[13px] font-medium"
             >
               더 보기
             </Link>

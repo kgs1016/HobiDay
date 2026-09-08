@@ -159,7 +159,7 @@ export default function MatchHistory() {
           <p className="text-[14px] text-muted">로그인하면 기록이 보여요</p>
           <Link
             href="/login"
-            className="rounded-xl bg-accent px-6 py-2.5 text-[14px] font-semibold text-white active:bg-accent-pressed"
+            className="button-primary rounded-xl px-6 py-2.5 text-[14px] font-semibold"
           >
             로그인 하기
           </Link>
@@ -172,7 +172,7 @@ export default function MatchHistory() {
           <p className="mt-3 text-[15px] font-semibold">아직 끝난 모임이 없어요</p>
           <Link
             href="/"
-            className="mt-3 rounded-xl bg-accent px-6 py-2.5 text-[14px] font-semibold text-white active:bg-accent-pressed"
+            className="button-primary mt-3 rounded-xl px-6 py-2.5 text-[14px] font-semibold"
           >
             모임 보러 가기
           </Link>

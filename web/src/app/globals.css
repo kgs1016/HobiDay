@@ -1,9 +1,7 @@
 @import "tailwindcss";
 
-/* HOBIDAY 디자인 토큰 — 흰 캔버스 + 하늘색 단일 accent.
-   화면 전체는 순수한 흰색이고, 회색(surface2)은 입력창·자리표시·
-   아주 약한 그룹 구분에만 쓴다. accent 는 주요 행동(CTA·선택 상태·
-   핵심 링크)에만 아껴 쓴다. 성별·기능별로 색을 나누지 않는다. */
+/* 흰 화면 + 하늘색 브랜드·선택 표시 + 차콜 핵심 행동.
+   보조 행동은 흰색 테두리 버튼, 상태는 연한 배경으로 구분한다. */
 @theme {
   --color-bg: #ffffff;
   --color-surface: #ffffff;
@@ -16,8 +14,52 @@
   --color-accent-pressed: #4696e8;
   --color-accent-soft: #eef6ff;
   --color-accent-strong: #2874d0;
+  --color-action: #191f28;
+  --color-action-pressed: #303b49;
+  --color-control-line: #cbd2d9;
   /* 되돌릴 수 없는 동작(탈퇴·신고 등) 전용 */
   --color-danger: #e5484d;
+}
+
+/* 크기와 배치는 각 화면에서 정하고, 행동의 색·상태는 함께 관리한다. */
+@utility button-primary {
+  background-color: var(--color-action);
+  color: var(--color-surface);
+
+  &:not(:disabled):active {
+    background-color: var(--color-action-pressed);
+  }
+
+  &:disabled {
+    background-color: var(--color-line);
+    color: var(--color-muted);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-action);
+    outline-offset: 3px;
+  }
+}
+
+@utility button-secondary {
+  border: 1px solid var(--color-control-line);
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+
+  &:not(:disabled):active {
+    background-color: var(--color-surface2);
+  }
+
+  &:disabled {
+    border-color: var(--color-line);
+    background-color: var(--color-surface2);
+    color: var(--color-muted);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-action);
+    outline-offset: 3px;
+  }
 }
 
 html {

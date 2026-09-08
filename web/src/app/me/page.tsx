@@ -88,7 +88,7 @@ export default function Me() {
                 <p className="text-[15px] font-semibold">프로필이 아직 없어요</p>
                 <Link
                   href="/profile/new"
-                  className="mt-1 inline-block text-[13px] font-semibold text-accent-pressed"
+                  className="mt-1 inline-block text-[13px] font-semibold text-accent-strong"
                 >
                   프로필 만들기
                 </Link>
@@ -119,7 +119,7 @@ export default function Me() {
       <section className="mx-4 mt-3 border-t border-line pt-4 pb-2">
         <Link
           href="/me/settings"
-          className="flex items-center justify-between rounded-xl border border-line bg-surface px-4 py-3.5 text-[15px] font-medium transition-colors active:bg-surface2"
+          className="button-secondary flex items-center justify-between rounded-xl px-4 py-3.5 text-[15px] font-medium transition-colors active:bg-surface2"
         >
           내 정보
           <ChevronRightIcon size={16} className="text-muted" />

@@ -87,7 +87,7 @@ function PersonForm({
           onClick={() => setLiked((v) => !v)}
           className={`flex shrink-0 items-center gap-1 rounded-full border px-3 py-1.5 text-[13px] font-semibold transition-colors disabled:opacity-50 ${
             liked
-              ? "border-accent bg-accent text-white"
+              ? "border-accent bg-accent-soft text-accent-strong"
               : "border-line bg-surface text-muted"
           }`}
         >
@@ -110,7 +110,7 @@ function PersonForm({
             type="button"
             disabled={busy || !filled}
             onClick={save}
-            className="rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white active:bg-accent-pressed disabled:opacity-40"
+            className="button-primary rounded-lg px-4 py-2 text-[13px] font-semibold"
           >
             {busy ? "남기는 중…" : "남기기"}
           </button>
@@ -158,7 +158,7 @@ export default function ReviewPage() {
           <p className="mt-3 text-[15px] font-semibold">리뷰를 남길 수 없는 모임이에요</p>
           <Link
             href="/me/reviews"
-            className="mt-3 rounded-xl bg-accent px-6 py-2.5 text-[14px] font-semibold text-white active:bg-accent-pressed"
+            className="button-primary mt-3 rounded-xl px-6 py-2.5 text-[14px] font-semibold"
           >
             리뷰 작성 목록
           </Link>

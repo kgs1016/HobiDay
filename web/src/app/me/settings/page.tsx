@@ -156,7 +156,7 @@ export default function Settings() {
                 setConfirmText("");
               }}
               disabled={busy}
-              className="flex-1 rounded-xl border border-line py-3 text-[13.5px] font-medium disabled:opacity-50"
+              className="button-secondary flex-1 rounded-xl py-3 text-[13.5px] font-medium"
             >
               계속 이용할래요
             </button>

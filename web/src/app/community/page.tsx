@@ -81,7 +81,7 @@ function CompetitionRow({ a }: { a: Article }) {
         <p className="flex items-center gap-2 text-[12px]">
           <span
             className={`rounded-md px-1.5 py-0.5 font-semibold ${
-              badge.live ? "bg-accent text-white" : "bg-accent-soft text-accent-pressed"
+              badge.live ? "bg-accent-soft font-bold text-accent-strong" : "bg-surface2 text-muted"
             }`}
           >
             {badge.label}
@@ -131,7 +131,7 @@ function PostRow({ p, photo }: { p: PostSummary; photo?: string }) {
       <div className="flex items-start justify-between gap-3">
         <p className="min-w-0 flex-1 truncate text-[15px] font-semibold">{p.title}</p>
         {p.comment_count > 0 && (
-          <span className="shrink-0 text-[12px] font-medium text-accent-pressed">
+          <span className="shrink-0 text-[12px] font-medium text-accent-strong">
             💬 {p.comment_count}
           </span>
         )}
@@ -235,7 +235,7 @@ export default function Community() {
         {(tab === "board" || tab === "video") && authed && (
           <Link
             href={tab === "video" ? "/community/upload" : "/community/write"}
-            className="flex items-center gap-1 py-1 text-[13.5px] font-semibold text-accent-pressed"
+            className="flex items-center gap-1 py-1 text-[13.5px] font-semibold text-accent-strong"
           >
             <PlusIcon size={14} strokeWidth={2.2} />
             {tab === "video" ? "영상 올리기" : "글쓰기"}
@@ -264,7 +264,7 @@ export default function Community() {
           <p className="text-[14px] text-muted">로그인하면 커뮤니티를 볼 수 있어요</p>
           <Link
             href="/login"
-            className="rounded-xl bg-accent px-6 py-2.5 text-[14px] font-semibold text-white active:bg-accent-pressed"
+            className="button-primary rounded-xl px-6 py-2.5 text-[14px] font-semibold"
           >
             로그인 하기
           </Link>
@@ -287,7 +287,7 @@ export default function Community() {
               <button
                 onClick={loadMore}
                 disabled={busy}
-                className="mt-3 w-full rounded-xl border border-line py-3 text-[13.5px] font-medium text-muted disabled:opacity-50"
+                className="button-secondary mt-3 w-full rounded-xl py-3 text-[13.5px] font-medium"
               >
                 {busy ? "불러오는 중…" : "더 보기"}
               </button>

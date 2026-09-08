@@ -36,16 +36,16 @@ function badge(s: MyHostedSession) {
     return { label: "취소됨", cls: "bg-surface2 text-muted" };
   if (isEnded(s))
     return s.status === "confirmed"
-      ? { label: "완료", cls: "bg-accent-soft text-accent-pressed" }
+      ? { label: "완료", cls: "bg-accent-soft text-accent-strong" }
       : { label: "무산됨", cls: "bg-surface2 text-muted" };
   /* 둘이면 그 순간 확정이다. 확정은 모집의 끝이 아니라서, 최대 정원이
      남아 있으면 확정된 채로 계속 받는다 — 둘을 같이 적는다. */
   if (s.status === "confirmed")
     return {
       label: s.confirmed < s.capacity ? "확정 · 모집 중" : "확정",
-      cls: "bg-accent-soft text-accent-pressed",
+      cls: "bg-accent-soft text-accent-strong",
     };
-  return { label: "모집 중", cls: "bg-accent-soft text-accent-pressed" };
+  return { label: "모집 중", cls: "bg-accent-soft text-accent-strong" };
 }
 
 /* 목록의 한 줄 — 카드 대신 divider(부모 divide-y)로 구분한다 */
@@ -121,7 +121,7 @@ export default function MySessions() {
           <p className="text-[14px] text-muted">로그인하면 내 모임이 보여요</p>
           <Link
             href="/login"
-            className="rounded-xl bg-accent px-6 py-2.5 text-[14px] font-semibold text-white active:bg-accent-pressed"
+            className="button-primary rounded-xl px-6 py-2.5 text-[14px] font-semibold"
           >
             로그인 하기
           </Link>
@@ -134,7 +134,7 @@ export default function MySessions() {
           <p className="mt-3 text-[15px] font-semibold">아직 만든 모임이 없어요</p>
           <Link
             href="/"
-            className="mt-3 rounded-xl bg-accent px-6 py-2.5 text-[14px] font-semibold text-white active:bg-accent-pressed"
+            className="button-primary mt-3 rounded-xl px-6 py-2.5 text-[14px] font-semibold"
           >
             모임 만들러 가기
           </Link>

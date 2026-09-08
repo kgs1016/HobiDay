@@ -4,8 +4,10 @@
    한 줄 메시지를 붙이면 받는 쪽이 맥락을 보고 판단한다. */
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { notifyPush } from "@/lib/nativePush";
-import { sendRequest } from "@/lib/supabase";
+import { fetchMyProfileDb, hasSupabase, sendRequest } from "@/lib/supabase";
+import { isProfileComplete } from "@/lib/profileGate";
 
 /* already 는 두 경우뿐이다 — 답을 기다리는 중이거나, 이미 채팅이
    열려 있거나. 거절당한 상대에게는 다시 보낼 수 있다(request_send 가
@@ -28,9 +30,17 @@ export default function ChatRequestSheet({
 }) {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const router = useRouter();
 
   const send = async () => {
+    if (busy) return;
     setBusy(true);
+    if (hasSupabase() && !isProfileComplete(await fetchMyProfileDb())) {
+      setBusy(false);
+      alert("채팅을 보내려면 대표 사진과 구력을 입력해주세요. 사람 찾기 공개는 선택입니다.");
+      router.push("/profile/new");
+      return;
+    }
     const r = await sendRequest(target.id, msg);
     setBusy(false);
 
@@ -76,7 +86,7 @@ export default function ChatRequestSheet({
         <button
           disabled={busy}
           onClick={send}
-          className="mt-2 w-full rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
+          className="button-primary mt-2 w-full rounded-xl py-3.5 text-[15px] font-semibold"
         >
           {busy ? "보내는 중…" : "채팅 보내기"}
         </button>

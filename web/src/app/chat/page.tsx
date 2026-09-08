@@ -174,7 +174,7 @@ function ChatContent({
           <p className="text-[14px] text-muted">로그인하면 대화가 보여요</p>
           <Link
             href="/login"
-            className="rounded-xl bg-accent px-6 py-2.5 text-[14px] font-semibold text-white active:bg-accent-pressed"
+            className="button-primary rounded-xl px-6 py-2.5 text-[14px] font-semibold"
           >
             로그인 하기
           </Link>
@@ -481,7 +481,7 @@ function ChatFrame({
         />
         <button
           disabled={busy || !text.trim()}
-          className="shrink-0 rounded-xl bg-accent px-4 text-[14px] font-semibold text-white active:bg-accent-pressed disabled:opacity-40"
+          className="button-primary shrink-0 rounded-xl px-4 text-[14px] font-semibold"
         >
           전송
         </button>
@@ -511,15 +511,13 @@ function Bubble({
     <div
       className={`max-w-full rounded-[18px] px-3.5 py-2.5 text-[14px] leading-relaxed ${
         m.mine
-          ? "rounded-br-md bg-accent text-white"
+          ? "rounded-br-md bg-accent-soft text-ink"
           : "rounded-bl-md bg-surface2 text-ink"
       }`}
     >
       {m.body}
       <span
-        className={`ml-2 align-bottom text-[10.5px] ${
-          m.mine ? "text-white/70" : "text-faint"
-        }`}
+        className="ml-2 align-bottom text-[10.5px] text-muted"
       >
         {when(m.created_at)}
       </span>
@@ -875,7 +873,7 @@ function SessionThread({
                     setPicking(false);
                     setTarget(p);
                   }}
-                  className="rounded-lg border border-line bg-surface px-4 py-3 text-left text-[14px] font-medium"
+                  className="button-secondary rounded-lg px-4 py-3 text-left text-[14px] font-medium"
                 >
                   {p.nickname}
                 </button>
@@ -884,7 +882,7 @@ function SessionThread({
           )}
           <button
             onClick={() => setPicking(false)}
-            className="mt-4 w-full rounded-xl border border-line py-3.5 text-[14px] font-medium"
+            className="button-secondary mt-4 w-full rounded-xl py-3.5 text-[14px] font-medium"
           >
             취소
           </button>

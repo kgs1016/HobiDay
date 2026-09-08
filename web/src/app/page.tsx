@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { isProfileComplete } from "@/lib/profileGate";
+import { isBasicProfileComplete } from "@/lib/profileGate";
 import SessionCard from "@/components/SessionCard";
 import SessionFilterBar from "@/components/SessionFilterBar";
 import ProfileTodo from "@/components/ProfileTodo";
+import HomeBanner from "@/components/HomeBanner";
 import { ShoeBadge } from "@/components/PublicShoe";
 import ChatRequestSheet from "@/components/ChatRequestSheet";
 import { AvatarFallback, BellIcon, PlusIcon, SearchIcon } from "@/components/icons";
@@ -86,10 +87,9 @@ export default function Home() {
         return;
       }
 
-      // 프로필(사진 포함)을 먼저 완성해야 둘러볼 수 있다.
-      // 막는 건 RequireProfile 이 레이아웃에서 한다 — 여기서는 조회만 멈춘다.
+      // 대표 사진을 포함한 기본 정보가 있으면 사람 찾기에 공개하지 않아도 둘러볼 수 있다.
       const prof = await fetchMyProfileDb();
-      if (!isProfileComplete(prof)) return;
+      if (!isBasicProfileComplete(prof)) return;
       setMe(prof);
 
       // 오픈 전에는 모임·사람을 잠근다 (대시보드 app_config 로 켠다)
@@ -192,7 +192,7 @@ export default function Home() {
         <div className="mx-auto mt-4 max-w-sm">
           <Link
             href="/profile/new"
-            className="block rounded-xl border border-line py-3.5 text-center text-[14px] font-semibold text-ink"
+            className="button-secondary block rounded-xl py-3.5 text-center text-[14px] font-semibold"
           >
             내 프로필 다듬기
           </Link>
@@ -232,13 +232,13 @@ export default function Home() {
         <div className="mx-auto mt-9 flex max-w-sm flex-col gap-2">
           <Link
             href="/login"
-            className="rounded-xl bg-accent py-3.5 text-center text-[15px] font-semibold text-white active:bg-accent-pressed"
+            className="button-primary rounded-xl py-3.5 text-center text-[15px] font-semibold"
           >
             로그인 하기
           </Link>
           <Link
             href="/intro.html"
-            className="rounded-xl border border-line py-3.5 text-center text-[14px] font-medium text-ink"
+            className="button-secondary rounded-xl py-3.5 text-center text-[14px] font-medium"
           >
             하비데이가 뭔가요?
           </Link>
@@ -347,18 +347,20 @@ export default function Home() {
       </form>}
 
       <div className="flex items-center justify-between gap-3 border-b border-line">
-        <div className="flex gap-5" aria-label="둘러보기">
+        <div className="flex gap-6" aria-label="둘러보기">
           {([["session", "모임"], ["people", "사람"]] as const).map(([key, label]) => (
             <button key={key} type="button" aria-pressed={tab === key} onClick={() => setTab(key)}
-              className={`-mb-px border-b-2 pb-2.5 pt-1 text-[15.5px] ${tab === key ? "border-ink font-bold text-ink" : "border-transparent font-medium text-faint"}`}>
+              className={`-mb-px min-h-12 border-b-2 pb-2.5 pt-1 text-[21px] font-bold tracking-tight ${tab === key ? "border-ink text-ink" : "border-transparent text-faint"}`}>
               {label}
             </button>
           ))}
         </div>
-        <Link href="/session/new" className="mb-2 flex shrink-0 items-center gap-1 rounded-lg bg-accent-soft px-2.5 py-1.5 text-[13px] font-semibold text-accent-pressed active:bg-line">
+        <Link href="/session/new" className="button-secondary mb-2 flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-[13px] font-semibold">
           <PlusIcon size={14} strokeWidth={2.2} />모임 만들기
         </Link>
       </div>
+
+      <HomeBanner />
 
       {tab === "session" ? (
         <>
@@ -383,7 +385,7 @@ export default function Home() {
               </p>
               <Link
                 href="/session/new"
-                className="mt-4 rounded-lg bg-accent px-4 py-2.5 text-[13.5px] font-semibold text-white active:bg-accent-pressed"
+                className="button-primary mt-4 rounded-lg px-4 py-2.5 text-[13.5px] font-semibold"
               >
                 모임 만들기
               </Link>
@@ -393,7 +395,7 @@ export default function Home() {
               <p className="text-[14px] font-medium">조건에 맞는 모임이 없어요</p>
               <button
                 onClick={resetSearch}
-                className="mt-3 text-[13px] font-medium text-accent-pressed"
+                className="mt-3 text-[13px] font-medium text-accent-strong"
               >
                 전체 모임 보기
               </button>
@@ -414,7 +416,7 @@ export default function Home() {
       ) : (
         <div className="pb-6">
           {mockMode && <p className="mt-3 rounded-lg bg-surface2 px-4 py-2.5 text-center text-[11.5px] text-faint">미리보기 데이터 · 암벽화 성취도 예시예요</p>}
-          {/* 내 프로필 (공개 중) — 목록 위의 한 줄 */}
+          {/* 내 공개 설정 — 비공개 프로필도 본인에게만 상태를 보여준다. */}
           {me ? (
             <div className="flex items-center gap-3.5 border-b border-line py-4">
               {me.photo && photoUrls[me.photo] ? (
@@ -430,8 +432,8 @@ export default function Home() {
               <div className="min-w-0 flex-1">
                 <p className="text-[14.5px] font-semibold">
                   {me.nickname}
-                  <span className="ml-1.5 align-middle text-[11px] font-medium text-accent-pressed">
-                    공개 중
+                  <span className={`ml-1.5 align-middle text-[11px] font-medium ${me.isPublic ? "text-accent-strong" : "text-faint"}`}>
+                    {me.isPublic ? "공개 중" : "비공개"}
                   </span>
                 </p>
                 <p className="mt-0.5 truncate text-[12.5px] text-muted">
@@ -449,7 +451,7 @@ export default function Home() {
                 href="/profile/new"
                 className="shrink-0 text-[13px] font-medium text-muted"
               >
-                관리
+                공개 설정
               </Link>
             </div>
           ) : (
@@ -457,7 +459,7 @@ export default function Home() {
               href="/profile/new"
               className="mt-3 block rounded-lg bg-surface2 px-4 py-3.5 text-center text-[13px] font-medium text-muted"
             >
-              내 프로필을 올리면 여기에 공개돼요
+              사람 찾기에 내 프로필 공개하기 (선택)
             </Link>
           )}
 
@@ -480,7 +482,7 @@ export default function Home() {
 
           {people.length > 0 && shownPeople.length === 0 && <div className="py-14 text-center">
             <p className="text-[14px] font-medium">조건에 맞는 사람이 없어요</p>
-            <button type="button" onClick={resetSearch} className="mt-3 min-h-11 px-3 text-[14px] font-semibold text-accent-pressed">전체 사람 보기</button>
+            <button type="button" onClick={resetSearch} className="mt-3 min-h-11 px-3 text-[14px] font-semibold text-accent-strong">전체 사람 보기</button>
           </div>}
           <div className="flex flex-col divide-y divide-line">
             {shownPeople.map((p) => (
@@ -507,17 +509,17 @@ export default function Home() {
                       <span className="text-[13.5px] font-normal text-muted">
                         {p.age}
                       </span>
-                      <ShoeBadge achievement={p.achievement} />
                     </p>
                     <p className="mt-0.5 truncate text-[13px] text-muted">
                       {[p.area, p.level && level(p.level).name]
                         .filter(Boolean)
                         .join(" · ")}
                     </p>
-                    {careerLabel(p.careerId) && (
-                      <p className="mt-0.5 text-[12.5px] text-faint">
-                        클라이밍 {careerLabel(p.careerId)}
-                      </p>
+                    {(careerLabel(p.careerId) || p.achievement) && (
+                      <div className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-faint">
+                        {careerLabel(p.careerId) && <span>클라이밍 {careerLabel(p.careerId)}</span>}
+                        <ShoeBadge achievement={p.achievement} />
+                      </div>
                     )}
                   </div>
                 </Link>
@@ -530,7 +532,7 @@ export default function Home() {
                   className={`shrink-0 text-[12.5px] ${
                     sentTo.has(p.id)
                       ? "py-2 font-medium text-faint"
-                      : "rounded-lg bg-accent-soft px-3.5 py-2 font-semibold text-accent-pressed"
+                      : "button-secondary rounded-lg px-3.5 py-2 font-semibold"
                   }`}
                 >
                   {sentTo.has(p.id) ? "보냈어요" : "채팅"}

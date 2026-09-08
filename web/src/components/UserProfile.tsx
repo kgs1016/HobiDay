@@ -148,7 +148,7 @@ export default function UserProfile({
         </p>
         <button
           onClick={() => (backTo ? router.push(backTo) : router.back())}
-          className="mt-6 rounded-xl bg-accent px-6 py-2.5 text-[14px] font-semibold text-white active:bg-accent-pressed"
+          className="button-primary mt-6 rounded-xl px-6 py-2.5 text-[14px] font-semibold"
         >
           돌아가기
         </button>
@@ -192,7 +192,7 @@ export default function UserProfile({
           <span className="ml-1.5 text-[14px] font-normal text-muted">{profile.age}</span>
         </p>
         {/* 받은 추천 — 플레이어 리뷰의 누적 */}
-        <p className="mt-2 flex items-center gap-1 text-[13px] font-semibold text-accent-pressed">
+        <p className="mt-2 flex items-center gap-1 text-[13px] font-semibold text-accent-strong">
           <ThumbIcon size={15} /> 추천 {profile.likes}
         </p>
         {profile.joined > 0 && (
@@ -230,7 +230,7 @@ export default function UserProfile({
           disabled={sent}
           onClick={() => setRequesting(true)}
           className={`mt-6 w-full rounded-xl py-3.5 text-[14.5px] font-semibold ${
-            sent ? "bg-surface2 text-faint" : "bg-accent text-white active:bg-accent-pressed"
+            sent ? "bg-surface2 text-muted" : "button-primary"
           }`}
         >
           {sent ? "채팅을 보냈어요" : "채팅 보내기"}

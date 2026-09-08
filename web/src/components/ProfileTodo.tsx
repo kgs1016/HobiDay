@@ -3,9 +3,9 @@ import type { MyProfile } from "@/lib/myProfile";
 import { missingFields } from "@/lib/profileGate";
 import { ChevronRightIcon } from "@/components/icons";
 
-/* 프로필이 이미 완성된 유저에게는 안 뜬다.
-   게이트를 통과한 뒤 나중에 사진을 지우는 등의 경우를 위한 안전망. */
+/* 사람 찾기를 공개한 회원에게만 빠진 공개 프로필 항목을 안내한다. */
 export default function ProfileTodo({ profile }: { profile: MyProfile }) {
+  if (!profile.isPublic) return null;
   const missing = missingFields(profile);
   if (missing.length === 0) return null;
 

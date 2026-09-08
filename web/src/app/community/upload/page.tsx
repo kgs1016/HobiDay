@@ -78,7 +78,7 @@ export default function UploadVideo() {
         {!busy && <BackButton fallback={FEED} />}
         <h1 className="flex-1 text-[18px] font-bold">영상 올리기</h1>
         <button onClick={submit} disabled={!file || !thumbnail || !body.trim() || busy || preparing}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">
+          className="button-primary rounded-lg px-4 py-2 text-sm font-semibold">
           {busy ? "올리는 중…" : "올리기"}
         </button>
       </header>

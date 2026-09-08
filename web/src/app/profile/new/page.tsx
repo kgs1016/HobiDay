@@ -6,7 +6,7 @@ import BackButton from "@/components/BackButton";
 import { CameraIcon } from "@/components/icons";
 import { CAREERS, LEVELS, type CareerId, type LevelId } from "@/lib/levels";
 import { loadMyProfile, saveMyProfile, type MyProfile } from "@/lib/myProfile";
-import { isProfileComplete } from "@/lib/profileGate";
+import { isBasicProfileComplete } from "@/lib/profileGate";
 import { downscaleImage } from "@/lib/imageResize";
 import {
   PHOTO_MAX_BYTES,
@@ -47,7 +47,7 @@ function Chip({
       onClick={onClick}
       className={`rounded-full border px-3.5 py-2 text-[13px] font-medium transition-colors ${
         active
-          ? "border-accent bg-accent text-white"
+          ? "border-accent bg-accent-soft text-accent-strong"
           : "border-line bg-surface text-muted"
       }`}
     >
@@ -64,6 +64,8 @@ export default function ProfileNew() {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [onboarding, setOnboarding] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isPublic, setIsPublic] = useState(false);
 
   const [nickname, setNickname] = useState("");
   const [gender, setGender] = useState<"m" | "f">("f");
@@ -132,10 +134,11 @@ export default function ProfileNew() {
       } else {
         p = loadMyProfile();
       }
-      // 미완성이면 온보딩 맥락으로 보여준다 (프로필이 아예 없는 경우 포함)
-      if (!isProfileComplete(p)) setOnboarding(true);
+      setOnboarding(!isBasicProfileComplete(p));
+      setLoading(false);
       if (!p) return;
       setEditing(true);
+      setIsPublic(p.isPublic ?? false);
       setNickname(p.nickname);
       setGender(p.gender);
       setAge(String(p.age));
@@ -167,16 +170,17 @@ export default function ProfileNew() {
     mbti,
     intro: intro.trim() || undefined,
     photo,
+    isPublic,
   });
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (busy || photoInFlight.current) return;
+    if (loading || busy || photoInFlight.current) return;
     const n = Number(age);
-    if (!photo) return alert("대표 사진을 1장 올려주세요");
+    if (!photo?.trim()) return alert("대표 사진을 1장 올려주세요");
     if (!nickname.trim()) return alert("닉네임을 입력해주세요");
     if (!n || n < 19 || n > 60) return alert("나이를 확인해주세요");
-    if (!careerId) return alert("구력을 선택해주세요");
+    if (isPublic && !careerId) return alert("사람 찾기에 공개하려면 구력을 선택해주세요");
     if (height && (Number(height) < 130 || Number(height) > 220))
       return alert("키를 확인해주세요 (130~220cm)");
     // 키·동네·홈짐·MBTI 는 선택 — 채우고 싶은 사람만
@@ -186,7 +190,7 @@ export default function ProfileNew() {
     if (hasSupabase()) {
       setBusy(true);
       try {
-        const r = await upsertMyProfileDb(profile, true);
+        const r = await upsertMyProfileDb(profile, isPublic);
         if (r.error) throw new Error(r.error);
       } catch (error) {
         alert(`저장 실패: ${error instanceof Error ? error.message : "연결을 확인하고 다시 시도해주세요"}`);
@@ -198,37 +202,39 @@ export default function ProfileNew() {
       saveMyProfile(profile);
     }
     // 온보딩을 막 끝냈으면 사람 목록보다 모임 찾기로 보내는 게 자연스럽다
-    router.push(onboarding ? "/" : "/#people");
+    router.push(onboarding ? "/" : isPublic ? "/#people" : "/me");
   };
 
   return (
     <main className="px-4">
       <header className="flex items-center gap-2 pt-4 pb-4">
-        {/* 온보딩 중에는 나갈 곳이 없다 — 뒤로 버튼을 두면 빈 프로필로 빠져나간다 */}
         {!onboarding && <BackButton />}
         <h1 className="text-[18px] font-bold tracking-tight">
           {onboarding
-            ? "프로필 만들기"
+            ? "기본 정보 등록"
             : editing
               ? "내 프로필 수정"
-              : "내 프로필 올리기"}
+              : "기본 정보 등록"}
         </h1>
       </header>
 
-      {/* 설명 문장은 붙이지 않는다 — 문구 원칙(AGENTS.md) */}
-      {onboarding ? (
-        <p className="mb-5 rounded-lg bg-accent-soft px-4 py-3 text-[13px] font-semibold text-ink">
-          시작 전에 프로필을 완성해주세요
-        </p>
-      ) : (
-        <p className="mb-5 rounded-lg bg-surface2 px-4 py-3 text-[12.5px] leading-relaxed text-muted">
-          여기 올린 프로필은 사람 찾기 목록에 공개돼요.
-        </p>
-      )}
-
       <form className="flex flex-col gap-6 pb-8" onSubmit={submit}>
-        {/* 대표 사진 — 사람 찾기의 첫인상이라 필수 */}
-        <Field label="대표 사진">
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-line px-4 py-3.5">
+          <div>
+            <p id="discovery-label" className="text-[14px] font-semibold">사람 찾기에 공개 <span className="text-[12px] font-normal text-muted">선택</span></p>
+            <p id="discovery-description" className="mt-1 text-[12px] text-muted">켜면 로그인한 회원의 사람 찾기 목록에 표시됩니다.</p>
+          </div>
+          <button type="button" role="switch" aria-checked={isPublic}
+            aria-labelledby="discovery-label" aria-describedby="discovery-description"
+            disabled={loading || busy} onClick={() => setIsPublic((value) => !value)}
+            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center disabled:opacity-50">
+            <span className={`flex h-6 w-11 items-center rounded-full p-0.5 transition-colors ${isPublic ? "bg-accent" : "bg-line"}`}>
+              <span className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${isPublic ? "translate-x-5" : "translate-x-0"}`} />
+            </span>
+          </button>
+        </div>
+
+        <Field label="대표 사진 (필수)">
           <div className="flex items-center gap-4">
             {/* 네이티브에서도 파일 선택창을 그대로 쓴다 — iOS 가
                 "사진 보관함/사진 찍기/파일 선택" 시트를 한국어로 띄워준다.
@@ -251,7 +257,7 @@ export default function ProfileNew() {
                 type="file"
                 accept="image/*"
                 className="hidden"
-                disabled={photoBusy}
+                disabled={loading || photoBusy}
                 onChange={(e) => {
                   const f = e.target.files?.[0];
                   e.target.value = "";
@@ -268,7 +274,7 @@ export default function ProfileNew() {
                     {photo ? "사진 바꾸기" : "얼굴이 보이는 사진 1장"}
                   </p>
                   <p className="mt-0.5">
-                    로그인한 사람에게만 보여요 · 최대 5MB
+                    {isPublic ? "사람 찾기에 공개" : "모임·채팅에서 사용"} · 최대 5MB
                   </p>
                 </>
               )}
@@ -350,7 +356,7 @@ export default function ProfileNew() {
             <button
               type="button"
               onClick={() => setShowLevelGuide((v) => !v)}
-              className="ml-1.5 font-medium text-accent-pressed underline underline-offset-2"
+              className="ml-1.5 font-medium text-accent-strong underline underline-offset-2"
             >
               {showLevelGuide ? "참고표 접기" : "참고표 보기"}
             </button>
@@ -380,13 +386,13 @@ export default function ProfileNew() {
           <p className="mt-2 text-[12px] text-muted">암벽화 성취는 완등 기록으로 별도 계산</p>
         </Field>
 
-        <Field label="구력 (클라이밍 시작한 지)">
+        <Field label={`구력 (클라이밍 시작한 지)${isPublic ? "" : " · 선택"}`}>
           <div className="flex flex-wrap gap-1.5">
             {CAREERS.map((c) => (
               <Chip
                 key={c.id}
                 active={careerId === c.id}
-                onClick={() => setCareerId(c.id)}
+                onClick={() => setCareerId(careerId === c.id ? null : c.id)}
               >
                 {c.label}
               </Chip>
@@ -437,10 +443,10 @@ export default function ProfileNew() {
 
         <button
           type="submit"
-          disabled={busy || photoBusy}
-          className="rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
+          disabled={loading || busy || photoBusy}
+          className="button-primary rounded-xl py-3.5 text-[15px] font-semibold"
         >
-          {busy ? "저장 중…" : editing ? "수정 완료" : "프로필 올리기"}
+          {loading ? "불러오는 중…" : busy ? "저장 중…" : editing ? "저장" : "시작하기"}
         </button>
       </form>
     </main>

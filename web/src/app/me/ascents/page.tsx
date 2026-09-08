@@ -104,7 +104,7 @@ export default function AscentsPage() {
       {authed === false ? (
         <div className="py-12 text-center">
           <p className="text-sm text-muted">로그인 후 완등 기록</p>
-          <Link href="/login" className="mt-4 inline-block rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-white">로그인 하기</Link>
+          <Link href="/login" className="button-primary mt-4 inline-block rounded-xl px-6 py-3 text-sm font-semibold">로그인 하기</Link>
         </div>
       ) : authed === null ? <p role="status" className="py-8 text-center text-sm text-faint">불러오는 중…</p> : (
         <>
@@ -132,16 +132,16 @@ export default function AscentsPage() {
             </div>
             <p id="grade-help" className="-mt-2 text-[12px] text-muted">문제에 안내된 V등급 · 모르면 전체 완등에만 포함</p>
             <div className="flex gap-2">
-              {editing && <button type="button" onClick={reset} disabled={busy} className="rounded-xl border border-line px-4 py-3 text-sm">취소</button>}
+              {editing && <button type="button" onClick={reset} disabled={busy} className="button-secondary rounded-xl px-4 py-3 text-sm">취소</button>}
               <button type="submit" disabled={busy || loadingMore || !gym.trim() || !problem.trim()}
-                className="flex-1 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">
+                className="button-primary flex-1 rounded-xl px-4 py-3 text-sm font-semibold">
                 {busy ? "저장 중…" : editing ? "수정 저장" : "완등 추가"}
               </button>
             </div>
           </form>
           <p className="mt-2 text-center text-[11.5px] text-faint">가입 전 완등도 기록 가능 · 직접 입력한 기록</p>
           {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
-          {notice && <p role="status" className="mt-3 text-sm text-accent-pressed">{notice}</p>}
+          {notice && <p role="status" className="mt-3 text-sm text-accent-strong">{notice}</p>}
 
           <section className="mt-8 border-t border-line pt-4" aria-labelledby="ascent-list-title">
             {progress && progress.total > 0 && <div className="mb-5">
@@ -168,7 +168,7 @@ export default function AscentsPage() {
                   </div>
                 </li>)}
               </ul>}
-            {more && <button onClick={nextPage} disabled={loadingMore || busy} className="mt-3 w-full rounded-xl border border-line py-3 text-sm">{loadingMore ? "불러오는 중…" : "더 보기"}</button>}
+            {more && <button onClick={nextPage} disabled={loadingMore || busy} className="button-secondary mt-3 w-full rounded-xl py-3 text-sm">{loadingMore ? "불러오는 중…" : "더 보기"}</button>}
           </section>
         </>
       )}

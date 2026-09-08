@@ -152,7 +152,7 @@ export default function PostPage() {
         </header>
         <div className="mt-20 flex flex-col items-center gap-3 text-center">
           <p className="text-[15px] font-semibold">글을 찾을 수 없어요</p>
-          <Link href={BOARD} className="mt-2 text-[13.5px] font-semibold text-accent-pressed">
+          <Link href={BOARD} className="mt-2 text-[13.5px] font-semibold text-accent-strong">
             게시판으로
           </Link>
         </div>
@@ -219,7 +219,7 @@ export default function PostPage() {
         </p>
         {post.video_path && <div className="mt-4">
           <button onClick={like} disabled={likeBusy} aria-pressed={!!post.liked}
-            className={`rounded-full border px-4 py-2 text-sm font-semibold disabled:opacity-50 ${post.liked ? "border-accent bg-accent-soft text-accent-pressed" : "border-line text-muted"}`}>
+            className={`rounded-full border px-4 py-2 text-sm font-semibold disabled:opacity-50 ${post.liked ? "border-accent bg-accent-soft text-accent-strong" : "border-line text-muted"}`}>
             {post.liked ? "♥" : "♡"} 좋아요 {post.like_count ?? 0}
           </button>
           {likeError && <p role="alert" className="mt-2 text-sm text-danger">{likeError}</p>}
@@ -291,7 +291,7 @@ export default function PostPage() {
           <button
             onClick={submitComment}
             disabled={busy || !comment.trim()}
-            className="shrink-0 rounded-xl bg-accent px-4 py-3 text-[14px] font-semibold text-white active:bg-accent-pressed disabled:opacity-40"
+            className="button-primary shrink-0 rounded-xl px-4 py-3 text-[14px] font-semibold"
           >
             {busy ? "…" : "등록"}
           </button>
