@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { useQueryParam } from "@/lib/queryId";
 import { level } from "@/lib/levels";
 import ReportSheet from "@/components/ReportSheet";
-import { AvatarFallback, ChevronLeftIcon, ChevronRightIcon, UserIcon } from "@/components/icons";
+import { AvatarFallback, ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
+import GymFallback from "@/components/GymFallback";
 import { CarabinerIllust, ShoeIllust } from "@/components/illustrations";
 import { notifyPush } from "@/lib/nativePush";
 import {
@@ -244,9 +245,7 @@ export default function ChatPage() {
                     className="h-12 w-12 shrink-0 rounded-full object-cover"
                   />
                 ) : (
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface2 text-faint">
-                    <UserIcon size={22} />
-                  </span>
+                  <GymFallback name={c.gym} size={48} shape="circle" />
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[15px] font-semibold">
