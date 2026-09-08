@@ -115,14 +115,14 @@ export default function Me() {
         </section>
       )}
 
-      {/* 설정은 전부 한 줄 뒤에 */}
-      <section className="mt-4 border-t-8 border-surface2 px-4">
+      {/* 설정은 전부 한 줄 뒤에 — 눈에 띄게 테두리 버튼으로 */}
+      <section className="px-4 pt-6 pb-2">
         <Link
           href="/me/settings"
-          className="flex items-center justify-between py-3.5 text-[15px]"
+          className="flex items-center justify-between rounded-xl border border-line bg-surface px-4 py-3.5 text-[15px] font-medium transition-colors active:bg-surface2"
         >
           내 정보
-          <ChevronRightIcon size={16} className="text-faint" />
+          <ChevronRightIcon size={16} className="text-muted" />
         </Link>
       </section>
     </main>
