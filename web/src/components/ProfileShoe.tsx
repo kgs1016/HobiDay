@@ -10,7 +10,7 @@ import { SHOE_STAGES, shoeProgress, type ClimbingProgress } from "@/lib/shoeProg
 export default function ProfileShoe() {
   const [progress, setProgress] = useState<ClimbingProgress | null>(null);
   const [error, setError] = useState("");
-  const [showCriteria, setShowCriteria] = useState(true);
+  const [showCriteria, setShowCriteria] = useState(false);
   const load = async () => {
     try { const data = await fetchClimbingProgress(); setProgress(data); setError(""); }
     catch (e) { setError(e instanceof Error ? e.message : "기록을 불러오지 못했어요"); }
