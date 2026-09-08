@@ -1,46 +1,38 @@
-/* 레벨 체계 L1~L5 — PRODUCT.md 기준 (더클라임 색 + V등급, 도달 기간 미표기) */
+/* 모임에서 함께 탈 수준을 직접 선택한다. 저장된 1~5 ID는 유지하되,
+   암장 색·V등급으로 환산하지 않는다. 기록 기반 암벽화 성취와 별개다. */
 
 export type LevelId = 1 | 2 | 3 | 4 | 5;
 
 export interface Level {
   id: LevelId;
   name: string;
-  colors: string;
-  vgrade: string;
+  description: string;
 }
 
 export const LEVELS: Level[] = [
-  { id: 1, name: "입문", colors: "흰·노랑", vgrade: "Vb~V0-" },
-  { id: 2, name: "초급", colors: "주황·초록", vgrade: "V0~V0+" },
-  { id: 3, name: "중급", colors: "파랑", vgrade: "V1~V2" },
-  { id: 4, name: "중상급", colors: "빨강·핑크", vgrade: "V3~V5" },
-  { id: 5, name: "상급", colors: "보라 이상", vgrade: "V6+" },
+  { id: 1, name: "입문", description: "기본 동작과 안전 수칙을 배우는 단계" },
+  { id: 2, name: "초급", description: "쉬운 문제를 스스로 완등하는 단계" },
+  { id: 3, name: "중급", description: "다양한 동작과 벽의 문제를 풀어가는 단계" },
+  { id: 4, name: "중상급", description: "어려운 동작을 연결해 완등하는 단계" },
+  { id: 5, name: "상급", description: "고난도 문제를 분석하고 완등하는 단계" },
 ];
 
 export const level = (id: LevelId) => LEVELS[id - 1];
 
-/** 목록 카드용 짧은 표기 — "L2 초급–L3 중급" / "L3 중급".
-    색·V등급까지 다 붙이면 카드가 문장이 된다. 상세에서만 전체를 보여준다. */
+/** 화면에는 수준 이름만 쓴다. 숫자 ID는 저장·필터 비교에만 사용한다. */
 export function levelRangeShort(min: LevelId, max: LevelId): string {
-  if (min === 1 && max === 5) return "모든 레벨";
-  if (min === max) return `L${min} ${level(min).name}`;
-  return `L${min} ${level(min).name}–L${max} ${level(max).name}`;
+  if (min === 1 && max === 5) return "수준 무관";
+  if (min === max) return level(min).name;
+  return `${level(min).name}–${level(max).name}`;
 }
 
-/** "L2 초급 ~ L3 중급 (주황·초록·파랑)".
- *  L1~L5 전부면 색을 늘어놓는 대신 "모든 레벨" 로 줄인다. */
 export function levelRangeLabel(min: LevelId, max: LevelId): string {
-  if (min === 1 && max === 5) return "모든 레벨 (L1 입문 ~ L5 상급)";
-  const colors = LEVELS.slice(min - 1, max)
-    .map((l) => l.colors)
-    .join("·");
-  if (min === max) return `L${min} ${level(min).name} (${level(min).colors})`;
-  return `L${min} ${level(min).name} ~ L${max} ${level(max).name} (${colors})`;
+  return `참가 수준 · ${levelRangeShort(min, max)}`;
 }
 
 /* ── 구력 ──
-   레벨만으로는 "6개월 만에 파랑"과 "3년 걸려 파랑"이 구분되지 않는다.
-   실력이 같아도 대화 맥락과 태도가 달라서 별도로 받는다. */
+   함께 등반할 사람의 경험을 알아보는 별도 정보다.
+   등반 수준이나 암벽화 성취 계산에는 사용하지 않는다. */
 
 export type CareerId = 1 | 2 | 3 | 4 | 5 | 6;
 

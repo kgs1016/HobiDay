@@ -3,10 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useQueryParam } from "@/lib/queryId";
+import { useLocationHash, useQueryParam } from "@/lib/queryId";
+import { useNow } from "@/lib/browserState";
+import { sameRows } from "@/lib/polling";
+import { usePolling } from "@/lib/usePolling";
 import { level } from "@/lib/levels";
 import ReportSheet from "@/components/ReportSheet";
-import { AvatarFallback, ChevronLeftIcon, ChevronRightIcon, UserIcon } from "@/components/icons";
+import { AvatarFallback, ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
+import GymPhoto from "@/components/GymPhoto";
+import PublicShoe from "@/components/PublicShoe";
+import type { PublicShoeAchievement } from "@/lib/shoeProgress";
 import { CarabinerIllust, ShoeIllust } from "@/components/illustrations";
 import { notifyPush } from "@/lib/nativePush";
 import {
@@ -14,6 +20,7 @@ import {
   fetchSessionMembers,
   fetchChatMessages,
   fetchChats,
+  fetchPublicShoeAchievements,
   fetchSessionChatMessages,
   fetchSessionChats,
   hasSupabase,
@@ -48,13 +55,12 @@ const origin = (c: Chat) =>
 
 const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
-/* 방은 모임이 끝나거나 취소되고 24시간 뒤에 사라진다
-   (session_chat_open 이 닫는다). 남은 시간을 초읽기로 보여주진 않는다 —
-   알아서 좋을 게 없고, 1분마다 다시 그릴 이유도 없다. */
-function endedNotice(c: SessionChat): string | null {
+/* 방은 모임이 끝나거나 취소되고 24시간 뒤에 사라진다.
+   종료 문구도 공통 시계를 따라 갱신한다. */
+function endedNotice(c: SessionChat, now: number): string | null {
   if (c.status === "cancelled")
     return "매칭이 취소되었어요. 24시간 뒤에 채팅방이 사라져요.";
-  return new Date(c.ends_at).getTime() < Date.now()
+  return new Date(c.ends_at).getTime() < now
     ? "모임이 종료되었어요. 24시간 뒤에 채팅방이 사라져요."
     : null;
 }
@@ -69,70 +75,70 @@ const sessionSub = (c: SessionChat) => {
 type Tab = "request" | "session";
 
 export default function ChatPage() {
+  const room = useQueryParam("room");
+  const hash = useLocationHash();
+  if (room === undefined || hash === undefined)
+    return <main className="px-4 pt-24 text-center text-[13.5px] text-faint">불러오는 중…</main>;
+  return <ChatContent initialRoomId={room} initialTab={room || hash === "#session" ? "session" : "request"} />;
+}
+
+function ChatContent({ initialRoomId, initialTab }: { initialRoomId: string | null; initialTab: Tab }) {
+  const now = useNow();
   const [authed, setAuthed] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<Tab>("request");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [chats, setChats] = useState<Chat[] | null>(null);
   const [rooms, setRooms] = useState<SessionChat[] | null>(null);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [open, setOpen] = useState<Chat | null>(null);
-  const [openRoom, setOpenRoom] = useState<SessionChat | null>(null);
+  const [openRoomId, setOpenRoomId] = useState(initialRoomId);
+  // 방 목록을 받은 순간 주소의 방을 바로 표시한다. 별도의 상태 복사 효과는 없다.
+  const openRoom = rooms?.find(room => room.session_id === openRoomId);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (signal?: AbortSignal) => {
     const [list, group] = await Promise.all([fetchChats(), fetchSessionChats()]);
+    if (signal?.aborted) return;
     setChats(list);
     setRooms(group);
-    if (list?.length)
-      setPhotoUrls(
-        await signedPhotoUrls(list.map((c) => c.photo).filter(Boolean) as string[])
-      );
+    if (list?.length) {
+      const urls = await signedPhotoUrls(list.map(c => c.photo).filter(Boolean) as string[]);
+      if (!signal?.aborted) setPhotoUrls(urls);
+    }
   }, []);
 
   useEffect(() => {
-    // 모임 상세의 "모임 채팅 열기" 는 /chat#session 으로 보낸다
-    if (window.location.hash === "#session") setTab("session");
-
+    const controller = new AbortController();
     (async () => {
       if (!hasSupabase()) return setAuthed(false);
       const user = await currentUser();
+      if (controller.signal.aborted) return;
       setAuthed(!!user);
-      if (user) load();
+      if (user) await load(controller.signal);
     })();
+    return () => controller.abort();
   }, [load]);
 
-  /* 진행 화면에서 ← 로 돌아오면 보던 방이 그대로 열려 있어야 한다.
-     방을 여는 건 화면 전환이 아니라 이 페이지의 상태라, 브라우저
-     뒤로가기만으로는 목록으로 떨어진다. 그래서 주소로 받아 다시 연다. */
-  const roomParam = useQueryParam("room");
+  // 모임 상세에서 돌아온 방은 초기 상태로 보관하고 주소에서는 한 번 지운다.
   useEffect(() => {
-    if (!roomParam || !rooms) return;
-    const r = rooms.find((x) => x.session_id === roomParam);
-    if (r) {
-      setTab("session");
-      openSession(r);
+    if (initialRoomId) {
+      window.history.replaceState(window.history.state, "", "/chat#session");
     }
-    // 한 번 열고 나면 주소에서 지운다 — 목록으로 나갔다가 다시
-    // 들어올 때 또 열려버리는 걸 막는다
-    window.history.replaceState(null, "", "/chat#session");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomParam, rooms]);
+  }, [initialRoomId]);
 
-  /** 방을 열면 읽음으로 표시한다 (목록의 배지가 바로 사라지게 낙관적 갱신) */
-  const openThread = async (c: Chat) => {
+  /** 목록 배지는 즉시 지우고, 실제 읽음 처리는 방에서 메시지를 받은 뒤 한 번 한다. */
+  const openThread = (c: Chat) => {
     setOpen(c);
     setChats((list) =>
       (list ?? []).map((x) => (x.match_id === c.match_id ? { ...x, unread: 0 } : x))
     );
-    await markChatRead(c.match_id);
   };
 
-  const openSession = async (c: SessionChat) => {
-    setOpenRoom(c);
+  const openSession = (c: SessionChat) => {
+    setOpenRoomId(c.session_id);
     setRooms((list) =>
       (list ?? []).map((x) =>
         x.session_id === c.session_id ? { ...x, unread: 0 } : x
       )
     );
-    await markSessionChatRead(c.session_id);
   };
 
   const unreadOf = (list: { unread: number }[] | null) =>
@@ -159,6 +165,7 @@ export default function ChatPage() {
   if (open)
     return (
       <Thread
+        key={open.match_id}
         chat={open}
         onBack={() => {
           setOpen(null);
@@ -170,9 +177,10 @@ export default function ChatPage() {
   if (openRoom)
     return (
       <SessionThread
+        key={openRoom.session_id}
         room={openRoom}
         onBack={() => {
-          setOpenRoom(null);
+          setOpenRoomId(null);
           load();
         }}
       />
@@ -236,18 +244,7 @@ export default function ChatPage() {
                 onClick={() => openSession(c)}
                 className="flex items-center gap-3.5 py-3.5 text-left transition-colors active:bg-surface2"
               >
-                {c.gym_thumb ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={c.gym_thumb}
-                    alt=""
-                    className="h-12 w-12 shrink-0 rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface2 text-faint">
-                    <UserIcon size={22} />
-                  </span>
-                )}
+                <GymPhoto src={c.gym_thumb} name={c.gym} size={48} shape="circle" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[15px] font-semibold">
                     {c.gym}
@@ -263,9 +260,9 @@ export default function ChatPage() {
                     {c.last_body ?? sessionSub(c)}
                   </p>
                   {/* 곧 사라질 방이라는 걸 목록에서도 알린다 */}
-                  {endedNotice(c) && (
+                  {endedNotice(c, now) && (
                     <p className="mt-0.5 truncate text-[11.5px] text-faint">
-                      {endedNotice(c)}
+                      {endedNotice(c, now)}
                     </p>
                   )}
                 </div>
@@ -314,7 +311,7 @@ export default function ChatPage() {
                   {c.nickname}
                   <span className="ml-1.5 text-[12px] font-normal text-muted">
                     {c.age}
-                    {c.level && ` · L${c.level} ${level(c.level).name}`}
+                    {c.level && ` · ${level(c.level).name}`}
                   </span>
                 </p>
                 <p
@@ -572,17 +569,25 @@ function Bubble({
   );
 }
 
-/* 1:1 방에서 제목을 누르면 뜨는 상대 프로필.
-   목록(my_chats)이 이미 내려주는 값만 쓴다 — 프로필 전체를 다시
-   불러오면 방을 열 때마다 요청이 하나 더 붙는데, 여기서 궁금한 건
-   "얼굴이랑 대충 누구였지" 정도다. */
+/* 1:1 상대 프로필. 기본 정보는 채팅 목록을 사용하고,
+   성취 요약은 프로필을 실제로 열었을 때 공개 권한에 맞춰 조회한다. */
 function PartnerSheet({ chat, onClose }: { chat: Chat; onClose: () => void }) {
   const [url, setUrl] = useState<string | null>(null);
+  const [achievement, setAchievement] = useState<PublicShoeAchievement | null>();
 
   useEffect(() => {
     if (!chat.photo) return;
     (async () => setUrl((await signedPhotoUrls([chat.photo!]))[chat.photo!] ?? null))();
   }, [chat.photo]);
+
+  useEffect(() => {
+    let active = true;
+    fetchPublicShoeAchievements([chat.partner_id], chat.session_id ?? undefined).then(
+      summaries => { if (active) setAchievement(summaries?.[chat.partner_id] ?? null); },
+      () => { if (active) setAchievement(null); },
+    );
+    return () => { active = false; };
+  }, [chat.partner_id, chat.session_id]);
 
   const lv = chat.level ? level(chat.level) : null;
 
@@ -617,13 +622,17 @@ function PartnerSheet({ chat, onClose }: { chat: Chat; onClose: () => void }) {
           </span>
         </p>
         <p className="mt-1 text-[13px] text-muted">
-          {[lv && `L${chat.level} ${lv.name} (${lv.colors})`, chat.home_gym]
+          {[lv && `등반 수준 · ${lv.name}`, chat.home_gym]
             .filter(Boolean)
             .join(" · ")}
         </p>
         <p className="mt-3 text-[12.5px] leading-relaxed text-faint">
           {origin(chat)}
         </p>
+
+        {achievement === undefined
+          ? <p role="status" className="mt-4 border-t border-line pt-4 text-[12px] text-muted">성취 불러오는 중…</p>
+          : <PublicShoe achievement={achievement ?? undefined} />}
 
         <button
           onClick={onClose}
@@ -643,27 +652,31 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
   // 상대 말풍선 옆 아바타 — 사진 주소는 캐시돼 있어 재서명이 싸다
   const [partnerPhoto, setPartnerPhoto] = useState<string | undefined>();
   const bottom = useRef<HTMLDivElement>(null);
+  const lastRead = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (!chat.photo) return;
-    (async () =>
-      setPartnerPhoto((await signedPhotoUrls([chat.photo!]))[chat.photo!]))();
+    let active = true;
+    const photo = chat.photo;
+    signedPhotoUrls([photo]).then(urls => {
+      if (active) setPartnerPhoto(urls[photo]);
+    });
+    return () => { active = false; };
   }, [chat.photo]);
 
-  const load = useCallback(async () => {
+  const poll = useCallback(async (signal: AbortSignal) => {
     // 실패(상대가 나감 등)해도 보고 있던 대화를 지우지 않는다
-    const list = await fetchChatMessages(chat.match_id);
-    if (list) setMsgs(list);
-    // 방을 보고 있는 동안 도착한 메시지도 읽음 처리한다
-    await markChatRead(chat.match_id);
+    const list = await fetchChatMessages(chat.match_id, signal);
+    if (!list || signal.aborted) return;
+    setMsgs(previous => sameRows(previous, list) ? previous : list);
+    // 작성 시각이 같은 메시지의 순서가 달라도 새 메시지를 놓치지 않는다.
+    const latest = list.map(message => message.id).join(",");
+    // 새 메시지가 없으면 읽음 RPC를 반복하지 않는다. 실패하면 다음 조회에서 재시도한다.
+    if (lastRead.current !== latest && await markChatRead(chat.match_id, signal)) {
+      if (!signal.aborted) lastRead.current = latest;
+    }
   }, [chat.match_id]);
-
-  useEffect(() => {
-    load();
-    // 실시간 대신 폴링 — 규모가 작을 때는 이게 단순하고 확실하다
-    const t = setInterval(load, 5_000);
-    return () => clearInterval(t);
-  }, [load]);
+  const load = usePolling(poll);
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: "end" });
@@ -701,7 +714,7 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
       <ChatFrame
         onBack={onBack}
         title={chat.nickname}
-        sub={[origin(chat), chat.level && `L${chat.level} ${level(chat.level).name}`]
+        sub={[origin(chat), chat.level && level(chat.level).name]
           .filter(Boolean)
           .join(" · ")}
         onTitle={() => setShowProfile(true)}
@@ -754,7 +767,7 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
       </ChatFrame>
 
       {showProfile && (
-        <PartnerSheet chat={chat} onClose={() => setShowProfile(false)} />
+        <PartnerSheet key={chat.partner_id} chat={chat} onClose={() => setShowProfile(false)} />
       )}
 
       {reporting && (
@@ -779,6 +792,7 @@ function SessionThread({
   room: SessionChat;
   onBack: () => void;
 }) {
+  const now = useNow();
   const [msgs, setMsgs] = useState<SessionChatMessage[] | null>(null);
   const [photos, setPhotos] = useState<Record<string, string>>({});
   // 신고 — 단체방이라 누구를 신고할지 먼저 고른다
@@ -786,25 +800,29 @@ function SessionThread({
   const [members, setMembers] = useState<SessionMember[] | null>(null);
   const [target, setTarget] = useState<SessionMember | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
+  const lastRead = useRef<string | undefined>(undefined);
 
-  const load = useCallback(async () => {
+  const poll = useCallback(async (signal: AbortSignal) => {
     // 실패(차단·모임 취소로 not_allowed 등)해도 보던 화면을 지우지 않는다
-    const list = await fetchSessionChatMessages(room.session_id);
-    if (list) setMsgs(list);
-    await markSessionChatRead(room.session_id);
-    if (list?.length) {
+    const list = await fetchSessionChatMessages(room.session_id, signal);
+    if (!list || signal.aborted) return;
+    setMsgs(previous => sameRows(previous, list) ? previous : list);
+    const latest = list.map(message => message.id).join(",");
+    if (lastRead.current !== latest && await markSessionChatRead(room.session_id, signal)) {
+      if (!signal.aborted) lastRead.current = latest;
+    }
+    if (!signal.aborted && list.length) {
       const paths = [
         ...new Set(list.map((m) => m.sender_photo).filter(Boolean) as string[]),
       ];
-      if (paths.length) setPhotos(await signedPhotoUrls(paths));
+      if (paths.length) {
+        const urls = await signedPhotoUrls(paths);
+        if (!signal.aborted) setPhotos(previous => sameRows([previous], [urls]) ? previous : urls);
+      }
     }
   }, [room.session_id]);
 
-  useEffect(() => {
-    load();
-    const t = setInterval(load, 5_000);
-    return () => clearInterval(t);
-  }, [load]);
+  const load = usePolling(poll);
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: "end" });
@@ -821,7 +839,7 @@ function SessionThread({
 
   const router = useRouter();
 
-  const ended = endedNotice(room);
+  const ended = endedNotice(room, now);
 
   const openPicker = async () => {
     setPicking(true);

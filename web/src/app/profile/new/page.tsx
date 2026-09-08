@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import { CameraIcon } from "@/components/icons";
@@ -82,31 +82,40 @@ export default function ProfileNew() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [busy, setBusy] = useState(false);
+  const photoInFlight = useRef(false);
+  const previewUrl = useRef<string | null>(null);
+
+  useEffect(() => () => {
+    if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
+  }, []);
 
   /** 고르는 즉시 올린다 — 저장 버튼에서 한꺼번에 올리면 실패 원인을 알기 어렵다 */
   const pickPhoto = async (raw: File) => {
-    // 원본(수 MB)을 그대로 올리면 보는 쪽이 매번 느리다 — 올리기 전에 줄인다
-    const file = await downscaleImage(raw);
-    if (file.size > PHOTO_MAX_BYTES) {
-      return alert(
-        `사진이 너무 커요 (${(file.size / 1024 / 1024).toFixed(1)}MB). 5MB 이하로 올려주세요.`
-      );
-    }
-    if (!hasSupabase()) {
-      // 목데이터 단계에선 미리보기만
-      setPhotoUrl(URL.createObjectURL(file));
-      setPhoto("local");
-      return;
-    }
+    if (photoInFlight.current) return;
+    photoInFlight.current = true;
     setPhotoBusy(true);
-    const r = await uploadProfilePhoto(file);
-    if (r.error) {
+    try {
+      const file = await downscaleImage(raw);
+      if (file.size > PHOTO_MAX_BYTES) {
+        return alert(`사진이 너무 커요 (${(file.size / 1024 / 1024).toFixed(1)}MB). 5MB 이하로 올려주세요.`);
+      }
+      if (!hasSupabase()) {
+        if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
+        previewUrl.current = URL.createObjectURL(file);
+        setPhotoUrl(previewUrl.current);
+        setPhoto("local");
+        return;
+      }
+      const r = await uploadProfilePhoto(file);
+      if (r.error || !r.path) throw new Error(r.error ?? "사진을 저장하지 못했어요");
+      setPhoto(r.path);
+      setPhotoUrl((await signedPhotoUrls([r.path]))[r.path] ?? null);
+    } catch (error) {
+      alert(`사진 업로드 실패: ${error instanceof Error ? error.message : "연결을 확인하고 다시 시도해주세요"}`);
+    } finally {
+      photoInFlight.current = false;
       setPhotoBusy(false);
-      return alert(`사진 업로드 실패: ${r.error}`);
     }
-    setPhoto(r.path);
-    setPhotoUrl((await signedPhotoUrls([r.path!]))[r.path!] ?? null);
-    setPhotoBusy(false);
   };
 
   useEffect(() => {
@@ -162,6 +171,7 @@ export default function ProfileNew() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy || photoInFlight.current) return;
     const n = Number(age);
     if (!photo) return alert("대표 사진을 1장 올려주세요");
     if (!nickname.trim()) return alert("닉네임을 입력해주세요");
@@ -176,12 +186,15 @@ export default function ProfileNew() {
 
     if (hasSupabase()) {
       setBusy(true);
-      const r = await upsertMyProfileDb(profile, true);
-      if (r.error) {
+      try {
+        const r = await upsertMyProfileDb(profile, true);
+        if (r.error) throw new Error(r.error);
+      } catch (error) {
+        alert(`저장 실패: ${error instanceof Error ? error.message : "연결을 확인하고 다시 시도해주세요"}`);
+        return;
+      } finally {
         setBusy(false);
-        return alert(`저장 실패: ${r.error}`);
       }
-      setBusy(false);
     } else {
       saveMyProfile(profile);
     }
@@ -318,8 +331,8 @@ export default function ProfileNew() {
           </Field>
         </div>
 
-        <Field label="레벨 (선택 — 편하게 완등하는 수준)">
-          <div className="flex gap-1.5">
+        <Field label="등반 수준 (선택)">
+          <div className="flex flex-wrap gap-1.5">
             {LEVELS.map((l) => (
               <Chip
                 key={l.id}
@@ -327,14 +340,14 @@ export default function ProfileNew() {
                 /* 고른 걸 다시 누르면 해제 — 레벨은 비워둘 수 있다 */
                 onClick={() => setLevel(level === l.id ? null : l.id)}
               >
-                L{l.id}
+                {l.name}
               </Chip>
             ))}
           </div>
           <p className="mt-1.5 text-[12px] text-muted">
             {level
-              ? `L${level} ${LEVELS[level - 1].name} — 더클라임 기준 ${LEVELS[level - 1].colors} (${LEVELS[level - 1].vgrade})`
-              : "아직 감이 없으면 비워둬도 돼요"}
+              ? LEVELS[level - 1].description
+              : "모임에서 함께 탈 수준 · 직접 선택"}
             <button
               type="button"
               onClick={() => setShowLevelGuide((v) => !v)}
@@ -356,15 +369,16 @@ export default function ProfileNew() {
                   }`}
                 >
                   <span className="shrink-0">
-                    L{l.id} {l.name}
+                    {l.name}
                   </span>
                   <span className="text-right text-muted">
-                    {l.colors} · {l.vgrade}
+                    {l.description}
                   </span>
                 </button>
               ))}
             </div>
           )}
+          <p className="mt-2 text-[12px] text-muted">암벽화 성취는 완등 기록으로 별도 계산</p>
         </Field>
 
         <Field label="구력 (클라이밍 시작한 지)">
@@ -427,7 +441,7 @@ export default function ProfileNew() {
 
         <button
           type="submit"
-          disabled={busy}
+          disabled={busy || photoBusy}
           className="rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-white active:bg-accent-pressed disabled:opacity-50"
         >
           {busy ? "저장 중…" : editing ? "수정 완료" : "프로필 올리기"}

@@ -16,8 +16,9 @@ export async function downscaleImage(
   // 이미지가 아니거나 이미 작으면 손대지 않는다
   if (!file.type.startsWith("image/") || file.size < 300 * 1024) return file;
 
+  let bitmap: ImageBitmap | undefined;
   try {
-    const bitmap = await createImageBitmap(file);
+    bitmap = await createImageBitmap(file);
     const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
     if (scale === 1 && file.size < 1024 * 1024) return file;
 
@@ -27,7 +28,6 @@ export async function downscaleImage(
     canvas.width = w;
     canvas.height = h;
     canvas.getContext("2d")!.drawImage(bitmap, 0, 0, w, h);
-    bitmap.close();
 
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, "image/jpeg", quality)
@@ -40,5 +40,7 @@ export async function downscaleImage(
   } catch {
     // 못 줄이면 원본 그대로 — 업로드 자체를 막을 이유는 없다
     return file;
+  } finally {
+    bitmap?.close();
   }
 }

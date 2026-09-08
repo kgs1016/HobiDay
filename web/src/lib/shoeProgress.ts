@@ -11,6 +11,16 @@ export const SHOE_STAGES = [
 
 export type ShoeColorId = (typeof SHOE_STAGES)[number]["id"];
 export type ClimbingProgress = { total: number; grade_counts: Record<string, number> };
+/** 다른 회원에게는 문제별 기록 대신 서버가 계산한 성취 요약만 공개한다. */
+export type PublicShoeAchievement = { stage: ShoeColorId; total: number };
+
+export function parseShoeAchievement(value: unknown): PublicShoeAchievement | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const row = value as Record<string, unknown>;
+  if (!SHOE_STAGES.some(stage => stage.id === row.stage) ||
+      typeof row.total !== "number" || !Number.isSafeInteger(row.total) || row.total < 0) return undefined;
+  return { stage: row.stage as ShoeColorId, total: row.total };
+}
 
 /** 서버가 본인 기록 전체에서 집계한 분포. 기간·영상 수는 승급에 쓰지 않는다. */
 export function shoeProgress(progress: ClimbingProgress) {

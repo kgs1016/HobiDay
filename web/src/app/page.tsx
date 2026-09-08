@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { isProfileComplete } from "@/lib/profileGate";
 import SessionCard from "@/components/SessionCard";
 import SessionFilterBar from "@/components/SessionFilterBar";
 import ProfileTodo from "@/components/ProfileTodo";
+import PublicShoe, { ShoeBadge } from "@/components/PublicShoe";
 import ReportSheet from "@/components/ReportSheet";
-import { AvatarFallback, PlusIcon } from "@/components/icons";
+import { AvatarFallback, BellIcon, PlusIcon, SearchIcon } from "@/components/icons";
 import { HoldIllust, ShoeIllust } from "@/components/illustrations";
 import { notifyPush } from "@/lib/nativePush";
 import { MOCK_SESSIONS, MOCK_PEOPLE, type Session, type Person } from "@/lib/mock";
@@ -17,6 +18,7 @@ import {
   EMPTY_FILTER,
   applySessionFilter,
 } from "@/lib/sessionFilter";
+import { findGym, matchesSearch } from "@/lib/homeSearch";
 import { loadMyProfile, type MyProfile } from "@/lib/myProfile";
 import {
   hasSupabase,
@@ -50,7 +52,10 @@ export default function Home() {
   const [people, setPeople] = useState<(Person & { intro?: string })[]>(
     mockMode ? MOCK_PEOPLE : []
   );
-  const [live, setLive] = useState(false);
+  const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const searchButton = useRef<HTMLButtonElement>(null);
   // Gym Master — 짐 필터의 검색 대상. 못 받으면(mock·마이그레이션 전) 폴백
   const [masterGyms, setMasterGyms] = useState<Gym[] | null>(null);
   // 모임 찾기 필터 — 서버를 다시 부르지 않고 받아온 목록에서 거른다
@@ -70,6 +75,7 @@ export default function Home() {
 
   useEffect(() => {
     (async () => {
+      // 브라우저 주소는 최초 hydration을 마친 뒤 확인한다.
       await Promise.resolve();
       if (window.location.hash === "#people") setTab("people");
       if (!hasSupabase()) {
@@ -109,7 +115,6 @@ export default function Home() {
       if (prof) setMe(prof);
       if (rows) {
         setSessions(rows.map((r) => toSession(r, prof?.homeGym, user.id)));
-        setLive(true);
       }
       // 비공개 버킷이라 표시용 서명 URL 을 한 번에 받아온다.
       // 사람 목록과 모임 호스트를 같이 넣어야 요청이 한 번으로 끝난다.
@@ -340,73 +345,66 @@ export default function Home() {
       .sort()
       .map((name) => ({ name })),
   ];
-  const shown = applySessionFilter(sessions, filter);
+  const resetSearch = () => { setFilter(EMPTY_FILTER); setQuery(""); };
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setQuery("");
+    searchButton.current?.focus();
+  };
+  const shown = applySessionFilter(sessions, filter).filter(session => {
+    const gym = findGym(gymChoices, session.gym);
+    return matchesSearch(query, [session.gym, session.note, session.host?.nickname, gym?.region, gym?.city_district, ...(gym?.aliases ?? [])]);
+  });
+  const shownPeople = people.filter(person => {
+    const gym = findGym(gymChoices, person.homeGym);
+    return matchesSearch(query, [person.nickname, person.homeGym, person.area, person.intro, ...(gym?.aliases ?? [])]);
+  });
 
   return (
     <main className="px-4">
-      {/* 헤더 — 로고는 작게, 오른쪽에 만들기·알림만 */}
-      <header className="flex items-center justify-between pt-5 pb-3">
-        <p className="text-[16px] font-bold tracking-[1.5px] text-accent">
-          HOBIDAY
-        </p>
-        <div className="flex items-center gap-3">
-          {/* 프로필 관리는 내 정보 탭에서 들어가면 되니 홈에서는 뺐다 */}
-          <Link
-            href="/session/new"
-            className="flex items-center gap-1 py-1 text-[13.5px] font-semibold text-accent-pressed"
-          >
-            <PlusIcon size={14} strokeWidth={2.2} />
-            모임 만들기
-          </Link>
-          {/* 알림함 — 푸시를 놓쳐도 여기 남아 있다 */}
-          <Link
-            href="/notifications"
-            aria-label="알림"
-            className="relative -mr-1 px-1 py-1 text-ink"
-          >
-            <svg
-              width="21"
-              height="21"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
-            {unread > 0 && (
-              <span className="absolute right-0 top-0 min-w-[15px] rounded-full bg-danger px-1 text-center text-[9.5px] font-bold leading-[15px] text-white">
-                {unread > 99 ? "99+" : unread}
-              </span>
-            )}
+      <header className="flex items-center justify-between gap-3 pt-5 pb-3">
+        <p className="shrink-0 text-[16px] font-bold tracking-[1.5px] text-accent">HOBIDAY</p>
+        <div className="flex items-center gap-1">
+          <button ref={searchButton} type="button" aria-label="검색" aria-expanded={searchOpen} aria-controls="home-search"
+            onClick={() => searchOpen ? closeSearch() : setSearchOpen(true)}
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-ink active:bg-surface2">
+            <SearchIcon size={21} />
+          </button>
+          <Link href="/notifications" aria-label={unread ? `알림 ${unread}개 안 읽음` : "알림"}
+            className="relative -mr-1 flex h-10 w-10 shrink-0 items-center justify-center text-ink">
+            <BellIcon size={21} />
+            {unread > 0 && <span aria-hidden="true" className="absolute right-0 top-0 min-w-[15px] rounded-full bg-danger px-1 text-center text-[9.5px] font-bold leading-[15px] text-white">
+              {unread > 99 ? "99+" : unread}
+            </span>}
           </Link>
         </div>
       </header>
 
-      {/* 탭 — 텍스트만, 밑줄은 글자 폭만큼 */}
-      <div className="flex gap-5 border-b border-line">
-        {(
-          [
-            ["session", "모임"],
-            ["people", "사람"],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={`-mb-px border-b-2 pb-2.5 pt-1 text-[15.5px] ${
-              tab === key
-                ? "border-ink font-bold text-ink"
-                : "border-transparent font-medium text-faint"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+      {searchOpen && <form id="home-search" role="search" className="mb-3 flex items-center gap-2"
+        onSubmit={e => { e.preventDefault(); searchInput.current?.blur(); }}>
+        <div className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-lg bg-surface2 px-3">
+          <SearchIcon size={17} className="shrink-0 text-muted" />
+          <input ref={searchInput} autoFocus type="search" value={query} onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => { if (e.key === "Escape") closeSearch(); }}
+            aria-label={tab === "session" ? "모임 검색" : "사람 검색"}
+            placeholder={tab === "session" ? "암장, 모임 내용, 호스트 검색" : "닉네임, 홈 암장 검색"}
+            className="h-full min-w-0 w-full bg-transparent text-[16px] outline-none placeholder:text-faint" />
+        </div>
+        <button type="button" onClick={closeSearch} className="min-h-11 px-1 text-[13px] font-medium text-muted">취소</button>
+      </form>}
+
+      <div className="flex items-center justify-between gap-3 border-b border-line">
+        <div className="flex gap-5" aria-label="둘러보기">
+          {([["session", "모임"], ["people", "사람"]] as const).map(([key, label]) => (
+            <button key={key} type="button" aria-pressed={tab === key} onClick={() => setTab(key)}
+              className={`-mb-px border-b-2 pb-2.5 pt-1 text-[15.5px] ${tab === key ? "border-ink font-bold text-ink" : "border-transparent font-medium text-faint"}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <Link href="/session/new" className="mb-2 flex shrink-0 items-center gap-1 rounded-lg bg-accent-soft px-2.5 py-1.5 text-[13px] font-semibold text-accent-pressed active:bg-line">
+          <PlusIcon size={14} strokeWidth={2.2} />모임 만들기
+        </Link>
       </div>
 
       {tab === "session" ? (
@@ -417,11 +415,10 @@ export default function Home() {
             gyms={gymChoices}
           />
 
-          {!live && hasSupabase() === false && (
-            <p className="mt-3 rounded-lg bg-surface2 px-4 py-2.5 text-center text-[11.5px] text-faint">
-              미리보기 데이터예요 · Supabase 연결 후 실제 모임이 표시됩니다
-            </p>
-          )}
+          {mockMode && <p className="mt-3 rounded-lg bg-surface2 px-4 py-2.5 text-center text-[11.5px] text-faint">
+            미리보기 데이터예요 · Supabase 연결 후 실제 모임이 표시됩니다
+          </p>}
+          {query.trim() && <p role="status" className="pt-3 text-[12px] text-muted">검색 결과 {shown.length}개</p>}
 
           {/* 빈 화면이 두 가지다. 열린 모임이 없는 것과, 있는데 내가
               건 조건에 안 걸리는 것 — 할 일이 다르니 말도 다르게 한다. */}
@@ -445,14 +442,14 @@ export default function Home() {
             <div className="py-16 text-center">
               <p className="text-[14px] font-medium">조건에 맞는 모임이 없어요</p>
               <button
-                onClick={() => setFilter(EMPTY_FILTER)}
+                onClick={resetSearch}
                 className="mt-3 text-[13px] font-medium text-accent-pressed"
               >
-                필터 초기화
+                전체 모임 보기
               </button>
             </div>
           ) : (
-            <div className="flex flex-col divide-y divide-line pb-6">
+            <div className="flex flex-col divide-y divide-line pb-6" aria-label="모임 목록">
               {shown.map((s) => (
                 <SessionCard
                   key={s.id}
@@ -466,6 +463,7 @@ export default function Home() {
         </>
       ) : (
         <div className="pb-6">
+          {mockMode && <p className="mt-3 rounded-lg bg-surface2 px-4 py-2.5 text-center text-[11.5px] text-faint">미리보기 데이터 · 암벽화 성취도 예시예요</p>}
           {/* 내 프로필 (공개 중) — 목록 위의 한 줄 */}
           {me ? (
             <div className="flex items-center gap-3.5 border-b border-line py-4">
@@ -490,7 +488,7 @@ export default function Home() {
                   {[
                     me.age,
                     me.area,
-                    me.level && `L${me.level}`,
+                    me.level && level(me.level).name,
                     careerLabel(me.careerId) && `클라이밍 ${careerLabel(me.careerId)}`,
                   ]
                     .filter(Boolean)
@@ -533,8 +531,12 @@ export default function Home() {
             </div>
           )}
 
+          {people.length > 0 && shownPeople.length === 0 && <div className="py-14 text-center">
+            <p className="text-[14px] font-medium">조건에 맞는 사람이 없어요</p>
+            <button type="button" onClick={resetSearch} className="mt-3 min-h-11 px-3 text-[14px] font-semibold text-accent-pressed">전체 사람 보기</button>
+          </div>}
           <div className="flex flex-col divide-y divide-line">
-            {people.map((p) => (
+            {shownPeople.map((p) => (
               <div key={p.id} className="flex items-center gap-4 py-4">
                 {/* 사진·정보를 누르면 상세 — 관심을 보내기 전에 크게 본다.
                     신고는 상세 시트에서 한다. */}
@@ -553,14 +555,15 @@ export default function Home() {
                     <AvatarFallback size={72} />
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="text-[15.5px] font-semibold">
-                      {p.nickname}
-                      <span className="ml-1.5 text-[13.5px] font-normal text-muted">
+                    <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[15.5px] font-semibold">
+                      <span className="truncate">{p.nickname}</span>
+                      <span className="text-[13.5px] font-normal text-muted">
                         {p.age}
                       </span>
+                      <ShoeBadge achievement={p.achievement} />
                     </p>
                     <p className="mt-0.5 truncate text-[13px] text-muted">
-                      {[p.area, p.level && `L${p.level}`]
+                      {[p.area, p.level && level(p.level).name]
                         .filter(Boolean)
                         .join(" · ")}
                     </p>
@@ -630,7 +633,7 @@ export default function Home() {
             <p className="mt-1 text-[13px] text-muted">
               {[
                 detail.level &&
-                  `L${detail.level} ${level(detail.level).name} (${level(detail.level).colors})`,
+                  `등반 수준 · ${level(detail.level).name}`,
                 careerLabel(detail.careerId) &&
                   `구력 ${careerLabel(detail.careerId)}`,
                 detail.homeGym,
@@ -639,6 +642,7 @@ export default function Home() {
                 .filter(Boolean)
                 .join(" · ")}
             </p>
+            <PublicShoe achievement={detail.achievement} />
             {detail.intro && (
               <p className="mt-3 rounded-lg bg-surface2 px-3.5 py-3 text-[13.5px] leading-relaxed">
                 &ldquo;{detail.intro}&rdquo;

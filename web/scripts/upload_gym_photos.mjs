@@ -3,6 +3,7 @@
 // 사용법 (web 디렉터리에서, 마이그레이션 적용 후):
 //   node scripts/upload_gym_photos.mjs           # 확정본(GYMS/photos)만 업로드
 //   node scripts/upload_gym_photos.mjs --review  # 검토폴더(GYMS/photos_review)도 포함
+//   node scripts/upload_gym_photos.mjs --dry-run # 파일만 검사. 키·서버 연결 불필요
 // 키는 환경변수 SUPABASE_SERVICE_ROLE_KEY 또는 web/.env.local 의 같은 이름 줄에서 읽는다.
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync, existsSync } from "node:fs";
@@ -20,7 +21,8 @@ if (existsSync(envFile)) {
 }
 const url = process.env.SUPABASE_URL ?? fileEnv.SUPABASE_URL ?? fileEnv.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? fileEnv.SUPABASE_SERVICE_ROLE_KEY;
-if (!url || !key) {
+const dryRun = process.argv.includes("--dry-run");
+if (!dryRun && (!url || !key)) {
   console.error("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 환경변수가 필요합니다.");
   process.exit(1);
 }
@@ -30,7 +32,7 @@ const gymsDir = resolve(webRoot, "..", "GYMS");
 const manifest = JSON.parse(readFileSync(resolve(gymsDir, "photos_manifest.json"), "utf-8"));
 
 const CT = { ".jpg": "image/jpeg", ".png": "image/png", ".webp": "image/webp" };
-const sb = createClient(url, key, { auth: { persistSession: false } });
+const sb = dryRun ? null : createClient(url, key, { auth: { persistSession: false } });
 
 let ok = 0, fail = 0, skipped = 0;
 for (const item of manifest.items) {
@@ -43,10 +45,13 @@ for (const item of manifest.items) {
   if (!existsSync(filePath)) { console.error(`없음: ${filePath}`); fail++; continue; }
   const ext = item.file.slice(item.file.lastIndexOf("."));
   const objectPath = item.file; // {gym_code}{ext}
+  const bytes = readFileSync(filePath);
+  if (!bytes.length || !CT[ext]) { console.error(`파일 형식 확인 필요: ${item.file}`); fail++; continue; }
+  if (dryRun) { ok++; continue; }
 
   const { error: upErr } = await sb.storage
     .from("gym-photos")
-    .upload(objectPath, readFileSync(filePath), {
+    .upload(objectPath, bytes, {
       contentType: CT[ext] ?? "application/octet-stream",
       upsert: true,
     });
@@ -70,10 +75,13 @@ for (const item of manifest.items) {
   console.log(`OK ${item.gym_code} ${item.name}${isReview ? " [검토본]" : ""}`);
   ok++;
 }
-console.log(`\n완료: 성공 ${ok} / 실패 ${fail} / 건너뜀 ${skipped}`);
+console.log(`\n${dryRun ? "로컬 파일 검사" : "완료"}: 성공 ${ok} / 실패 ${fail} / 건너뜀 ${skipped}`);
+if (fail) process.exitCode = 1;
+if (dryRun) process.exit(fail ? 1 : 0);
 
 const { count, error: cntErr } = await sb
   .from("gyms")
   .select("id", { count: "exact", head: true })
   .not("thumbnail_url", "is", null);
 console.log(cntErr ? `검증 실패: ${cntErr.message}` : `검증: thumbnail_url 채워진 암장 ${count}곳`);
+if (cntErr) process.exitCode = 1;

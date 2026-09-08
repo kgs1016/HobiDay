@@ -40,6 +40,14 @@ export function HomeIcon(p: IconProps) {
   );
 }
 
+export function SearchIcon(p: IconProps) {
+  return <Base {...p}><circle cx="10.5" cy="10.5" r="7" /><path d="m16 16 5 5" /></Base>;
+}
+
+export function BellIcon(p: IconProps) {
+  return <Base {...p}><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M10 21h4" /></Base>;
+}
+
 export function ChatIcon(p: IconProps) {
   return (
     <Base {...p}>

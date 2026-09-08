@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { slotsLeft, type Session } from "@/lib/mock";
 import { totalSeats } from "@/lib/capacity";
-import { AvatarFallback, PhotoIcon } from "@/components/icons";
+import { AvatarFallback } from "@/components/icons";
+import GymPhoto from "@/components/GymPhoto";
 import { ageRangeLabel } from "@/lib/meetupOptions";
+import { level, levelRangeShort } from "@/lib/levels";
 
 /* 목록의 한 줄 — 떠 있는 카드가 아니라 feed 의 항목이다.
    테두리·그림자·둥근 컨테이너 없이 사진과 여백, 얇은 divider(부모의
@@ -15,8 +17,7 @@ export default function SessionCard({
   session: Session;
   /* 사진 버킷이 비공개라 서명 URL 을 목록에서 한 번에 받아 넘긴다 */
   hostPhotoUrl?: string;
-  /* 클라이밍짐 사진 — 아직 데이터가 없어 자리만 잡아둔다.
-     URL 이 넘어오면 그대로 그려진다. */
+  /* 암장 마스터의 공개 대표사진 URL. 없거나 로딩 실패 시 대체 표시. */
   gymPhotoUrl?: string;
 }) {
   const left = slotsLeft(s);
@@ -56,18 +57,7 @@ export default function SessionCard({
       className="flex gap-3.5 py-4 transition-colors active:bg-surface2"
     >
       {/* 클라이밍짐 사진 */}
-      {gymPhotoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={gymPhotoUrl}
-          alt=""
-          className="h-[84px] w-[84px] shrink-0 rounded-lg object-cover"
-        />
-      ) : (
-        <span className="flex h-[84px] w-[84px] shrink-0 items-center justify-center rounded-lg bg-surface2 text-faint">
-          <PhotoIcon size={24} />
-        </span>
-      )}
+      <GymPhoto src={gymPhotoUrl} name={s.gym} size={84} />
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* 장소 */}
@@ -87,9 +77,7 @@ export default function SessionCard({
 
         {/* 구하는 조건 — 사진 옆 좁은 폭이라 레벨은 짧게 */}
         <p className="mt-[3px] truncate text-[12.5px] text-muted">
-          {s.levelMin === s.levelMax
-            ? `L${s.levelMin}`
-            : `L${s.levelMin}–L${s.levelMax}`}{" "}
+          {levelRangeShort(s.levelMin, s.levelMax)}{" "}
           · {ageRangeLabel(s.ageMin, s.ageMax)}
         </p>
 
@@ -110,7 +98,7 @@ export default function SessionCard({
               <p className="truncate text-[12px] text-muted">
                 {[
                   s.host.age ? `${s.host.nickname} ${s.host.age}` : s.host.nickname,
-                  s.host.level && `L${s.host.level}`,
+                  s.host.level && level(s.host.level).name,
                 ]
                   .filter(Boolean)
                   .join(" · ")}

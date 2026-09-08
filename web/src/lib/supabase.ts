@@ -5,6 +5,7 @@ import { createClient, type SupabaseClient, type User } from "@supabase/supabase
 import type { CareerId, LevelId } from "./levels";
 import type { Session } from "./mock";
 import type { MyProfile } from "./myProfile";
+import { parseShoeAchievement, type PublicShoeAchievement } from "./shoeProgress";
 import type {
   Article,
   ArticleKind,
@@ -193,6 +194,7 @@ export interface HostProfile {
   intro: string | null;
   photo: string | null;
   hosted: number; // 지금까지 연 모임 수
+  achievement?: PublicShoeAchievement;
 }
 
 export async function fetchSessionHost(
@@ -208,7 +210,8 @@ export async function fetchSessionHost(
   const r = data as (HostProfile & { error?: string }) | null;
   if (!r) return { error: "not_found" };
   if (r.error) return { error: r.error };
-  return { host: r };
+  const achievements = await fetchPublicShoeAchievements([r.id], sessionId);
+  return { host: { ...r, achievement: achievements?.[r.id] } };
 }
 
 /* 모임 참여자 한 줄. 호스트도 이 목록에 같이 들어온다 (is_host) —
@@ -258,7 +261,8 @@ export async function fetchSessionMember(
   const r = data as (HostProfile & { error?: string }) | null;
   if (!r) return { error: "not_found" };
   if (r.error) return { error: r.error };
-  return { host: r };
+  const achievements = await fetchPublicShoeAchievements([r.id], sessionId);
+  return { host: { ...r, achievement: achievements?.[r.id] } };
 }
 
 export async function createSession(p: {
@@ -607,10 +611,11 @@ export async function fetchChats() {
   return data as Chat[];
 }
 
-export async function fetchChatMessages(matchId: string) {
+export async function fetchChatMessages(matchId: string, signal?: AbortSignal) {
   const sb = getSupabase();
   if (!sb) return null;
-  const { data, error } = await sb.rpc("chat_messages", { p_match: matchId });
+  const query = sb.rpc("chat_messages", { p_match: matchId });
+  const { data, error } = await (signal ? query.abortSignal(signal) : query);
   if (error) return null;
   const d = data as ChatMessage[] | { error: string };
   if (!Array.isArray(d)) return null;
@@ -676,13 +681,16 @@ export async function uploadProfilePhoto(
      프로필 저장은 나중이라, 골라만 놓고 저장 안 하면 옛 경로가 살아 있다.
      그 파일은 다음번 업로드 때 참조가 풀린 뒤 지워진다. */
   try {
-    const { data: row } = await sb
+    const { data: row, error: profileError } = await sb
       .from("profiles")
       .select("photo")
       .eq("id", user.id)
       .maybeSingle();
+    // 현재 사진을 확인하지 못한 경우에는 기존 파일을 지우지 않는다.
+    if (profileError) return { path };
     const keep = new Set([path, row?.photo].filter(Boolean));
-    const { data: files } = await sb.storage.from(PHOTO_BUCKET).list(user.id);
+    const { data: files, error: listError } = await sb.storage.from(PHOTO_BUCKET).list(user.id);
+    if (listError) return { path };
     const old = (files ?? [])
       .map((f) => `${user.id}/${f.name}`)
       .filter((p) => !keep.has(p));
@@ -945,10 +953,12 @@ export async function fetchInboxCounts() {
 }
 
 /** 방을 열면 호출 — 이 시점 이후 메시지만 안 읽음으로 센다 */
-export async function markChatRead(matchId: string) {
+export async function markChatRead(matchId: string, signal?: AbortSignal) {
   const sb = getSupabase();
-  if (!sb) return;
-  await sb.rpc("chat_mark_read", { p_match: matchId });
+  if (!sb) return false;
+  const query = sb.rpc("chat_mark_read", { p_match: matchId });
+  const { error } = await (signal ? query.abortSignal(signal) : query);
+  return !error;
 }
 
 /* ── 모임 단체 채팅 ──
@@ -986,12 +996,13 @@ export async function fetchSessionChats() {
   return data as SessionChat[];
 }
 
-export async function fetchSessionChatMessages(sessionId: string) {
+export async function fetchSessionChatMessages(sessionId: string, signal?: AbortSignal) {
   const sb = getSupabase();
   if (!sb) return null;
-  const { data, error } = await sb.rpc("session_chat_messages", {
+  const query = sb.rpc("session_chat_messages", {
     p_session: sessionId,
   });
+  const { data, error } = await (signal ? query.abortSignal(signal) : query);
   if (error) return null;
   const d = data as SessionChatMessage[] | { error: string };
   if (!Array.isArray(d)) return null;
@@ -1010,13 +1021,34 @@ export async function sendSessionChat(sessionId: string, body: string) {
   return data as { ok?: boolean; notify?: string[]; error?: string };
 }
 
-export async function markSessionChatRead(sessionId: string) {
+export async function markSessionChatRead(sessionId: string, signal?: AbortSignal) {
   const sb = getSupabase();
-  if (!sb) return;
-  await sb.rpc("session_chat_mark_read", { p_session: sessionId });
+  if (!sb) return false;
+  const query = sb.rpc("session_chat_mark_read", { p_session: sessionId });
+  const { error } = await (signal ? query.abortSignal(signal) : query);
+  return !error;
 }
 
 /* ── 프로필 목록 ── */
+
+/** 목록 단위로 한 번에 조회한다. 실패/열람 불가는 기록 0개와 구분한다. */
+export async function fetchPublicShoeAchievements(userIds: string[], sessionId?: string): Promise<Record<string, PublicShoeAchievement> | null> {
+  const ids = [...new Set(userIds)];
+  if (!ids.length) return {};
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc("public_climbing_achievements", {
+    p_users: ids, p_session: sessionId ?? null,
+  });
+  if (error || !Array.isArray(data)) return null;
+  const entries: [string, PublicShoeAchievement][] = [];
+  for (const row of data) {
+    const achievement = parseShoeAchievement(row);
+    if (achievement && typeof row.user_id === "string" && ids.includes(row.user_id))
+      entries.push([row.user_id, achievement]);
+  }
+  return Object.fromEntries(entries);
+}
 
 /**
  * 사람 찾기 목록.
@@ -1042,6 +1074,7 @@ export async function fetchPeople(me?: { id: string }) {
     .order("created_at", { ascending: false })
     .limit(50);
   if (error) return null;
+  const achievements = await fetchPublicShoeAchievements(data.map(d => d.id as string));
   return data.map((d) => ({
     id: d.id as string,
     nickname: d.nickname as string,
@@ -1055,6 +1088,7 @@ export async function fetchPeople(me?: { id: string }) {
     area: d.area as string,
     intro: (d.intro ?? undefined) as string | undefined,
     photo: (d.photo ?? undefined) as string | undefined,
+    achievement: achievements?.[d.id as string],
   }));
 }
 

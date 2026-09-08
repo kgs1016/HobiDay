@@ -9,7 +9,7 @@
 
 import { useState } from "react";
 import Calendar, { monthOf } from "@/components/Calendar";
-import { LEVELS, type LevelId } from "@/lib/levels";
+import { LEVELS, levelRangeShort, type LevelId } from "@/lib/levels";
 import {
   AGE_BANDS,
   AGE_FROM,
@@ -32,7 +32,7 @@ const TITLES: Record<Facet, string> = {
   date: "날짜",
   time: "시간",
   seats: "정원",
-  level: "레벨",
+  level: "참가 수준",
   age: "나이대",
 };
 
@@ -67,10 +67,8 @@ function chipLabel(f: SessionFilter, k: Facet): string {
       return `정원 ${f.seats.length}`;
     }
     case "level":
-      if (!f.levelMin || !f.levelMax) return "레벨";
-      return f.levelMin === f.levelMax
-        ? `L${f.levelMin}`
-        : `L${f.levelMin}~L${f.levelMax}`;
+      if (!f.levelMin || !f.levelMax) return "참가 수준";
+      return levelRangeShort(f.levelMin, f.levelMax);
     case "age":
       return f.ageFrom == null || f.ageTo == null
         ? "나이대"
@@ -438,13 +436,13 @@ export default function SessionFilterBar({
                       }
                       onClick={() => pickLevel(l.id)}
                     >
-                      L{l.id} {l.name}
+                      {l.name}
                     </Opt>
                   ))}
                 </div>
                 <p className="mt-2.5 text-[12px] leading-relaxed text-muted">
                   {f.levelMin && f.levelMax
-                    ? "범위 밖을 누르면 넓어지고, 안을 누르면 그 레벨만 남아요."
+                    ? "범위 밖을 누르면 넓어지고, 안을 누르면 그 수준만 남아요."
                     : "두 개를 누르면 범위가 돼요."}
                 </p>
               </>

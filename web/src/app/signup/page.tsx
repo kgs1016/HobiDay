@@ -5,12 +5,13 @@
    비밀번호 확인칸이 없으면 오타 난 채로 가입되어 다시 못 들어온다
    (비밀번호 재설정 흐름이 아직 없다). */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
 import BackButton from "@/components/BackButton";
 import OAuthButtons from "@/components/OAuthButtons";
+import { useHydrated } from "@/lib/browserState";
 
 /* 인증번호 대기 상태를 저장해 둔다 — 메일 앱에 갔다 오는 게 이 흐름에서
    가장 흔한 동작인데, 그때마다 처음부터 다시 시작하면 안 된다. */
@@ -25,8 +26,7 @@ const loadOtpState = (): string | null => {
     const raw = localStorage.getItem(OTP_KEY);
     if (!raw) return null;
     const { email, at } = JSON.parse(raw);
-    if (typeof email !== "string" || Date.now() - at > OTP_TTL) {
-      clearOtpState();
+    if (typeof email !== "string" || typeof at !== "number" || Date.now() - at > OTP_TTL) {
       return null;
     }
     return email;
@@ -40,24 +40,23 @@ const inputCls =
   "w-full rounded-lg border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-faint focus:border-accent focus:outline-none";
 
 export default function Signup() {
+  const hydrated = useHydrated();
+  if (!hydrated) return null;
+  return <SignupForm />;
+}
+
+function SignupForm() {
   const router = useRouter();
   const sb = getSupabase();
+  // 메일 앱에서 돌아왔을 때 인증번호 화면을 처음부터 올바른 상태로 연다.
+  const [savedEmail] = useState(loadOtpState);
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(savedEmail ?? "");
   const [pw, setPw] = useState("");
   const [pw2, setPw2] = useState("");
   const [busy, setBusy] = useState(false);
   const [otp, setOtp] = useState(""); // 가입 확인 인증번호 (메일의 6자리)
-  const [sentMail, setSentMail] = useState(false);
-
-  // 메일 확인하러 나갔다 돌아와도(앱 재시작 포함) 인증번호 화면을 복원한다
-  useEffect(() => {
-    const saved = loadOtpState();
-    if (saved) {
-      setEmail(saved);
-      setSentMail(true);
-    }
-  }, []);
+  const [sentMail, setSentMail] = useState(savedEmail !== null);
 
   if (!sb) {
     return (

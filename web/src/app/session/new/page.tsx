@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LEVELS, type LevelId } from "@/lib/levels";
+import { LEVELS, levelRangeLabel, type LevelId } from "@/lib/levels";
 import { CAPACITY_CHOICES } from "@/lib/capacity";
 import {
   AGE_FROM,
@@ -23,6 +23,7 @@ import Calendar, { monthOf, ymd } from "@/components/Calendar";
 import BackButton from "@/components/BackButton";
 import GymPicker from "@/components/GymPicker";
 import { ChevronDownIcon } from "@/components/icons";
+import { useNow } from "@/lib/browserState";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -68,8 +69,8 @@ const hm = (d: Date) =>
    서버는 "지금부터 30분 뒤" 부터 받는다. 여유를 조금 더 두고 다음 30분
    칸으로 올린다. 밤늦게 열어서 오늘 안에는 더 잡을 수 없으면 내일
    오후로 넘긴다 — 오늘을 고집하면 어차피 잠긴 화면이 된다. */
-function defaultSlot() {
-  const now = new Date();
+function defaultSlot(timestamp: number) {
+  const now = new Date(timestamp);
   const today = ymd(now);
   const start = new Date(now.getTime() + 40 * 60 * 1000);
   start.setSeconds(0, 0);
@@ -91,7 +92,15 @@ const boxCls =
 const inputCls = `w-full ${boxCls}`;
 
 export default function NewSession() {
+  const now = useNow();
+  if (!now) return <main className="px-4 pt-24 text-center text-[13.5px] text-faint">불러오는 중…</main>;
+  return <NewSessionForm now={now} />;
+}
+
+function NewSessionForm({ now }: { now: number }) {
   const router = useRouter();
+  // 실제 브라우저 시각을 받은 뒤 한 번만 초기화해 사용자 입력을 유지한다.
+  const [initialSlot] = useState(() => defaultSlot(now));
   /* 암장 — gym master 에서 고른다. 마스터를 못 받는 환경(mock ·
      마이그레이션 전 DB)에서는 예전 자유입력 + 칩으로 동작한다. */
   const [gyms, setGyms] = useState<Gym[] | null>(null);
@@ -111,33 +120,12 @@ export default function NewSession() {
   const masterMode = !!gyms && gyms.length > 0;
   const selected = masterMode ? gyms!.find((g) => g.id === gymId) : undefined;
 
-  /* 빈 값으로 시작해서 브라우저에서 오늘로 채운다. 렌더 중에 new Date()
-     를 부르면 서버가 미리 그려둔 날이 박혀서, 하루만 지나도 어제가
-     기본값이 된다. 달력을 아무 데도 안 짚은 채 열어두면 여는 사람이
-     "어디부터 고를 수 있는지" 를 스스로 알아내야 한다. */
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(initialSlot.date);
   // 보고 있는 달. 날짜를 고르면 그 달에 머문다
-  const [month, setMonth] = useState(monthOf(""));
+  const [month, setMonth] = useState(monthOf(initialSlot.date));
 
-  const [startTime, setStartTime] = useState("15:00");
-  const [endTime, setEndTime] = useState("17:00");
-
-  /* 지금 시각. 렌더 중에 new Date() 를 부르면 프리렌더된 값이 박혀서
-     하루만 지나도 어제가 기준이 된다. 브라우저에서 읽고, 30초마다
-     새로 본다 — 화면을 켜둔 채로 시작 시각이 지나가면 그 순간부터
-     등록 버튼이 잠겨야 한다.
-     0 = 아직 안 읽음 (이때는 시각 규칙을 재지 않는다). */
-  const [now, setNow] = useState(0);
-  useEffect(() => {
-    setNow(Date.now());
-    const slot = defaultSlot();
-    setDate((d) => d || slot.date);
-    setMonth(monthOf(slot.date));
-    setStartTime(slot.start);
-    setEndTime(slot.end);
-    const t = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(t);
-  }, []);
+  const [startTime, setStartTime] = useState(initialSlot.start);
+  const [endTime, setEndTime] = useState(initialSlot.end);
 
   /* 달력에서 지난 날짜·90일 밖을 아예 못 고르게 한다 (서버도 같은 범위를
      거부한다). now 를 따라가니 자정을 넘겨도 어제가 남지 않는다. */
@@ -360,24 +348,20 @@ export default function NewSession() {
           </div>
         </Field>
 
-        <Field label="레벨 범위">
-          <div className="flex gap-1.5">
+        <Field label="참가 수준">
+          <div className="flex flex-wrap gap-1.5">
             {LEVELS.map((l) => (
               <Chip
                 key={l.id}
                 active={l.id >= levelMin && l.id <= levelMax}
                 onClick={() => toggleLevel(l.id)}
               >
-                L{l.id}
+                {l.name}
               </Chip>
             ))}
           </div>
           <p className="mt-1.5 text-[12px] text-muted">
-            {levelMin === 1 && levelMax === 5
-              ? "모든 레벨 환영 — 오늘 처음인 사람도 올 수 있어요"
-              : LEVELS.slice(levelMin - 1, levelMax)
-                  .map((l) => `L${l.id} ${l.name}(${l.colors})`)
-                  .join(" · ")}
+            {levelRangeLabel(levelMin, levelMax)}
           </p>
         </Field>
 

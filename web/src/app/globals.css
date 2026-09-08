@@ -15,6 +15,7 @@
   --color-accent: #5ba7f7;
   --color-accent-pressed: #4696e8;
   --color-accent-soft: #eef6ff;
+  --color-accent-strong: #2874d0;
   /* 되돌릴 수 없는 동작(탈퇴·신고 등) 전용 */
   --color-danger: #e5484d;
 }

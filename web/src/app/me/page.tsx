@@ -135,8 +135,6 @@ export default function Me() {
                 <p className="text-[17px] font-bold">{profile.nickname}</p>
                 <p className="mt-0.5 text-[13px] text-muted">
                   {[
-                    profile.level &&
-                      `L${profile.level} ${level(profile.level).name}`,
                     careerLabel(profile.careerId) &&
                       `구력 ${careerLabel(profile.careerId)}`,
                     profile.homeGym,
@@ -144,6 +142,11 @@ export default function Me() {
                     .filter(Boolean)
                     .join(" · ")}
                 </p>
+                <Link href="/profile/new" className="mt-2 inline-flex items-center gap-1.5 text-[12px] text-muted">
+                  등반 수준 <b className="font-semibold text-ink">{profile.level ? level(profile.level).name : "미설정"}</b>
+                  <span className="text-faint">· 직접 선택</span>
+                  <ChevronRightIcon size={12} />
+                </Link>
               </>
             ) : (
               <>
