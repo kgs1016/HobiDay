@@ -180,6 +180,8 @@ export default function Me() {
         {!locked && <MenuRow href="/session/mine" label="내가 만든 모임" />}
         {/* 끝난 모임은 홈에서도 채팅에서도 사라진다 — 여기가 유일한 통로 */}
         {!locked && <MenuRow href="/me/history" label="매칭 기록" />}
+        {/* 끝난 모임의 리뷰 — 알림을 놓쳐도 일주일 동안 여기서 쓴다 */}
+        {!locked && <MenuRow href="/me/reviews" label="리뷰 작성" />}
         <MenuRow href="/safety" label="안전 설정 · 차단 목록" />
         <MenuRow href="/support" label="고객센터 · 문의" />
       </section>

@@ -13,9 +13,10 @@ import { careerLabel, level } from "@/lib/levels";
 import { MOCK_PEOPLE, MOCK_SESSIONS } from "@/lib/mock";
 import BackButton from "@/components/BackButton";
 import ChatRequestSheet from "@/components/ChatRequestSheet";
+import PlayerReviews from "@/components/PlayerReviews";
 import PublicShoe from "@/components/PublicShoe";
 import ReportSheet from "@/components/ReportSheet";
-import { AvatarFallback } from "@/components/icons";
+import { AvatarFallback, ThumbIcon } from "@/components/icons";
 import { ShoeIllust } from "@/components/illustrations";
 import {
   currentUser,
@@ -53,6 +54,8 @@ function mockProfile(userId: string | null, sessionId: string | null): Profile |
     is_public: true,
     is_host: s ? s.host?.id === p.id : null,
     joined: MOCK_SESSIONS.filter((x) => x.host?.id === p.id).length,
+    likes: 0,
+    reviews: 0,
     achievement: p.achievement,
   };
 }
@@ -188,8 +191,12 @@ export default function UserProfile({
           {profile.nickname}
           <span className="ml-1.5 text-[14px] font-normal text-muted">{profile.age}</span>
         </p>
+        {/* 받은 추천 — 플레이어 리뷰의 누적 */}
+        <p className="mt-2 flex items-center gap-1 text-[13px] font-semibold text-accent-pressed">
+          <ThumbIcon size={15} /> 추천 {profile.likes}
+        </p>
         {profile.joined > 0 && (
-          <span className="mt-3 rounded-md bg-surface2 px-2.5 py-1 text-[11.5px] font-medium text-muted">
+          <span className="mt-2.5 rounded-md bg-surface2 px-2.5 py-1 text-[11.5px] font-medium text-muted">
             모임 {profile.joined}번 참여했어요
           </span>
         )}
@@ -206,6 +213,8 @@ export default function UserProfile({
         </p>
       )}
       <PublicShoe achievement={profile.achievement} />
+
+      {hasSupabase() && <PlayerReviews userId={profile.id} count={profile.reviews} />}
 
       <section className="mt-6 border-t border-line pt-2">
         {lv && <Row label="등반 수준" value={`${lv.name} · 직접 선택`} />}

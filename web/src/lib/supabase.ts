@@ -200,6 +200,10 @@ export interface UserProfile {
   is_host: boolean | null;
   /** 실제로 열린 모임에 호스트 또는 확정 참가자로 다녀온 수 */
   joined: number;
+  /** 받은 추천 수 (플레이어 리뷰) */
+  likes: number;
+  /** 글이 있는 리뷰 수 */
+  reviews: number;
   achievement?: PublicShoeAchievement;
 }
 
@@ -253,6 +257,105 @@ export async function fetchSessionMembers(
     return [];
   }
   return (data as SessionMember[] | null) ?? [];
+}
+
+/* ── 플레이어 리뷰 ──
+   같은 모임에 확정으로 함께 있던 사람에게, 끝난 뒤 일주일 안에 남긴다.
+   추천(liked) 하나와 글 한 줄. 모임 하나에 한 사람당 하나 — 다시 저장하면 덮어쓴다. */
+
+export interface Review {
+  id: string;
+  liked: boolean;
+  body: string;
+  created_at: string;
+  /** 탈퇴한 글쓴이는 null */
+  author_id: string | null;
+  author_name: string | null;
+  author_photo: string | null;
+  gym: string | null;
+}
+
+export async function fetchProfileReviews(
+  userId: string,
+  before?: string,
+  limit = 20
+): Promise<Review[] | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc("profile_reviews", {
+    p_user: userId,
+    p_before: before ?? null,
+    p_limit: limit,
+  });
+  if (error) {
+    console.error("profile_reviews", error);
+    return null;
+  }
+  return (data as Review[] | null) ?? [];
+}
+
+export interface ReviewTarget {
+  id: string;
+  nickname: string;
+  photo: string | null;
+  is_host: boolean;
+  /** 내가 이미 남긴 것. 없으면 null */
+  liked: boolean | null;
+  body: string | null;
+}
+
+export interface ReviewSession {
+  id: string;
+  gym: string;
+  starts_at: string;
+  ends_at: string;
+  /** 이때까지 쓸 수 있다 (끝나고 일주일) */
+  until: string;
+  open: boolean;
+  people: ReviewTarget[];
+}
+
+/** 내 정보 > 리뷰 작성 — 끝난 지 일주일 안인 모임들 */
+export async function fetchReviewSessions(): Promise<ReviewSession[] | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc("my_review_sessions");
+  if (error) {
+    console.error("my_review_sessions", error);
+    return null;
+  }
+  return (data as ReviewSession[] | null) ?? [];
+}
+
+export async function fetchReviewSession(
+  sessionId: string
+): Promise<{ session?: ReviewSession; error?: string }> {
+  const sb = getSupabase();
+  if (!sb) return { error: "no_client" };
+  const { data, error } = await sb.rpc("review_session", { p_session: sessionId });
+  if (error) return { error: error.message };
+  const r = data as (ReviewSession & { error?: string }) | null;
+  if (!r) return { error: "not_found" };
+  if (r.error) return { error: r.error };
+  return { session: r };
+}
+
+export async function submitReview(
+  sessionId: string,
+  targetId: string,
+  liked: boolean,
+  body: string
+) {
+  const sb = getSupabase();
+  if (!sb) return { error: "no_client" };
+  const { data, error } = await sb.rpc("review_submit", {
+    p_session: sessionId,
+    p_target: targetId,
+    p_liked: liked,
+    p_body: body,
+  });
+  if (error) return { error: error.message };
+  return data as { ok?: boolean; removed?: boolean; error?: string };
 }
 
 export async function createSession(p: {

@@ -153,6 +153,16 @@ export function PlayIcon(p: IconProps) {
 }
 
 /* 사진이 없을 때 쓰는 프로필 자리표시 — 이모지(🧗) 대신 중립 아이콘 원 */
+/** 추천 — 플레이어 리뷰의 엄지 */
+export function ThumbIcon(p: IconProps) {
+  return (
+    <Base {...p}>
+      <path d="M7 11v9H4a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3Z" />
+      <path d="M7 11l4-7a2 2 0 0 1 2 2v4h5a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 16.8 20H7" />
+    </Base>
+  );
+}
+
 export function AvatarFallback({
   size = 56,
   className = "",
