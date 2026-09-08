@@ -11,7 +11,7 @@ const TABS = [
   { href: "/chat", label: "채팅", Icon: ChatIcon },
   { href: "/inbox", label: "신청함", Icon: InboxIcon },
   { href: "/community", label: "커뮤니티", Icon: CommunityIcon },
-  { href: "/me", label: "내 정보", Icon: UserIcon },
+  { href: "/me", label: "내 프로필", Icon: UserIcon },
 ];
 
 export default function BottomNav() {

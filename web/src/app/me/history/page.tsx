@@ -150,7 +150,7 @@ export default function MatchHistory() {
   return (
     <main className="px-4 pb-10">
       <header className="flex items-center gap-2 pt-4 pb-2">
-        <BackButton fallback="/me" />
+        <BackButton fallback="/me/settings" />
         <h1 className="text-[18px] font-bold tracking-tight">함께한 모임</h1>
       </header>
 

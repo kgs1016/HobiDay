@@ -92,7 +92,7 @@ export default function ReportSheet({
         (r.cancelled_sessions
           ? `\n\n내가 연 모임 ${r.cancelled_sessions}개는 취소했어요.`
           : "") +
-        `\n\n차단은 마이 > 안전 설정에서 풀 수 있어요.`
+        `\n\n차단은 내 프로필 > 내 정보 > 안전 설정에서 풀 수 있어요.`
     );
     onDone?.();
     onClose();
