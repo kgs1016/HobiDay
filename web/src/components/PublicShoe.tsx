@@ -32,9 +32,9 @@ export default function PublicShoe({ achievement }: { achievement?: PublicShoeAc
         <p className="text-[17px] font-bold" style={{ color: unrecorded ? undefined : stage.ink }}>
           {unrecorded ? "완등 기록 전" : `${stage.name} 암벽화`}
         </p>
-        <p className="mt-1 text-[12px] leading-relaxed text-muted">
-          {unrecorded ? "등반 수준과 별도로 쌓는 성취" : stage.minV === null ? "시작 단계" : `획득 기준 · V${stage.minV} 이상 ${stage.required}개`}
-        </p>
+        {!unrecorded && <p className="mt-1 text-[12px] leading-relaxed text-muted">
+          {stage.minV === null ? "시작 단계" : `획득 기준 · V${stage.minV} 이상 ${stage.required}개`}
+        </p>}
         {!unrecorded && <p className="mt-1 text-[12px] text-muted">누적 완등 <b className="font-semibold tabular-nums text-ink">{achievement.total.toLocaleString()}개</b></p>}
       </div>
     </div>
