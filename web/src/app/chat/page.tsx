@@ -593,7 +593,8 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
   const [msgs, setMsgs] = useState<ChatMessage[] | null>(null);
   const [reporting, setReporting] = useState(false);
   const router = useRouter();
-  /* 상대 프로필은 어디서 열든 한 화면 — 방 id 를 들려 보내 돌아올 수 있게 한다 */
+  /* 상대 프로필은 어디서 열든 한 화면 — 아바타를 누르면 열린다.
+     방 id 를 들려 보내 돌아올 수 있게 한다 */
   const openProfile = () =>
     router.push(`/user?id=${chat.partner_id}&m=${chat.match_id}&from=chat`);
   // 상대 말풍선 옆 아바타 — 사진 주소는 캐시돼 있어 재서명이 싸다
@@ -664,7 +665,8 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
         sub={[origin(chat), chat.level && level(chat.level).name]
           .filter(Boolean)
           .join(" · ")}
-        onTitle={openProfile}
+        /* 제목은 누르지 않는다 — 프로필은 말풍선 옆 아바타로만 연다.
+           단체방은 제목을 누르면 모임 정보로 간다 (SessionThread). */
         closedNote={
           chat.partner_left
             ? "상대가 대화방을 나갔어요. 더 이상 메시지를 보낼 수 없어요."
