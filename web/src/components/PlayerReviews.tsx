@@ -57,7 +57,16 @@ export function ReviewCard({
   );
 }
 
-export default function PlayerReviews({ userId, count }: { userId: string; count: number }) {
+export default function PlayerReviews({
+  userId,
+  count,
+  likes,
+}: {
+  userId: string;
+  count: number;
+  /** 내 정보에서만 — 남의 프로필은 이름 아래에 이미 있다 */
+  likes?: number;
+}) {
   const [list, setList] = useState<Review[] | null>(null);
   const [photos, setPhotos] = useState<Record<string, string>>({});
 
@@ -81,9 +90,14 @@ export default function PlayerReviews({ userId, count }: { userId: string; count
   return (
     <section className="mt-6 border-t border-line pt-4">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-[13px] font-semibold">
+        <h2 className="flex items-center gap-1.5 text-[13px] font-semibold">
           플레이어 리뷰
-          {count > 0 && <span className="ml-1.5 font-normal text-muted">{count}</span>}
+          {count > 0 && <span className="font-normal text-muted">{count}</span>}
+          {likes !== undefined && (
+            <span className="ml-1 flex items-center gap-0.5 text-[12px] text-accent-pressed">
+              <ThumbIcon size={13} /> {likes}
+            </span>
+          )}
         </h2>
         {count > 0 && (
           <Link

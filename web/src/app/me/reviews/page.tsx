@@ -76,7 +76,6 @@ export default function MyReviews() {
       ) : (
         <div className="flex flex-col divide-y divide-line">
           {list.map((r) => {
-            const done = r.people.filter((p) => p.liked || p.body).length;
             return (
               <Link
                 key={r.id}
@@ -105,7 +104,7 @@ export default function MyReviews() {
                       )}
                     </div>
                     <span className="ml-1 text-[12px] text-muted">
-                      {done}/{r.people.length}명 남김
+                      {r.people.length}명 남았어요
                     </span>
                   </div>
                 </div>

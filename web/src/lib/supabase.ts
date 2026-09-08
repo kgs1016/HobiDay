@@ -261,7 +261,7 @@ export async function fetchSessionMembers(
 
 /* ── 플레이어 리뷰 ──
    같은 모임에 확정으로 함께 있던 사람에게, 끝난 뒤 일주일 안에 남긴다.
-   추천(liked) 하나와 글 한 줄. 모임 하나에 한 사람당 하나 — 다시 저장하면 덮어쓴다. */
+   추천(liked) 하나와 글 한 줄. 한 사람에게 한 번 — 남기면 고치지 못한다. */
 
 export interface Review {
   id: string;
@@ -299,9 +299,6 @@ export interface ReviewTarget {
   nickname: string;
   photo: string | null;
   is_host: boolean;
-  /** 내가 이미 남긴 것. 없으면 null */
-  liked: boolean | null;
-  body: string | null;
 }
 
 export interface ReviewSession {
@@ -355,7 +352,7 @@ export async function submitReview(
     p_body: body,
   });
   if (error) return { error: error.message };
-  return data as { ok?: boolean; removed?: boolean; error?: string };
+  return data as { ok?: boolean; error?: string };
 }
 
 export async function createSession(p: {

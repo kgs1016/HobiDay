@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ProfileTodo from "@/components/ProfileTodo";
 import ProfileShoe from "@/components/ProfileShoe";
+import PlayerReviews from "@/components/PlayerReviews";
 import { resetProfileGate } from "@/components/RequireProfile";
 import { AvatarFallback, ChevronRightIcon } from "@/components/icons";
 import type { MyProfile } from "@/lib/myProfile";
@@ -17,7 +18,7 @@ import {
   deleteAccount,
   fetchAppFlags,
   fetchMyProfileDb,
-  fetchMyVideoCount,
+  fetchUserProfile,
   signedPhotoUrls,
 } from "@/lib/supabase";
 
@@ -42,7 +43,8 @@ export default function Me() {
   const [email, setEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<MyProfile | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
-  const [videoCount, setVideoCount] = useState(0);
+  /* 내 프로필을 남이 보는 모양 그대로 — 추천 수·리뷰 수 */
+  const [mine, setMine] = useState<{ id: string; likes: number; reviews: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [leaving, setLeaving] = useState(false); // 탈퇴 확인 패널
   const [confirmText, setConfirmText] = useState("");
@@ -64,14 +66,15 @@ export default function Me() {
       }
       setAuthed(true);
       setEmail(user.email ?? null);
-      const [prof, vids, flags] = await Promise.all([
+      const [prof, flags, me] = await Promise.all([
         fetchMyProfileDb(),
-        fetchMyVideoCount(),
         fetchAppFlags(),
+        fetchUserProfile(user.id),
       ]);
       if (flags) setLocked(!flags.sessions_open && !flags.people_open);
       setProfile(prof);
-      setVideoCount(vids);
+      if (me.profile)
+        setMine({ id: me.profile.id, likes: me.profile.likes, reviews: me.profile.reviews });
       setLoading(false);
       if (prof?.photo)
         setPhotoUrl((await signedPhotoUrls([prof.photo]))[prof.photo] ?? null);
@@ -159,19 +162,12 @@ export default function Me() {
 
       <ProfileShoe />
 
-      {/* 내 영상 */}
-      <section className="border-t-8 border-surface2 px-4">
-        <Link
-          href="/me/videos"
-          className="flex items-center justify-between py-3.5"
-        >
-          <span className="text-[15px]">내 영상</span>
-          <span className="flex items-center gap-1.5">
-            <span className="text-[15px] font-semibold">{videoCount}</span>
-            <ChevronRightIcon size={15} className="text-faint" />
-          </span>
-        </Link>
-      </section>
+      {/* 내가 받은 리뷰 — 남의 프로필과 같은 칸. 내 영상은 프로필 수정 아래로 갔다 */}
+      {mine && (
+        <section className="px-4 pb-2">
+          <PlayerReviews userId={mine.id} count={mine.reviews} likes={mine.likes} />
+        </section>
+      )}
 
       {/* 메뉴 */}
       <section className="border-t-8 border-surface2 px-4">

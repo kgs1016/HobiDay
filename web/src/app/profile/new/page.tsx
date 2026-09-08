@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
-import { CameraIcon } from "@/components/icons";
+import { CameraIcon, ChevronRightIcon } from "@/components/icons";
 import { CAREERS, LEVELS, type CareerId, type LevelId } from "@/lib/levels";
 import { loadMyProfile, saveMyProfile, type MyProfile } from "@/lib/myProfile";
 import { isProfileComplete } from "@/lib/profileGate";
@@ -13,6 +14,7 @@ import {
   hasSupabase,
   currentUser,
   fetchMyProfileDb,
+  fetchMyVideoCount,
   signedPhotoUrls,
   uploadProfilePhoto,
   upsertMyProfileDb,
@@ -63,6 +65,7 @@ const inputCls =
 export default function ProfileNew() {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
+  const [videoCount, setVideoCount] = useState(0);
   const [onboarding, setOnboarding] = useState(false);
 
   const [nickname, setNickname] = useState("");
@@ -136,6 +139,7 @@ export default function ProfileNew() {
       if (!isProfileComplete(p)) setOnboarding(true);
       if (!p) return;
       setEditing(true);
+      if (hasSupabase()) fetchMyVideoCount().then(setVideoCount);
       setNickname(p.nickname);
       setGender(p.gender);
       setAge(String(p.age));
@@ -442,8 +446,21 @@ export default function ProfileNew() {
         >
           {busy ? "저장 중…" : editing ? "수정 완료" : "프로필 올리기"}
         </button>
-
       </form>
+
+      {/* 내 영상 — 커뮤니티에 올린 것들. 내 정보 첫 화면에서 여기로 옮겼다 */}
+      {editing && (
+        <Link
+          href="/me/videos"
+          className="mb-8 flex items-center justify-between border-t border-line py-3.5"
+        >
+          <span className="text-[15px]">내 영상</span>
+          <span className="flex items-center gap-1.5">
+            <span className="text-[15px] font-semibold">{videoCount}</span>
+            <ChevronRightIcon size={15} className="text-faint" />
+          </span>
+        </Link>
+      )}
     </main>
   );
 }

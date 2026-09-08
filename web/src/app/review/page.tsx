@@ -1,7 +1,7 @@
 "use client";
 
 /* 리뷰 작성 — /review?id=<모임>. 알림과 내 정보 > 리뷰 작성에서 온다.
-   함께한 사람마다 추천 하나와 한마디. 끝난 뒤 일주일까지. */
+   함께한 사람마다 추천 하나와 한마디. 끝난 뒤 일주일까지, 한 사람에게 한 번. */
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -33,35 +33,36 @@ const ERRORS: Record<string, string> = {
   not_member: "함께한 모임이 아니에요",
   blocked: "차단한 사람에게는 남길 수 없어요",
   left: "탈퇴한 사람이에요",
+  done: "이미 남긴 사람이에요",
+  empty: "추천을 누르거나 한마디를 적어주세요",
 };
 
+/* 사람 하나 — 남기면 끝이다. 고치지 못하고 목록에서 빠진다 (onDone). */
 function PersonForm({
   sessionId,
   p,
   photoUrl,
   open,
+  onDone,
 }: {
   sessionId: string;
   p: ReviewTarget;
   photoUrl?: string;
   open: boolean;
+  onDone: () => void;
 }) {
-  const [liked, setLiked] = useState(!!p.liked);
-  const [body, setBody] = useState(p.body ?? "");
-  const [saved, setSaved] = useState<{ liked: boolean; body: string }>({
-    liked: !!p.liked,
-    body: p.body ?? "",
-  });
+  const [liked, setLiked] = useState(false);
+  const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
-  const dirty = liked !== saved.liked || body.trim() !== saved.body.trim();
-  const has = saved.liked || saved.body.trim();
+  const filled = liked || body.trim().length > 0;
 
   const save = async () => {
+    if (!confirm(`${p.nickname}님에게 리뷰를 남길까요?\n남기면 고칠 수 없어요.`)) return;
     setBusy(true);
     const r = await submitReview(sessionId, p.id, liked, body);
     setBusy(false);
-    if (r.error) return alert(ERRORS[r.error] ?? `저장하지 못했어요: ${r.error}`);
-    setSaved({ liked, body });
+    if (r.error) return alert(ERRORS[r.error] ?? `남기지 못했어요: ${r.error}`);
+    onDone();
   };
 
   return (
@@ -104,16 +105,14 @@ function PersonForm({
       />
       {open && (
         <div className="mt-2 flex items-center justify-between">
-          <span className="text-[11.5px] text-faint">
-            {has && !dirty ? "남겼어요" : `${body.length}/300`}
-          </span>
+          <span className="text-[11.5px] text-faint">{body.length}/300</span>
           <button
             type="button"
-            disabled={busy || !dirty}
+            disabled={busy || !filled}
             onClick={save}
             className="rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white active:bg-accent-pressed disabled:opacity-40"
           >
-            {busy ? "저장 중…" : has ? "수정" : "남기기"}
+            {busy ? "남기는 중…" : "남기기"}
           </button>
         </div>
       )}
@@ -176,7 +175,7 @@ export default function ReviewPage() {
 
           {s.people.length === 0 ? (
             <p className="pt-12 text-center text-[13.5px] text-muted">
-              리뷰를 남길 사람이 없어요
+              이 모임의 리뷰를 다 남겼어요
             </p>
           ) : (
             <div className="mt-2">
@@ -187,6 +186,12 @@ export default function ReviewPage() {
                   p={p}
                   open={s.open}
                   photoUrl={p.photo ? photos[p.photo] : undefined}
+                  // 남긴 사람은 그 자리에서 빠진다 — 서버 목록과 같은 모양
+                  onDone={() =>
+                    setS((cur) =>
+                      cur ? { ...cur, people: cur.people.filter((x) => x.id !== p.id) } : cur
+                    )
+                  }
                 />
               ))}
             </div>
