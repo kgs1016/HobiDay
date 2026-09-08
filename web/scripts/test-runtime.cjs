@@ -158,6 +158,14 @@ async function checkClock() {
   const { findGym, matchesSearch } = load('homeSearch.ts');
   const gyms = [{ name: '더클라임 연남점', aliases: ['The Climb Yeonnam'] }];
   assert.equal(findGym(gyms, 'theclimb yeonnam'), gyms[0], 'gym aliases ignore case and spacing');
+  for (const missingGym of [null, undefined, '', '   ']) {
+    assert.equal(findGym(gyms, missingGym), undefined, 'an optional home gym must not crash the home page');
+    const person = { nickname: '홈짐 없는 회원', homeGym: missingGym, area: null };
+    const gym = findGym(gyms, person.homeGym);
+    const fields = [person.nickname, person.homeGym, person.area, ...(gym?.aliases ?? [])];
+    assert.equal(matchesSearch('', fields), true, 'a missing home gym must not hide a person from the default list');
+    assert.equal(matchesSearch('홈짐 없는', fields), true, 'a person without a home gym remains searchable by nickname');
+  }
   assert.equal(matchesSearch('연남 서연', ['더클라임 연남점', '서연']), true, 'all search words may match different visible fields');
   assert.equal(matchesSearch('연남 지훈', ['더클라임 연남점', '서연']), false, 'unmatched search words filter out the row');
   assert.equal(matchesSearch('  ', [undefined, null]), true, 'clearing search restores every row');
