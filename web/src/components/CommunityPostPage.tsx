@@ -11,6 +11,7 @@ import { useQueryId, useQueryParam } from "@/lib/queryId";
 import FeedbackVideoPlayer from "@/components/FeedbackVideoPlayer";
 import { setVideoLike } from "@/lib/feedbackVideo";
 import BackButton from "@/components/BackButton";
+import GearPreparing from "@/components/GearPreparing";
 import PostBody from "@/components/PostBody";
 import ReportSheet from "@/components/ReportSheet";
 import { AvatarFallback } from "@/components/icons";
@@ -112,7 +113,7 @@ export default function PostPage() {
   }, [id, tick, pathname, from, router]);
 
   const submitComment = async () => {
-    if (!post || !comment.trim()) return;
+    if (!post || post.category === "gear" || !comment.trim()) return;
     if (!hasSupabase()) return alert("목데이터 모드에서는 저장되지 않아요");
     setBusy(true);
     const r = await createComment(post.id, comment.trim());
@@ -154,6 +155,13 @@ export default function PostPage() {
     return (
       <main className="px-4 pt-24 text-center text-[13.5px] text-faint">불러오는 중…</main>
     );
+
+  if (post?.category === "gear") return (
+    <main className="px-4">
+      <header className="flex items-center gap-2 pt-4"><BackButton to="/community?tab=gear" /><h1 className="text-[18px] font-bold">장비 추천</h1></header>
+      <GearPreparing />
+    </main>
+  );
 
   if (!id || !post)
     return (
@@ -213,7 +221,7 @@ export default function PostPage() {
       </header>
 
       <article>
-        {!post.video_path && post.category !== "gear" && <p className="mb-2 text-[12px] font-semibold text-accent-strong">
+        {!post.video_path && <p className="mb-2 text-[12px] font-semibold text-accent-strong">
           {post.pinned_rank ? "공지" : boardTopicLabel(post.topic)}
         </p>}
         <h1 className="text-[19px] font-bold leading-snug tracking-tight">{post.video_path ? "영상 피드백" : post.title}</h1>

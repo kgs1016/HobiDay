@@ -62,7 +62,7 @@ export default function Home() {
   // 모임 찾기 필터 — 서버를 다시 부르지 않고 받아온 목록에서 거른다
   const [filter, setFilter] = useState(EMPTY_FILTER);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
-  // 채팅 보내기
+  // 대화신청
   const [sentTo, setSentTo] = useState<Set<string>>(new Set());
   // 종 아이콘 배지 — 안 읽은 알림 수만 쓴다
   const [unread, setUnread] = useState(0);
@@ -189,7 +189,7 @@ export default function Home() {
             </p>
             <p>
               <span className="font-medium">사람 찾기</span>
-              <span className="text-muted"> — 같이 타고 싶은 사람에게 채팅 보내기</span>
+              <span className="text-muted"> — 같이 타고 싶은 사람에게 대화신청</span>
             </p>
             <p>
               <span className="font-medium">영상</span>
@@ -543,9 +543,9 @@ export default function Home() {
                     )}
                   </div>
                 </Link>
-                {/* 채팅 신청 하나로 통일 — 보내면 상대 신청함에 뜨고,
+                {/* 대화신청 하나로 통일 — 보내면 상대 신청함에 뜨고,
                     수락하면 채팅이 열린다. 목록에서는 secondary 로 물러난다 —
-                    primary CTA 는 상세 시트의 "채팅 보내기" 하나만 강하게 둔다. */}
+                    primary CTA 는 상세 시트의 "대화신청" 하나만 강하게 둔다. */}
                 <button
                   disabled={sentTo.has(p.id)}
                   onClick={() => setReqTarget(p)}
@@ -555,7 +555,7 @@ export default function Home() {
                       : "button-secondary rounded-lg px-3.5 py-2 font-semibold"
                   }`}
                 >
-                  {sentTo.has(p.id) ? "보냈어요" : "채팅"}
+                  {sentTo.has(p.id) ? "신청완료" : "대화신청"}
                 </button>
               </div>
             ))}

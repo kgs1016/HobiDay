@@ -236,7 +236,6 @@ export const MOCK_ARTICLES: Record<ArticleKind, Article[]> = {
   news: editorial.news.map((article) => ({
     ...article,
     kind: "news",
-    image_url: null,
     location: null,
     starts_at: null,
     ends_at: null,

@@ -5,7 +5,9 @@ import Link from "next/link";
 import BackButton from "@/components/BackButton";
 import { useRouter } from "next/navigation";
 import { careerLabel, level } from "@/lib/levels";
-import { AvatarFallback, ChevronRightIcon } from "@/components/icons";
+import { ChevronRightIcon } from "@/components/icons";
+import PersonAvatar from "@/components/PersonAvatar";
+import { useQueryParam } from "@/lib/queryId";
 import { ChalkBagIllust } from "@/components/illustrations";
 import { notifyPush } from "@/lib/nativePush";
 import { useNow } from "@/lib/browserState";
@@ -16,9 +18,7 @@ import {
   fetchHostedRequests,
   fetchMySignups,
   fetchReceivedRequests,
-  fetchSentChanges,
   fetchSentRequests,
-  markSentSeen,
   rejectSignup,
   respondRequest,
   signedPhotoUrls,
@@ -56,19 +56,6 @@ const STATUS: Record<string, { label: string; cls: string; note?: string }> = {
 
 type Tab = "received" | "sent";
 
-function Avatar({ url }: { url?: string }) {
-  return url ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={url}
-      alt=""
-      className="h-14 w-14 shrink-0 rounded-full object-cover"
-    />
-  ) : (
-    <AvatarFallback size={56} />
-  );
-}
-
 function Empty({ title, sub }: { title: string; sub?: string }) {
   return (
     <div className="mt-16 flex flex-col items-center gap-1.5 text-center">
@@ -87,38 +74,35 @@ export default function Inbox() {
   const router = useRouter();
   const now = useNow();
   const [authed, setAuthed] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<Tab>("received");
+  const tabQuery = useQueryParam("tab");
+  const [pickedTab, setPickedTab] = useState<Tab | null>(null);
+  const tab = pickedTab ?? (tabQuery === "sent" ? "sent" : "received");
 
   const [hosted, setHosted] = useState<HostedRequest[]>([]);
   const [received, setReceived] = useState<ReceivedRequest[]>([]);
   const [signups, setSignups] = useState<MySignup[]>([]);
   const [sent, setSent] = useState<SentRequest[]>([]);
-  /* 보낸 신청 배지 = 아직 안 본 "결과" 의 수. 대기 중인 신청은 세지
-     않는다 — 호스트가 답할 일이라 내가 할 게 없는데, 예전엔 그걸 세느라
-     답이 올 때까지 1이 박혀 있었다. 서버가 sent_seen_at 과 비교해 센다. */
-  const [sentChanges, setSentChanges] = useState(0);
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const [ho, re, si, se, sc] = await Promise.all([
+    const [ho, re, si, se] = await Promise.all([
       fetchHostedRequests(),
       fetchReceivedRequests(),
       fetchMySignups(),
       fetchSentRequests(),
-      fetchSentChanges(),
     ]);
     setHosted(ho ?? []);
     setReceived(re ?? []);
     setSignups(si ?? []);
     setSent(se ?? []);
-    setSentChanges(sc);
 
     const paths = [
       ...(ho ?? []).map((x) => x.photo),
       ...(re ?? []).map((x) => x.photo),
       ...(si ?? []).map((x) => x.host_photo),
+      ...(se ?? []).map((x) => x.photo),
     ].filter(Boolean) as string[];
     if (paths.length) setPhotos(await signedPhotoUrls(paths));
     setLoading(false);
@@ -248,15 +232,9 @@ export default function Inbox() {
 
   const receivedCount = hosted.length + received.length;
 
-  /* 보낸 신청 탭을 열면 여기까지 본 것으로 친다. 배지는 기다리지 않고
-     바로 0 이 된다 — 탭이 열렸는데 숫자가 남아 있으면 안 지워진 것처럼
-     보인다. 서버에도 같은 시각을 남겨서 다시 들어와도 안 뜬다. */
   const openTab = (key: Tab) => {
-    setTab(key);
-    if (key === "sent" && sentChanges > 0) {
-      setSentChanges(0);
-      markSentSeen();
-    }
+    setPickedTab(key);
+    window.history.replaceState(window.history.state, "", key === "sent" ? "/inbox?tab=sent" : "/inbox");
   };
 
   return (
@@ -271,7 +249,7 @@ export default function Inbox() {
         {(
           [
             ["received", "받은 신청", receivedCount],
-            ["sent", "보낸 신청", sentChanges],
+            ["sent", "보낸 신청", 0],
           ] as const
         ).map(([key, label, badge]) => (
           <button
@@ -320,11 +298,11 @@ export default function Inbox() {
                         key={key}
                         className="rounded-xl border border-line bg-surface p-4"
                       >
-                        <p className="text-[12px] text-faint">
+                        <Link href={`/session?id=${h.session_id}`} className="text-[12px] text-faint">
                           {h.gym} · {when(h.starts_at)}
-                        </p>
-                        <div className="mt-2.5 flex items-center gap-3.5">
-                          <Avatar url={h.photo ? photos[h.photo] : undefined} />
+                        </Link>
+                        <Link href={`/user?id=${h.user_id}&s=${h.session_id}&from=inbox`} aria-label={`${h.nickname} 프로필 보기`} className="mt-2.5 flex items-center gap-3.5">
+                          <PersonAvatar url={h.photo ? photos[h.photo] : undefined} size={56} />
                           <div className="min-w-0 flex-1">
                             <p className="text-[15px] font-semibold">
                               {h.nickname}
@@ -339,14 +317,13 @@ export default function Inbox() {
                                 h.level && level(h.level).name,
                                 careerLabel(h.career) &&
                                   `구력 ${careerLabel(h.career)}`,
-                                h.home_gym,
                                 h.mbti,
                               ]
                                 .filter(Boolean)
                                 .join(" · ")}
                             </p>
                           </div>
-                        </div>
+                        </Link>
 
                         {h.intro && (
                           <p className="mt-2.5 rounded-lg bg-surface2 px-3.5 py-2.5 text-[13px] leading-relaxed">
@@ -397,8 +374,8 @@ export default function Inbox() {
                       key={r.id}
                       className="rounded-xl border border-line bg-surface p-4"
                     >
-                      <div className="flex items-center gap-3.5">
-                        <Avatar url={r.photo ? photos[r.photo] : undefined} />
+                      <Link href={`/user?id=${r.from_id}&from=inbox`} aria-label={`${r.nickname} 프로필 보기`} className="flex items-center gap-3.5">
+                        <PersonAvatar url={r.photo ? photos[r.photo] : undefined} size={56} />
                         <div className="min-w-0 flex-1">
                           <p className="text-[15px] font-semibold">
                             {r.nickname}
@@ -412,14 +389,13 @@ export default function Inbox() {
                             {[
                               r.level && level(r.level).name,
                               careerLabel(r.career) && `구력 ${careerLabel(r.career)}`,
-                              r.home_gym,
                               r.mbti,
                             ]
                               .filter(Boolean)
                               .join(" · ")}
                           </p>
                         </div>
-                      </div>
+                      </Link>
 
                       {r.message && (
                         <p className="mt-2.5 rounded-lg bg-surface2 px-3.5 py-2.5 text-[13px] leading-relaxed">
@@ -483,7 +459,7 @@ export default function Inbox() {
                           ? {
                               label: "다녀왔어요",
                               cls: "bg-accent-soft text-accent-strong",
-                              note: "함께한 모임에서 다시 볼 수 있어요.",
+                              note: "이미 끝난 모임이에요.",
                             }
                           : {
                               /* 혼자인 채로 끝난 모임. 매칭 기록은 성사된
@@ -542,7 +518,7 @@ export default function Inbox() {
                             {s.gym}
                           </p>
                           <p className="mt-0.5 text-[12.5px] text-muted">
-                            {when(s.starts_at)} · 호스트 {s.host_nickname ?? "—"}
+                            {when(s.starts_at)}
                           </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-1">
@@ -563,20 +539,18 @@ export default function Inbox() {
                       )}
                     </>
                   );
-                  return openable ? (
-                    <Link
-                      key={s.id}
-                      href={`/session?id=${s.id}`}
-                      className="button-secondary block rounded-xl p-4 transition-colors active:bg-surface2"
-                    >
-                      {body}
-                    </Link>
-                  ) : (
-                    <div
-                      key={s.id}
-                      className="rounded-xl border border-line bg-surface p-4 opacity-70"
-                    >
-                      {body}
+                  return (
+                    <div key={s.id} className="rounded-xl border border-line bg-surface p-4">
+                      {openable ? (
+                        <Link href={`/session?id=${s.id}`} className="block transition-colors active:bg-surface2">{body}</Link>
+                      ) : <div className="opacity-70">{body}</div>}
+                      {s.host_nickname ? (
+                        <Link href={`/user?s=${s.id}&from=inbox-sent`} aria-label={`${s.host_nickname} 프로필 보기`} className="mt-3 flex items-center gap-2.5 border-t border-line pt-3">
+                          <PersonAvatar url={s.host_photo ? photos[s.host_photo] : undefined} size={36} />
+                          <span className="min-w-0 flex-1 truncate text-[13px]">호스트 {s.host_nickname}</span>
+                          <ChevronRightIcon size={15} className="text-faint" />
+                        </Link>
+                      ) : <p className="mt-3 text-[12px] text-faint">탈퇴한 호스트</p>}
                     </div>
                   );
                 })}
@@ -594,7 +568,8 @@ export default function Inbox() {
                     key={r.id}
                     className="flex items-center justify-between gap-2 rounded-xl border border-line bg-surface p-4"
                   >
-                    <div className="min-w-0">
+                    <Link href={`/user?id=${r.to_id}&from=inbox-sent`} aria-label={`${r.nickname} 프로필 보기`} className="flex min-w-0 flex-1 items-center gap-2.5">
+                      <PersonAvatar url={r.photo ? photos[r.photo] : undefined} size={44} />
                       <p className="truncate text-[14.5px] font-semibold">
                         {r.nickname}
                         <span className="ml-1.5 text-[12px] font-normal text-muted">
@@ -602,10 +577,7 @@ export default function Inbox() {
                           {r.level && ` · ${level(r.level).name}`}
                         </span>
                       </p>
-                      <p className="mt-0.5 truncate text-[12.5px] text-muted">
-                        {r.home_gym}
-                      </p>
-                    </div>
+                    </Link>
                     {/* 거절과 무응답을 구분해서 보여준다. 예전엔 둘 다
                         '기다리는 중' 이었다 — 소개팅 앱이던 시절의
                         짝사랑 비노출 규칙이고, 매칭 앱에서는 다음 사람에게

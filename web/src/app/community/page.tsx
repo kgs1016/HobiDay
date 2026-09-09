@@ -7,7 +7,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import BoardFeed from "@/components/BoardFeed";
+import GearPreparing from "@/components/GearPreparing";
+import NewsArtwork from "@/components/NewsArtwork";
 import FreeBoardFeed from "@/components/FreeBoardFeed";
 import { useRouter } from "next/navigation";
 import { useQueryParam } from "@/lib/queryId";
@@ -102,7 +103,8 @@ function CompetitionRow({ a }: { a: Article }) {
 
 function NewsRow({ a }: { a: Article }) {
   return (
-    <Link href={`/community/news?id=${a.id}`} className="block py-3.5 transition-colors active:bg-surface2">
+    <Link href={`/community/news?id=${a.id}`} className="flex items-start gap-3 py-4 transition-colors active:bg-surface2">
+      <div className="min-w-0 flex-1">
       <p className="text-[14.5px] font-semibold leading-snug">{a.title}</p>
       {a.summary && (
         <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-muted">
@@ -112,6 +114,8 @@ function NewsRow({ a }: { a: Article }) {
       <p className="mt-1 text-[12px] text-faint">
         {[a.source, ago(a.published_at)].filter(Boolean).join(" · ")}
       </p>
+      </div>
+      <NewsArtwork article={a} thumbnail />
     </Link>
   );
 }
@@ -186,7 +190,7 @@ export default function Community() {
     <main className="px-4">
       <header className="flex items-center justify-between pt-6 pb-3">
         <h1 className="text-[20px] font-bold tracking-tight">게시판</h1>
-        {(tab === "board" || tab === "gear") && authed && (
+        {tab === "board" && authed && (
           <Link
             href={`/community/write?category=${tab}${tab === "board" && boardFilters.topic ? `&topic=${boardFilters.topic}` : ""}`}
             className="flex items-center gap-1 py-1 text-[13.5px] font-semibold text-accent-strong"
@@ -214,7 +218,7 @@ export default function Community() {
         ))}
       </div>
 
-      {authed === false ? (
+      {tab === "gear" ? <GearPreparing /> : authed === false ? (
         <div className="mt-14 flex flex-col items-center gap-3 text-center">
           <p className="text-[14px] text-muted">로그인하면 게시판을 볼 수 있어요</p>
           <Link
@@ -226,8 +230,6 @@ export default function Community() {
         </div>
       ) : !tab || authed === null ? null : tab === "board" ? (
         topicQuery === undefined || searchQuery === undefined ? null : <FreeBoardFeed {...boardFilters} onChange={selectBoardFilters} />
-      ) : tab === "gear" ? (
-        <BoardFeed key={tab} category={tab} />
       ) : articleError ? (
         <div role="alert" className="py-12 text-center text-sm">
           <p>소식을 불러오지 못했어요</p>
