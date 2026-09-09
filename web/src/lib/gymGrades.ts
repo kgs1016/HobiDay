@@ -22,7 +22,7 @@ export const GYM_GRADE_GUIDES: GymGradeGuide[] = [
       {label:"일산점 방문기 · V등급 안내판 교차 확인",url:"https://blog.naver.com/yjkim610/223374018247",published:"2024-03-05",checked:"2026-09-09"},
       {label:"HOLDAY 문래점 · 핑크 포함 11색 참고표",url:"https://holday.rocks/gym/더클라임-문래점",published:null,checked:"2026-09-09"},
     ],
-    note: "홀드가 아닌 난이도 스티커 색상 기준입니다. 핑크를 포함한 11색 모두 하비데이 점수로 반영됩니다.",
+    note: "홀드가 아닌 난이도 스티커 색상 기준입니다.",
   },
   {
     id: "metrorock", name: "메트로락클라이밍",

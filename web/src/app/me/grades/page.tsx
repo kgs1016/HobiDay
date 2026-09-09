@@ -149,10 +149,6 @@ function GymGuides({ initialGym, active }: { initialGym: string; active: boolean
         </ol>
       </div>
       {guide.note && <p className="mt-3 text-[11px] leading-relaxed text-muted">{guide.note}</p>}
-      <div className="mt-5 rounded-xl bg-surface2 px-4 py-4">
-        <p className="text-[13px] font-semibold">{guide.colors.length}색 모두 하비데이 점수 반영</p>
-        <p className="mt-1.5 text-[12px] leading-relaxed text-muted">암장 내 색상 순서에 따른 자체 배점입니다. V환산이나 다른 암장과의 절대 난이도 비교표는 아닙니다.</p>
-      </div>
       <div className="mt-6 border-t border-line pt-4 text-[11px] leading-relaxed text-muted">
         <p>공개 자료를 모은 참고표 · 현장 안내 우선</p>
         <details className="mt-2">
