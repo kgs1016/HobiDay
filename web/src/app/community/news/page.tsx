@@ -67,14 +67,18 @@ function NewsContent({ id }: { id: string | null }) {
 
   return (
     <article className="pt-5 pb-8">
-      <p className="text-[12px] font-semibold text-accent-strong">뉴스 요약</p>
+      <p className="text-[12px] font-semibold text-accent-strong">클라이밍 뉴스</p>
       <h1 className="mt-2 text-[24px] font-bold leading-[1.4] tracking-tight [word-break:keep-all]">{article.title}</h1>
       <p className="mt-3 text-[12.5px] text-muted">
         {[article.source, published].filter(Boolean).join(" · ")}
       </p>
       <div className="mt-6 border-t border-line pt-6">
         {article.summary?.trim() ? (
-          <p className="whitespace-pre-line text-[16px] leading-[1.9] text-ink [word-break:keep-all] [overflow-wrap:anywhere]">{article.summary}</p>
+          <div className="space-y-6 text-[16px] leading-[1.9] text-ink [word-break:keep-all] [overflow-wrap:anywhere]">
+            {article.summary.trim().split(/\n\s*\n/).map((paragraph, index) => (
+              <p key={index} className={`whitespace-pre-line ${index === 0 ? "font-medium" : ""}`}>{paragraph}</p>
+            ))}
+          </div>
         ) : (
           <p className="text-[14px] leading-relaxed text-muted">요약이 등록되지 않았어요.{sourceUrl && " 원문에서 자세한 내용을 확인할 수 있어요."}</p>
         )}

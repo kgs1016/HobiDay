@@ -11,11 +11,13 @@ import { useQueryId, useQueryParam } from "@/lib/queryId";
 import FeedbackVideoPlayer from "@/components/FeedbackVideoPlayer";
 import { setVideoLike } from "@/lib/feedbackVideo";
 import BackButton from "@/components/BackButton";
+import PostBody from "@/components/PostBody";
 import ReportSheet from "@/components/ReportSheet";
 import { AvatarFallback } from "@/components/icons";
 import {
   COMMENT_MAX,
   boardHref,
+  boardTopicLabel,
   MOCK_POSTS,
   ago,
   type PostComment,
@@ -211,6 +213,9 @@ export default function PostPage() {
       </header>
 
       <article>
+        {!post.video_path && post.category !== "gear" && <p className="mb-2 text-[12px] font-semibold text-accent-strong">
+          {post.pinned_rank ? "공지" : boardTopicLabel(post.topic)}
+        </p>}
         <h1 className="text-[19px] font-bold leading-snug tracking-tight">{post.video_path ? "영상 피드백" : post.title}</h1>
         <div className="mt-3 flex items-center gap-2.5">
           <Avatar url={post.photo ? photos[post.photo] : undefined} size={32} />
@@ -223,9 +228,7 @@ export default function PostPage() {
           </div>
         </div>
         {post.video_path && <FeedbackVideoPlayer key={post.video_path} path={post.video_path} thumbnail={post.thumbnail_path} />}
-        <p className="mt-5 whitespace-pre-wrap break-words text-[15px] leading-relaxed">
-          {post.body}
-        </p>
+        <PostBody body={post.body} />
         {post.video_path && <div className="mt-4">
           <button onClick={like} disabled={likeBusy} aria-pressed={!!post.liked}
             className={`rounded-full border px-4 py-2 text-sm font-semibold disabled:opacity-50 ${post.liked ? "border-accent bg-accent-soft text-accent-strong" : "border-line text-muted"}`}>

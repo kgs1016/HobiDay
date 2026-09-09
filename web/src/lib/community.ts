@@ -2,8 +2,28 @@
    데이터 접근은 supabase.ts 의 "커뮤니티" 절에 있다.
    서버 기준은 supabase/migrations/20260906120000_community.sql */
 
+import editorial from "@/content/editorial-2026-09-09.json";
+import notices from "@/content/board-notices.json";
+
 export type ArticleKind = "competition" | "news";
 export type PostCategory = "board" | "gear";
+export const BOARD_TOPICS = [
+  { id: "daily", label: "일상" },
+  { id: "question", label: "질문" },
+  { id: "gym", label: "암장 후기" },
+  { id: "lost", label: "분실물" },
+] as const;
+export type BoardTopic = (typeof BOARD_TOPICS)[number]["id"];
+export const isBoardTopic = (value: unknown): value is BoardTopic => BOARD_TOPICS.some(t => t.id === value);
+export const boardTopicLabel = (topic?: BoardTopic) => BOARD_TOPICS.find(t => t.id === topic)?.label ?? "일상";
+
+export function freeBoardHref(topic: BoardTopic | null = null, query = "") {
+  const params = new URLSearchParams();
+  if (topic) params.set("topic", topic);
+  if (query.trim()) params.set("q", query.trim().slice(0, 80));
+  const search = params.toString();
+  return `/community${search ? `?${search}` : ""}`;
+}
 
 export function boardHref(category: PostCategory = "board") {
   return category === "gear" ? "/community?tab=gear" : "/community";
@@ -28,6 +48,8 @@ export interface Article {
 export interface PostSummary {
   id: string;
   category?: PostCategory;
+  topic?: BoardTopic;
+  pinned_rank?: number | null;
   title: string;
   preview: string;
   /** 탈퇴한 글쓴이는 null */
@@ -52,6 +74,8 @@ export interface PostComment {
 export interface PostDetail {
   id: string;
   category?: PostCategory;
+  topic?: BoardTopic;
+  pinned_rank?: number | null;
   title: string;
   body: string;
   author_id: string | null;
@@ -65,6 +89,11 @@ export interface PostDetail {
   thumbnail_path?: string | null;
   liked?: boolean;
   like_count?: number;
+}
+
+export interface BoardFeedPage {
+  pinned: { id: string; title: string; pinned_rank: number }[];
+  items: PostSummary[];
 }
 
 export interface VideoSummary extends PostSummary {
@@ -204,52 +233,40 @@ export const MOCK_ARTICLES: Record<ArticleKind, Article[]> = {
       published_at: iso(1),
     },
   ],
-  news: [
-    {
-      id: "n1",
-      kind: "news",
-      title: "스포츠클라이밍 국가대표, 아시안게임 대비 합동훈련 돌입",
-      summary: "대표팀이 진천선수촌에서 4주간 합동훈련을 시작했다.",
-      url: "https://news.example.com/1",
-      source: "연합뉴스",
-      image_url: null,
-      location: null,
-      starts_at: null,
-      ends_at: null,
-      published_at: iso(0, 8),
-    },
-    {
-      id: "n2",
-      kind: "news",
-      title: "실내 암장 500곳 시대… 2030 볼더링 열풍 계속",
-      summary: "전국 인공암벽장이 5년 새 2.5배 늘었다.",
-      url: "https://news.example.com/2",
-      source: "중앙일보",
-      image_url: null,
-      location: null,
-      starts_at: null,
-      ends_at: null,
-      published_at: iso(1, 17),
-    },
-  ],
+  news: editorial.news.map((article) => ({
+    ...article,
+    kind: "news",
+    image_url: null,
+    location: null,
+    starts_at: null,
+    ends_at: null,
+  })),
 };
 
 export const MOCK_POSTS: PostDetail[] = [
-  {
-    id: "gear1",
-    category: "gear",
-    title: "첫 암벽화, 어떤 기준으로 골랐나요?",
-    body: "대여화만 신다가 첫 암벽화를 사보려고 해요.\n발볼이나 사이즈는 어떻게 골랐는지 경험을 나눠주세요 🧗",
-    author_id: "u_me",
-    nickname: "나",
+  ...notices.map((post): PostDetail => ({
+    ...post,
+    category: "board",
+    topic: "daily",
+    nickname: "운영팀",
     photo: null,
-    created_at: iso(0, 10),
-    updated_at: iso(0, 10),
-    mine: true,
+    mine: false,
     comments: [],
-  },
+  })),
+  ...editorial.gear.map((post): PostDetail => ({
+    ...post,
+    category: "gear",
+    author_id: editorial.operator_id,
+    nickname: "운영팀",
+    photo: null,
+    created_at: `${editorial.checked_at}T09:00:00+09:00`,
+    updated_at: `${editorial.checked_at}T09:00:00+09:00`,
+    mine: false,
+    comments: [],
+  })),
   {
     id: "p1",
+    topic: "question",
     title: "성수 쪽 저녁 타임 사람 많나요?",
     body: "퇴근하고 7시쯤 가려는데 평일 저녁 얼마나 붐비는지 궁금해요.\n초보라 사람 많으면 좀 눈치 보여서요 🙈",
     author_id: "u_mina",
@@ -272,6 +289,7 @@ export const MOCK_POSTS: PostDetail[] = [
   },
   {
     id: "p2",
+    topic: "daily",
     title: "첫 V3 완등했습니다!!",
     body: "3주 붙잡고 있던 문제 드디어 풀었어요. 다들 화이팅 💪",
     author_id: "u_me",
@@ -288,6 +306,8 @@ export function mockPostSummaries(category: PostCategory = "board"): PostSummary
   return MOCK_POSTS.filter((p) => !p.video_path && (p.category ?? "board") === category).map((p) => ({
     id: p.id,
     category: p.category ?? "board",
+    topic: p.topic ?? "daily",
+    pinned_rank: p.pinned_rank ?? null,
     title: p.title,
     preview: p.body.replace(/\s+/g, " ").slice(0, 140),
     author_id: p.author_id,
@@ -297,4 +317,15 @@ export function mockPostSummaries(category: PostCategory = "board"): PostSummary
     mine: p.mine,
     comment_count: p.comments.length,
   }));
+}
+
+export function mockBoardFeed(topic: BoardTopic | null, query: string): BoardFeedPage {
+  const normalized = query.trim().slice(0, 80).toLowerCase();
+  const rows = mockPostSummaries("board");
+  return {
+    pinned: rows.filter(p => p.pinned_rank != null).map(p => ({ id: p.id, title: p.title, pinned_rank: p.pinned_rank! }))
+      .sort((a, b) => a.pinned_rank - b.pinned_rank),
+    items: rows.filter(p => p.pinned_rank == null && (!topic || p.topic === topic) &&
+      `${p.title}\n${MOCK_POSTS.find(post => post.id === p.id)?.body ?? ""}`.toLowerCase().includes(normalized)),
+  };
 }

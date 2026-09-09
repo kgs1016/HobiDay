@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryId, useQueryParam } from "@/lib/queryId";
 import BackButton from "@/components/BackButton";
-import { boardHref, MOCK_POSTS, POST_BODY_MAX, POST_TITLE_MAX, type PostCategory } from "@/lib/community";
+import { boardHref, BOARD_TOPICS, isBoardTopic, MOCK_POSTS, POST_BODY_MAX, POST_TITLE_MAX, type BoardTopic, type PostCategory } from "@/lib/community";
 import { createPost, fetchPost, hasSupabase, updatePost } from "@/lib/supabase";
 
 const ERRORS: Record<string, string> = {
@@ -15,11 +15,15 @@ const ERRORS: Record<string, string> = {
   empty: "제목과 내용을 적어주세요",
   too_fast: "잠시 후 다시 써주세요",
   not_mine: "내가 쓴 글만 고칠 수 있어요",
+  invalid_topic: "글 주제를 다시 선택해주세요",
 };
 
 export default function WritePost() {
   const id = useQueryId(); // null = 새 글, string = 수정
   const categoryQuery = useQueryParam("category");
+  const topicQuery = useQueryParam("topic");
+  const [pickedTopic, setPickedTopic] = useState<BoardTopic | null>(null);
+  const topic = pickedTopic ?? (isBoardTopic(topicQuery) ? topicQuery : "daily");
   const [postCategory, setPostCategory] = useState<PostCategory | null>(null);
   const category = postCategory ?? (categoryQuery === "gear" ? "gear" : "board");
   const BOARD = boardHref(category);
@@ -28,7 +32,7 @@ export default function WritePost() {
   const [body, setBody] = useState("");
   const [loaded, setLoaded] = useState(false); // 수정 모드에서 글을 받았는가
   const [busy, setBusy] = useState(false);
-  const ready = categoryQuery !== undefined && (id === null || loaded);
+  const ready = categoryQuery !== undefined && topicQuery !== undefined && (id === null || loaded);
 
   useEffect(() => {
     if (!id) return;
@@ -44,6 +48,7 @@ export default function WritePost() {
       setTitle(p.title);
       setBody(p.body);
       setPostCategory(p.category ?? "board");
+      setPickedTopic(p.topic ?? "daily");
       setLoaded(true);
     })();
   }, [id, router]);
@@ -58,8 +63,8 @@ export default function WritePost() {
     }
     setBusy(true);
     const r = id
-      ? await updatePost(id, title.trim(), body.trim())
-      : await createPost(title.trim(), body.trim(), category);
+      ? await updatePost(id, title.trim(), body.trim(), topic)
+      : await createPost(title.trim(), body.trim(), category, topic);
     setBusy(false);
     if (r.error) return alert(ERRORS[r.error] ?? `실패: ${r.error}`);
     const postId = id ?? (r as { id?: string }).id;
@@ -87,7 +92,13 @@ export default function WritePost() {
         </button>
       </header>
 
-      <p className="mt-2 text-[13px] font-semibold text-muted">{category === "gear" ? "장비 추천" : "자유게시판"}</p>
+      {category === "board" ? <div className="mt-3 flex items-center gap-3 border-b border-line pb-3">
+        <label htmlFor="post-topic" className="text-[13px] font-semibold text-muted">글 주제</label>
+        <select id="post-topic" value={topic} onChange={event => { if (isBoardTopic(event.target.value)) setPickedTopic(event.target.value); }}
+          className="min-h-10 flex-1 rounded-lg bg-surface2 px-3 text-[16px] text-ink">
+          {BOARD_TOPICS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+        </select>
+      </div> : <p className="mt-2 text-[13px] font-semibold text-muted">장비 추천</p>}
 
       {/* iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다 */}
       <input
@@ -99,7 +110,7 @@ export default function WritePost() {
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value.slice(0, POST_BODY_MAX))}
-        placeholder={category === "gear" ? "써본 장비의 후기나 궁금한 장비를 이야기해보세요" : "클라이밍 이야기, 궁금한 것, 같이 갈 사람 찾기… 무엇이든"}
+        placeholder={category === "gear" ? "써본 장비의 후기나 궁금한 장비를 이야기해보세요" : "클라이밍 이야기, 궁금한 것, 암장 후기… 편하게 남겨주세요"}
         rows={12}
         className="mt-2 w-full resize-none bg-transparent py-3 text-[16px] leading-relaxed text-ink placeholder:text-faint focus:outline-none"
       />

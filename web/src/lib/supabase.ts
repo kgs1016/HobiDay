@@ -12,6 +12,8 @@ import type {
   PostDetail,
   PostSummary,
   PostCategory,
+  BoardTopic,
+  BoardFeedPage,
 } from "./community";
 
 let _client: SupabaseClient | null | undefined;
@@ -1355,6 +1357,17 @@ export async function fetchPosts(category: PostCategory = "board", before?: Pick
   return data as PostSummary[];
 }
 
+export async function fetchBoardFeed(topic: BoardTopic | null, query: string, before?: Pick<PostSummary, "id" | "created_at">): Promise<BoardFeedPage | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc("board_feed", {
+    p_topic: topic, p_query: query.trim().slice(0, 80),
+    p_before: before?.created_at ?? null, p_before_id: before?.id ?? null,
+  });
+  if (error) { console.error("board_feed", error); return null; }
+  return data as BoardFeedPage;
+}
+
 /** 글 하나 + 댓글. 지워졌거나 차단 관계면 null */
 export async function fetchPost(id: string): Promise<PostDetail | null> {
   const sb = getSupabase();
@@ -1377,11 +1390,11 @@ async function callRpc<T = object>(fn: string, args: Record<string, unknown>) {
   return (data ?? {}) as RpcResult<T>;
 }
 
-export const createPost = (title: string, body: string, category: PostCategory = "board") =>
-  callRpc<{ id: string }>("post_create_in_category", { p_title: title, p_body: body, p_category: category });
+export const createPost = (title: string, body: string, category: PostCategory = "board", topic: BoardTopic = "daily") =>
+  callRpc<{ id: string }>("post_create_with_topic", { p_title: title, p_body: body, p_category: category, p_topic: topic });
 
-export const updatePost = (id: string, title: string, body: string) =>
-  callRpc("post_update", { p_post: id, p_title: title, p_body: body });
+export const updatePost = (id: string, title: string, body: string, topic: BoardTopic = "daily") =>
+  callRpc("post_update_with_topic", { p_post: id, p_title: title, p_body: body, p_topic: topic });
 
 export const deletePost = (id: string) => callRpc("post_delete", { p_post: id });
 
