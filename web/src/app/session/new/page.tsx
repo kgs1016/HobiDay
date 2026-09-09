@@ -101,7 +101,7 @@ function NewSessionForm({ now }: { now: number }) {
   const router = useRouter();
   // 실제 브라우저 시각을 받은 뒤 한 번만 초기화해 사용자 입력을 유지한다.
   const [initialSlot] = useState(() => defaultSlot(now));
-  /* 암장 — gym master 에서 고른다. 마스터를 못 받는 환경(mock ·
+  /* 클라이밍장 — gym master 에서 고른다. 마스터를 못 받는 환경(mock ·
      마이그레이션 전 DB)에서는 예전 자유입력 + 칩으로 동작한다. */
   const [gyms, setGyms] = useState<Gym[] | null>(null);
   const [gym, setGym] = useState(MOCK_GYMS[0]);
@@ -153,8 +153,8 @@ function NewSessionForm({ now }: { now: number }) {
      여기서 조용히 고쳐주지는 않는다. 연도를 잘못 친 것(2025 ↔ 2026)일
      수도 있어서, 값을 바꿔치기하면 무엇이 틀렸는지 영영 모른다. */
   const blocked = (() => {
-    if (masterMode && !gymId) return "암장을 골라주세요";
-    if (!masterMode && !gym.trim()) return "암장을 입력해주세요";
+    if (masterMode && !gymId) return "클라이밍장을 골라주세요";
+    if (!masterMode && !gym.trim()) return "클라이밍장을 입력해주세요";
     if (!date) return "날짜를 골라주세요";
     if (endTime <= startTime) return "종료 시각이 시작보다 빨라요";
     if (!now) return null; // 시각을 아직 못 읽었다 — 서버가 마지막으로 막는다
@@ -187,8 +187,8 @@ function NewSessionForm({ now }: { now: number }) {
       router.push("/");
       return;
     }
-    if (masterMode && !gymId) return alert("암장을 선택해주세요");
-    if (!masterMode && !gym.trim()) return alert("암장을 입력해주세요");
+    if (masterMode && !gymId) return alert("클라이밍장을 선택해주세요");
+    if (!masterMode && !gym.trim()) return alert("클라이밍장을 입력해주세요");
     if (!date) return alert("날짜를 선택해주세요");
     if (endTime <= startTime) return alert("종료 시각이 시작보다 빨라요");
     // 서버도 막지만(지난 시각·30분 이내·90일 초과 거부) 여기서 먼저 알려주는
@@ -241,7 +241,7 @@ function NewSessionForm({ now }: { now: number }) {
     if (r.error === "past") return alert("이미 지난 시각이에요. 시간을 다시 골라주세요");
     if (r.error === "too_far") return alert("모임은 90일 안쪽으로만 열 수 있어요");
     if (r.error === "bad_capacity") return alert("최대 정원을 다시 골라주세요");
-    if (r.error === "bad_gym") return alert("암장을 다시 선택해주세요");
+    if (r.error === "bad_gym") return alert("클라이밍장을 다시 선택해주세요");
     if (r.error) return alert(`등록 실패: ${r.error}`);
     alert("모임을 열었어요!");
     router.push("/");
@@ -255,7 +255,7 @@ function NewSessionForm({ now }: { now: number }) {
       </header>
 
       <form className="flex flex-col gap-6 pb-8" onSubmit={submit}>
-        <Field label="암장">
+        <Field label="클라이밍장">
           {masterMode ? (
             /* 서울·경기 200곳 — 칩으로 못 늘어놓는다. 검색 시트에서 고른다 */
             <>
@@ -267,7 +267,7 @@ function NewSessionForm({ now }: { now: number }) {
                 <span
                   className={`text-[16px] ${selected ? "text-ink" : "text-faint"}`}
                 >
-                  {selected ? selected.name : "암장을 검색해서 선택"}
+                  {selected ? selected.name : "클라이밍장을 검색해서 선택"}
                 </span>
                 <ChevronDownIcon size={16} className="shrink-0 text-faint" />
               </button>

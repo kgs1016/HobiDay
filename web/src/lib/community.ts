@@ -10,7 +10,7 @@ export type PostCategory = "board" | "gear";
 export const BOARD_TOPICS = [
   { id: "daily", label: "일상" },
   { id: "question", label: "질문" },
-  { id: "gym", label: "암장 후기" },
+  { id: "gym", label: "클라이밍장 후기" },
   { id: "lost", label: "분실물" },
 ] as const;
 export type BoardTopic = (typeof BOARD_TOPICS)[number]["id"];

@@ -28,7 +28,7 @@ import {
 type Facet = "gym" | "date" | "time" | "seats" | "level" | "age";
 
 const TITLES: Record<Facet, string> = {
-  gym: "짐",
+  gym: "장소",
   date: "날짜",
   time: "시간",
   seats: "정원",
@@ -41,10 +41,10 @@ function chipLabel(f: SessionFilter, k: Facet): string {
   switch (k) {
     case "gym":
       return f.gyms.length === 0
-        ? "짐"
+        ? "장소"
         : f.gyms.length === 1
           ? f.gyms[0]
-          : `짐 ${f.gyms.length}`;
+          : `장소 ${f.gyms.length}`;
     case "date": {
       if (!f.dateFrom && !f.dateTo) return "날짜";
       const md = (v: string) => {
@@ -291,7 +291,7 @@ export default function SessionFilterBar({
                   <input
                     value={gymQ}
                     onChange={(e) => setGymQ(e.target.value)}
-                    placeholder="암장 이름 · 지역으로 검색"
+                    placeholder="클라이밍장 이름 · 지역으로 검색"
                     className={`mt-4 w-full ${inputCls}`}
                   />
                   {/* 지역 pill 은 master 를 받아 지역 정보가 있을 때만 —
@@ -325,7 +325,7 @@ export default function SessionFilterBar({
                     )}
                     {picked.length === 0 && rest.length === 0 && (
                       <p className="py-6 text-center text-[12.5px] text-muted">
-                        찾는 암장이 없어요
+                        찾는 클라이밍장이 없어요
                       </p>
                     )}
                   </div>

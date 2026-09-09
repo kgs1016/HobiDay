@@ -32,13 +32,13 @@ export function isAscentDraft(value: unknown): value is AscentDraft {
 export function ascentDraftError(draft: AscentDraft): string | null {
   if (!isAscentDraft(draft)) return "기록 내용을 확인해주세요";
   if (draft.legacyId && draft.legacyId !== draft.recordId) return "기존 기록을 확인해주세요";
-  if (!draft.gym.trim()) return "암장을 입력해주세요";
+  if (!draft.gym.trim()) return "클라이밍장을 입력해주세요";
   if (!draft.completed_on || draft.completed_on < "1900-01-01" || draft.completed_on > ascentToday()) return "완등 날짜를 확인해주세요";
   if (!draft.items.length || draft.items.some(item => !item.color.trim() || item.quantity < 1)) return "색상과 완등 개수를 선택해주세요";
   for (const item of draft.items) if (item.grade_mapping_id != null) {
     const mapping = gradeMappingById(item.grade_mapping_id);
     if (!mapping || mapping.brandId !== findGymGradeGuide(draft.gym)?.id || mapping.color !== item.color.trim() || mapping.min !== item.v_grade)
-      return "암장과 색상의 등급 기준을 다시 선택해주세요";
+      return "클라이밍장과 색상의 등급 기준을 다시 선택해주세요";
   }
   if (draft.items.some(item => item.manual_difficulty != null && colorDifficulty(draft.gym, item.color)))
     return "등록된 색상은 하비데이 기준으로 자동 계산됩니다";
@@ -48,6 +48,17 @@ export function ascentDraftError(draft: AscentDraft): string | null {
 }
 export function emptyAscentDraft(gym = ""): AscentDraft {
   return { gym, completed_on: ascentToday(), items: [], recordId: null, legacyId: null };
+}
+/** ブランド切替では前のブランドの色・点数を持ち越さない。日付と編集中のIDは保持する。 */
+export function selectAscentBrand(draft: AscentDraft, brandId: string): AscentDraft {
+  const brand = GYM_GRADE_GUIDES.find(guide => guide.id === brandId);
+  const next: AscentDraft = { ...draft, gym: brand?.name ?? "기타 클라이밍장", gym_mode: brand ? "search" : "other", items: [] };
+  return brand ? next : addManualAscentEntry(next);
+}
+export function addManualAscentEntry(draft: AscentDraft): AscentDraft {
+  const level = Array.from({ length: 11 }, (_, i) => i + 1).find(h => !draft.items.some(item => item.color === `H${h}`));
+  if (!level || draft.items.length >= 11) return draft;
+  return { ...draft, items: [...draft.items, { color: `H${level}`, quantity: 1, manual_difficulty: level, v_grade: null, grade_mapping_id: null }] };
 }
 export function draftFromAscent(row: AscentRecord): AscentDraft {
   return { gym: row.gym, completed_on: row.completed_on ?? "", items: row.items.map(item => ({ ...item, color: item.color ?? "",
@@ -66,7 +77,7 @@ export function colorAscentEntry(gym: string, color: string, quantity = 1): Asce
   const mapping = findGradeMapping(findGymGradeGuide(gym)?.id, color);
   return { color, quantity, v_grade: mapping?.min ?? null, grade_mapping_id: mapping?.id ?? null };
 }
-/** 암장을 바꾸면 이전 암장의 자동 환산을 들고 가지 않는다. 직접 입력한 값은 보존한다. */
+/** 클라이밍장을 바꾸면 이전 클라이밍장의 자동 환산을 들고 가지 않는다. 직접 입력한 값은 보존한다. */
 export function changeAscentGym(draft: AscentDraft, gym: string): AscentDraft {
   return { ...draft, gym, items: draft.items.map(item => {
     const next = item.grade_mapping_id || (item.v_grade === null && !item.custom_color)

@@ -61,7 +61,7 @@ function NewsContent({ id }: { id: string | null }) {
   }
 
   const { article } = state;
-  // 외부로 나가는 행동은 원문 버튼에서만 제공한다.
+  // 기사 원문 링크는 본문과 별도 버튼으로 제공한다.
   const sourceUrl = article.url && /^https?:\/\//i.test(article.url) ? article.url : null;
   const date = new Date(article.published_at);
   const published = Number.isNaN(date.getTime()) ? null : date.toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul", year: "numeric", month: "long", day: "numeric" });

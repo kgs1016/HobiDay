@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import GymPhoto from "@/components/GymPhoto";
 import { useRouter } from "next/navigation";
 import { useQueryId, useQueryParam } from "@/lib/queryId";
 import { notifyPush } from "@/lib/nativePush";
@@ -298,6 +299,9 @@ function SessionContent({ id, from }: { id: string | null; from: string | null |
         <p className="mt-1 text-[14px] text-muted">
           {s.date} · {s.start}–{s.end}
         </p>
+        <div className="mt-4">
+          <GymPhoto src={s.gymThumb} name={s.gym} wide />
+        </div>
         <div className="mt-3 flex flex-col gap-1 text-[13.5px]">
           <p>{levelRangeLabel(s.levelMin, s.levelMax)}</p>
           <p className="text-muted">{capacityLabel(s.capacity)}</p>

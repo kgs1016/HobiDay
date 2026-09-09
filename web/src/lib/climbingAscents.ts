@@ -2,7 +2,7 @@ import { getSupabase } from "./supabase";
 import { shoePeriodStart, type ClimbingProgress } from "./shoeProgress";
 import { ascentDraftError, ascentToday, type AscentDraft, type AscentRecord } from "./ascentRecord";
 import { findGymGradeGuide } from "./gymGrades";
-import { ascentDifficulty } from "./hobiDifficulty";
+import { ascentDifficulty, HOBI_POLICY } from "./hobiDifficulty";
 
 /** Supabase 없는 개발 화면에서만 사용하는 메모리 기록. 운영 저장과 분리한다. */
 export const isAscentPreview = () => process.env.NODE_ENV === "development" && !getSupabase();
@@ -33,8 +33,8 @@ export async function fetchClimbingProgress(): Promise<ClimbingProgress> {
     return { total, grade_counts: counts, difficulty_counts: difficulties, recent_total: Object.values(counts).reduce((sum, n) => sum + n, 0),
       undated_total: undated, period_start: start, period_end: end };
   }
-  const { data, error } = await sb.rpc("climbing_progress_v3");
-  if (error || !data?.difficulty_counts) throw new Error("완등 기록을 불러오지 못했어요");
+  const { data, error } = await sb.rpc("climbing_progress_v4");
+  if (error || !data?.difficulty_counts || data.policy !== HOBI_POLICY) throw new Error("완등 기록을 불러오지 못했어요");
   return data as ClimbingProgress;
 }
 
@@ -57,8 +57,8 @@ export async function saveClimbingAscent(ascent: Omit<ClimbingAscent, "created_a
   if (error) throw new Error("저장 결과를 확인하지 못했어요. 다시 시도해주세요");
   const messages: Record<string, string> = {
     no_auth: "로그인이 필요해요", no_profile: "프로필을 먼저 만들어주세요",
-    duplicate: "같은 암장의 같은 문제가 이미 기록되어 있어요",
-    bad_input: "암장·문제·난이도를 확인해주세요", not_mine: "내 기록만 수정할 수 있어요",
+    duplicate: "같은 클라이밍장의 같은 문제가 이미 기록되어 있어요",
+    bad_input: "클라이밍장·문제·난이도를 확인해주세요", not_mine: "내 기록만 수정할 수 있어요",
   };
   if (data?.error) throw new Error(messages[data.error] ?? "기록을 저장하지 못했어요");
 }
@@ -97,7 +97,7 @@ export async function saveAscentBatch(draft: AscentDraft & { recordId: string })
       items });
     return;
   }
-  const { data, error } = await sb.rpc("climbing_ascent_batch_save_v2", {
+  const { data, error } = await sb.rpc("climbing_ascent_batch_save_v3", {
     p_id: draft.recordId, p_gym: draft.gym.trim(), p_completed_on: draft.completed_on, p_brand_id: brand,
     p_items: items, p_legacy_id: draft.legacyId,
   });

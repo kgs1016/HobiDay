@@ -67,19 +67,7 @@ assert.equal(url.pathname, '/me/grades');
 assert.equal(url.searchParams.get('gym'), 'A&B #1?');
 assert.equal(url.searchParams.get('tab'), 'gyms');
 assert.equal(new URL(guide.gymGradeGuideHref('   '), url).searchParams.has('gym'), false);
-const recentKey = 'hobiday:grade-guide-recent';
-for (const bad of ['broken', '{}', 'null', '[3,null,{},""]']) {
-  entries.set(recentKey, bad);
-  assert.equal(guide.readRecentGradeGyms().length, 0);
-}
-entries.set(recentKey, JSON.stringify(['서울숲클라이밍 영등포점', '서울숲클라이밍 구로점', '피커스 클라이밍 종로점', 'unknown']));
-assert.equal(JSON.stringify(guide.readRecentGradeGyms()), '["서울숲클라이밍","피커스"]', 'migrate legacy visits without duplicated brands');
-for (const name of ['신촌담장', '알레 강동', '서울숲 잠실점', '피커스 구로', '알레 영등포']) guide.rememberGradeGym(name);
-assert.equal(JSON.stringify(guide.readRecentGradeGyms()), '["알레클라이밍","피커스","서울숲클라이밍"]');
-assert.equal(JSON.stringify(guide.rememberGradeGym('unknown')), JSON.stringify(guide.readRecentGradeGyms()));
 const blocked = new Proxy({}, { get() { throw Error('blocked storage'); } });
-assert.equal(load('gymGrades.ts', blocked).readRecentGradeGyms().length, 0);
-assert.doesNotThrow(() => load('gymGrades.ts', blocked).rememberGradeGym('a'));
 
 const draftApi = load('ascentGuideDraft.ts');
 const recordApi = load('ascentRecord.ts');
@@ -124,7 +112,7 @@ assert.equal(load('ascentGuideDraft.ts', blocked).takeAscentGuideDraft('one'), n
 draftApi.saveAscentGuideDraft('one', draft);
 draftApi.clearAscentGuideDraft('one');
 assert.equal(draftApi.takeAscentGuideDraft('one'), null);
-console.log(`PASS: ${guide.GYM_GRADE_GUIDES.length} brand guides, links, source differences, recent brands, bulk input validation and isolated draft restore`);
+console.log(`PASS: ${guide.GYM_GRADE_GUIDES.length} brand guides, links, source differences, bulk input validation and isolated draft restore`);
 
 const mappingApi = load('gymGradeMappings.ts');
 const mappings = mappingApi.GYM_GRADE_MAPPINGS;
@@ -188,7 +176,7 @@ assert.equal(customRestored.items[0].custom_color, true, 'editing unknown colors
 console.log('PASS: source-backed range mapping, SQL parity, gym changes, manual input, unknown grades and attribution restore');
 
 const hobi = load('hobiDifficulty.ts');
-const hobiSql = fs.readFileSync(path.join(migrationDir, '20260909220000_hobi_color_achievement.sql'), 'utf8');
+const hobiSql = fs.readFileSync(path.join(migrationDir, '20260910010000_gym_color_catalog_v2.sql'), 'utf8');
 const brandSeed = JSON.parse(hobiSql.split('$hobi_brands$')[1]);
 assert.deepEqual(brandSeed, JSON.parse(JSON.stringify(guide.GYM_GRADE_GUIDES.map(g => ({id:g.id,
   aliases:[...new Set([g.id,g.name,...g.aliases].map(s=>s.toLowerCase().replace(/\s+/g,'')))],
@@ -220,3 +208,42 @@ assert.equal(recordApi.changeAscentGym({...manualH,items:[{...manualH.items[0],c
 draftApi.saveAscentGuideDraft('manual-h',manualH);
 assert.deepEqual(JSON.parse(JSON.stringify(draftApi.takeAscentGuideDraft('manual-h'))),manualH);
 console.log('PASS: all brand colors, relative weighting, no fabricated V, manual difficulty, draft restore and policy parity');
+
+assert.equal(hobi.HOBI_POLICY, 'color-v2');
+for (const [gym, top] of [['알레클라이밍', '검정'], ['손상원', '보라']]) {
+  assert.deepEqual(Array.from(recordApi.ascentPalette(gym).slice(-2), c => c.name), ['핑크', top]);
+  assert.equal(hobi.colorDifficulty(gym, top).level, 11);
+  assert.equal(hobi.colorDifficulty(gym, '핑크').level, 9);
+  assert.equal(recordApi.ascentDraftError({...draft, gym, items:[recordApi.colorAscentEntry(gym, top, 3)]}), null);
+}
+assert.equal(recordApi.ascentPalette('캐치스톤')[8].name, '갈색');
+assert.equal(recordApi.ascentPalette('캐치스톤').some(c => c.name === '검정'), false);
+assert.equal(hobi.colorDifficulty('캐치스톤', '갈색').points, 36);
+assert.equal(hobi.ascentDifficulty('캐치스톤', {color:'검정', v_grade:null}).points, 36, 'old black records retain their score');
+assert.equal(hobi.colorDifficulty('기타 암장', '검정'), null, 'legacy alias stays brand specific');
+console.log('PASS: corrected palettes, new highest colors and legacy Catchstone scoring');
+
+const brandDraft = recordApi.selectAscentBrand(draft, 'allez');
+assert.equal(brandDraft.gym, '알레클라이밍');
+assert.equal(brandDraft.completed_on, draft.completed_on);
+assert.equal(brandDraft.recordId, draft.recordId);
+assert.equal(brandDraft.items.length, 0, 'switching brands never carries over another gym color');
+const blackEntry = recordApi.colorAscentEntry(brandDraft.gym, '검정', 5);
+assert.equal(recordApi.ascentDraftError({...brandDraft,items:[blackEntry]}), null);
+assert.equal(hobi.ascentDifficulty(brandDraft.gym, blackEntry).points * blackEntry.quantity, 350);
+let otherDraft = recordApi.selectAscentBrand(draft, 'other');
+assert.equal(otherDraft.gym_mode, 'other');
+assert.equal(recordApi.ascentDraftError(otherDraft), null, 'other needs no typed gym or color');
+otherDraft.items[0] = {...otherDraft.items[0],color:'H7',manual_difficulty:7,quantity:10};
+assert.equal(hobi.ascentDifficulty(otherDraft.gym,otherDraft.items[0]).points * 10,180);
+otherDraft=recordApi.addManualAscentEntry(otherDraft);
+assert.equal(otherDraft.items[1].color,'H1');
+while(otherDraft.items.length<11) otherDraft=recordApi.addManualAscentEntry(otherDraft);
+assert.equal(new Set(otherDraft.items.map(i=>i.color)).size,11);
+assert.equal(recordApi.addManualAscentEntry(otherDraft).items.length,11);
+assert.equal(recordApi.ascentDraftError(otherDraft),null);
+assert.equal(recordApi.selectAscentBrand(otherDraft,'ssw').items.length,0);
+const restoredOther=recordApi.draftFromAscent({...otherDraft,id:draft.recordId,kind:'batch'});
+assert.equal(restoredOther.items[0].manual_difficulty,7);
+assert.equal(restoredOther.items[0].quantity,10);
+console.log('PASS: brand selection, isolated color changes, no-typing manual H/counts and history restore');
