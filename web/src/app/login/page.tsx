@@ -8,6 +8,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
+import { useHydrated } from "@/lib/browserState";
+import { readRememberedEmail, rememberEmail } from "@/lib/loginPreferences";
 import OAuthButtons from "@/components/OAuthButtons";
 import { ChevronLeftIcon } from "@/components/icons";
 
@@ -15,13 +17,110 @@ const inputCls =
   // iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다 — 16px 유지
   "w-full rounded-lg border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-faint focus:border-accent focus:outline-none";
 
+function EmailLoginForm() {
+  const router = useRouter();
+  const [initialEmail] = useState(readRememberedEmail);
+  const [remember, setRemember] = useState(Boolean(initialEmail));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (busy) return;
+    const sb = getSupabase();
+    if (!sb) return;
+
+    // 자동완성은 React change 이벤트 없이 값을 채우기도 한다.
+    // 제출 시 실제 입력값을 읽고, 로그인 성공 시에만 이메일을 기억한다.
+    const form = new FormData(e.currentTarget);
+    const email = String(form.get("username") ?? "").trim();
+    const password = String(form.get("password") ?? "");
+    setBusy(true);
+    setError("");
+    try {
+      const { error: authError } = await sb.auth.signInWithPassword({ email, password });
+      if (authError) {
+        setError(
+          authError.message.includes("Email not confirmed")
+            ? "이메일 인증이 아직이에요. 회원가입 화면에서 같은 이메일로 다시 진행하면 인증번호를 새로 받을 수 있어요."
+            : "이메일 또는 비밀번호가 맞지 않아요."
+        );
+        setBusy(false);
+        return;
+      }
+      rememberEmail(remember ? email : null);
+      // 비밀번호 관리자가 성공한 로그인을 감지하도록 폼의 값은 유지한 채 이동한다.
+      router.replace("/me");
+    } catch {
+      setError("로그인하지 못했어요. 연결을 확인하고 다시 시도해주세요.");
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} autoComplete="on" aria-label="이메일 로그인" className="flex flex-col gap-2.5">
+      <label htmlFor="login-email" className="sr-only">이메일</label>
+      <input
+        id="login-email"
+        name="username"
+        type="email"
+        defaultValue={initialEmail}
+        placeholder="이메일"
+        autoComplete="username"
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        required
+        readOnly={busy}
+        className={inputCls}
+      />
+      <label htmlFor="login-password" className="sr-only">비밀번호</label>
+      <input
+        id="login-password"
+        name="password"
+        type="password"
+        placeholder="비밀번호"
+        autoComplete="current-password"
+        required
+        minLength={6}
+        readOnly={busy}
+        className={inputCls}
+      />
+      <label className="flex min-h-11 w-fit cursor-pointer items-center gap-2 text-[13px] text-muted">
+        <input
+          type="checkbox"
+          checked={remember}
+          disabled={busy}
+          onChange={(e) => {
+            setRemember(e.target.checked);
+            if (!e.target.checked) rememberEmail(null);
+          }}
+          className="h-4 w-4 accent-ink"
+        />
+        이메일 기억하기
+      </label>
+      {error && <p role="alert" className="text-[13px] leading-relaxed text-danger">{error}</p>}
+      <button
+        type="submit"
+        disabled={busy}
+        className="button-primary rounded-xl py-3.5 text-[15px] font-semibold"
+      >
+        {busy ? "처리 중…" : "로그인"}
+      </button>
+      <Link
+        href="/reset"
+        className="mt-1 text-center text-[12.5px] font-medium text-muted underline underline-offset-4"
+      >
+        비밀번호를 잊으셨나요?
+      </Link>
+    </form>
+  );
+}
+
 export default function Login() {
   const router = useRouter();
   const sb = getSupabase();
-
-  const [email, setEmail] = useState("");
-  const [pw, setPw] = useState("");
-  const [busy, setBusy] = useState(false);
+  const hydrated = useHydrated();
 
   useEffect(() => {
     // 소개 페이지의 "지금 사전 가입하기" 는 옛 주소(?mode=signup)로 온다.
@@ -41,24 +140,6 @@ export default function Login() {
       </main>
     );
   }
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.includes("@")) return alert("이메일을 확인해주세요");
-    if (pw.length < 6) return alert("비밀번호는 6자 이상으로 해주세요");
-
-    setBusy(true);
-    const { error } = await sb.auth.signInWithPassword({ email, password: pw });
-    setBusy(false);
-    if (error) {
-      return alert(
-        error.message.includes("Email not confirmed")
-          ? "이메일 인증이 아직이에요. 회원가입 화면에서 같은 이메일로 다시 진행하면 인증번호를 새로 받을 수 있어요."
-          : "이메일 또는 비밀번호가 맞지 않아요."
-      );
-    }
-    router.push("/me");
-  };
 
   return (
     <main className="px-4">
@@ -87,36 +168,7 @@ export default function Login() {
 
       <OAuthButtons />
 
-      <form onSubmit={submit} className="flex flex-col gap-2.5">
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="이메일"
-          autoComplete="email"
-          className={inputCls}
-        />
-        <input
-          type="password"
-          value={pw}
-          onChange={(e) => setPw(e.target.value)}
-          placeholder="비밀번호"
-          autoComplete="current-password"
-          className={inputCls}
-        />
-        <button
-          disabled={busy}
-          className="button-primary mt-1 rounded-xl py-3.5 text-[15px] font-semibold"
-        >
-          {busy ? "처리 중…" : "로그인"}
-        </button>
-        <Link
-          href="/reset"
-          className="mt-1 text-center text-[12.5px] font-medium text-muted underline underline-offset-4"
-        >
-          비밀번호를 잊으셨나요?
-        </Link>
-      </form>
+      {hydrated ? <EmailLoginForm /> : <div className="h-[256px]" aria-busy="true" />}
 
       {/* 애플 심사 1.2 — UGC 앱은 약관 동의가 가입 흐름에 보여야 한다.
           소셜 로그인은 이 화면에서 바로 가입될 수 있어서 여기에도 둔다. */}
