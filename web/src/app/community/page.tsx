@@ -112,7 +112,7 @@ function NewsRow({ a }: { a: Article }) {
         </p>
       )}
       <p className="mt-1 text-[12px] text-faint">
-        {[a.source, ago(a.published_at)].filter(Boolean).join(" · ")}
+        {ago(a.published_at)}
       </p>
       </div>
       <NewsArtwork article={a} thumbnail />

@@ -118,7 +118,7 @@ export default function WritePost() {
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value.slice(0, POST_BODY_MAX))}
-        placeholder="클라이밍 이야기, 궁금한 것, 암장 후기… 편하게 남겨주세요"
+        placeholder="클라이밍 이야기, 궁금한 것, 클라이밍장 후기… 편하게 남겨주세요"
         rows={12}
         className="mt-2 w-full resize-none bg-transparent py-3 text-[16px] leading-relaxed text-ink placeholder:text-faint focus:outline-none"
       />

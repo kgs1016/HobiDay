@@ -1,20 +1,22 @@
 import { findGymGradeGuide } from "./gymGrades";
 
-/** 하비데이 상대 난이도 정책 v1. V등급이나 암장 간 절대 실력의 등가표가 아니다. */
+/** 하비데이 상대 난이도 정책 v2. V등급이나 암장 간 절대 실력의 등가표가 아니다. */
 export const HOBI_DIFFICULTIES = [
   { level: 1, points: 1 }, { level: 2, points: 2 }, { level: 3, points: 3 },
   { level: 4, points: 5 }, { level: 5, points: 8 }, { level: 6, points: 12 },
   { level: 7, points: 18 }, { level: 8, points: 26 }, { level: 9, points: 36 },
   { level: 10, points: 50 }, { level: 11, points: 70 },
 ] as const;
-export const HOBI_POLICY = "color-v1";
+export const HOBI_POLICY = "color-v2";
 export const validHobiLevel = (level: unknown): level is number =>
   typeof level === "number" && Number.isInteger(level) && level >= 1 && level <= 11;
 
 /** 서로 다른 단계 수를 1~11에 배치한다. 색 이름은 암장 안에서만 의미가 있다. */
 export function colorDifficulty(gym: string, color: string | null) {
   const guide = findGymGradeGuide(gym);
-  const index = guide?.colors.findIndex(item => item.name === color?.trim()) ?? -1;
+  // 기존 캐치스톤 검정 기록은 같은 위치의 갈색 점수를 유지한다. 원본 기록은 변경하지 않는다.
+  const canonical = guide?.id === "catch-stone" && color?.trim() === "검정" ? "갈색" : color?.trim();
+  const index = guide?.colors.findIndex(item => item.name === canonical) ?? -1;
   if (!guide || index < 0) return null;
   return HOBI_DIFFICULTIES[Math.floor(index * 10 / (guide.colors.length - 1))];
 }

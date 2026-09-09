@@ -8,7 +8,7 @@ import { SHOE_STAGES } from "@/lib/shoeProgress";
 import { useQueryParam } from "@/lib/queryId";
 import { colorDifficulty, HOBI_DIFFICULTIES } from "@/lib/hobiDifficulty";
 import {
-  findGymGradeGuide, GYM_GRADE_GUIDES, matchesGradeGuide, readRecentGradeGyms, rememberGradeGym,
+  findGymGradeGuide, GYM_GRADE_GUIDES, matchesGradeGuide,
   type GymGradeGuide,
 } from "@/lib/gymGrades";
 
@@ -51,7 +51,7 @@ function GradeGuide({ initialTab, initialGym, stage }: { initialTab: GuideTab; i
       <StageGuide stage={stage} onGyms={() => setTab("gyms")} />
     </section>
     <section id="guide-panel-gyms" role="tabpanel" aria-labelledby="guide-tab-gyms" hidden={tab !== "gyms"}>
-      <GymGuides initialGym={initialGym} active={tab === "gyms"} />
+      <GymGuides initialGym={initialGym} />
     </section>
   </>;
 }
@@ -98,9 +98,9 @@ function StageGuide({ stage, onGyms }: { stage: string; onGyms: () => void }) {
     <div className="mt-6 space-y-4 text-[12px] leading-relaxed">
       <div><h3 className="font-semibold">승급해도 기록은 그대로</h3><p className="mt-1 text-muted">높은 난이도의 기록은 하위 조건에도 포함됩니다. 최근 3개월 범위를 벗어난 기록은 내역에 남고, 현재 단계는 다시 계산됩니다.</p></div>
       <div><h3 className="font-semibold">실제 완등 날짜 기준</h3><p className="mt-1 text-muted">한국 날짜로 3개월 전 같은 날부터 오늘까지 계산합니다. 날짜 없는 기존 기록은 완등일을 입력한 뒤 반영됩니다. 같은 문제는 중복 없이 기록해주세요.</p></div>
-      <div><h3 className="font-semibold">색상 × 완등 수</h3><p className="mt-1 text-muted">암장 안에서 쉬운 색부터 어려운 색까지 H1~H11로 배치합니다. 색상별 점수에 완등 수를 곱해 합산하며, 점수와 완등 조건을 모두 충족한 가장 높은 단계가 적용됩니다.</p></div>
-      <div><h3 className="font-semibold">하비데이 자체 기준</h3><p className="mt-1 text-muted">H는 V등급이 아닙니다. 같은 H라도 암장 간 실제 난이도가 같다는 뜻은 아닙니다. 초기 배점은 상대적인 성취를 나타내며, V등급 없이도 등록된 색상만으로 점수를 받습니다.</p></div>
-      <div><h3 className="font-semibold">기타와 기존 기록</h3><p className="mt-1 text-muted">기타 암장·색상은 H난이도를 직접 선택할 수 있습니다. 색상 기준이 없는 기존 V기록은 별도 하비데이 배점으로 반영합니다. 난이도를 모두 모르면 개수만 기록됩니다.</p></div>
+      <div><h3 className="font-semibold">색상 × 완등 수</h3><p className="mt-1 text-muted">클라이밍장 안에서 쉬운 색부터 어려운 색까지 H1~H11로 배치합니다. 색상별 점수에 완등 수를 곱해 합산하며, 점수와 완등 조건을 모두 충족한 가장 높은 단계가 적용됩니다.</p></div>
+      <div><h3 className="font-semibold">하비데이 자체 기준</h3><p className="mt-1 text-muted">H는 V등급이 아닙니다. 같은 H라도 클라이밍장 간 실제 난이도가 같다는 뜻은 아닙니다. 초기 배점은 상대적인 성취를 나타내며, V등급 없이도 등록된 색상만으로 점수를 받습니다.</p></div>
+      <div><h3 className="font-semibold">기타와 기존 기록</h3><p className="mt-1 text-muted">기타 클라이밍장·색상은 H난이도를 직접 선택할 수 있습니다. 색상 기준이 없는 기존 V기록은 별도 하비데이 배점으로 반영합니다. 난이도를 모두 모르면 개수만 기록됩니다.</p></div>
     </div>
     <button onClick={onGyms} className="mt-5 flex min-h-13 w-full items-center justify-between rounded-xl bg-surface2 px-4 text-[13px] font-semibold">
       브랜드별 난이도 찾기<ChevronRightIcon size={16} />
@@ -108,10 +108,9 @@ function StageGuide({ stage, onGyms }: { stage: string; onGyms: () => void }) {
   </>;
 }
 
-function GymGuides({ initialGym, active }: { initialGym: string; active: boolean }) {
+function GymGuides({ initialGym }: { initialGym: string }) {
   const [query, setQuery] = useState("");
   const [selectedName, setSelectedName] = useState(initialGym);
-  const [recent, setRecent] = useState(readRecentGradeGyms);
   const searchInput = useRef<HTMLInputElement>(null);
   const detailHeading = useRef<HTMLHeadingElement>(null);
   const shouldFocusDetail = useRef(false);
@@ -122,17 +121,13 @@ function GymGuides({ initialGym, active }: { initialGym: string; active: boolean
   }, [selectedName]);
 
   const selectGuide = (guide: GymGradeGuide) => {
-    shouldFocusDetail.current = true; setSelectedName(guide.name); setRecent(rememberGradeGym(guide.name));
+    shouldFocusDetail.current = true; setSelectedName(guide.name);
   };
   const guide = findGymGradeGuide(selectedName);
-  useEffect(() => {
-    if (active && guide) rememberGradeGym(guide.name);
-  }, [active, guide]);
   const visible = GYM_GRADE_GUIDES.filter(item => matchesGradeGuide(item, query));
-  const recentGuides = recent.flatMap(name => findGymGradeGuide(name) ?? []);
 
   if (selectedName) return <div className="pt-5">
-    <button onClick={() => { setSelectedName(""); setRecent(readRecentGradeGyms()); requestAnimationFrame(() => searchInput.current?.focus()); }}
+    <button onClick={() => { setSelectedName(""); requestAnimationFrame(() => searchInput.current?.focus()); }}
       className="mb-4 min-h-10 text-[12px] font-medium text-muted">← 브랜드 목록</button>
     <h2 ref={detailHeading} tabIndex={-1} className="break-words text-[22px] font-bold tracking-tight outline-none">{guide?.name ?? selectedName}</h2>
     {guide && <p className="mt-1.5 text-[12px] text-muted">난이도 색상 · {guide.colors.length}단계</p>}
@@ -149,39 +144,19 @@ function GymGuides({ initialGym, active }: { initialGym: string; active: boolean
         </ol>
       </div>
       {guide.note && <p className="mt-3 text-[11px] leading-relaxed text-muted">{guide.note}</p>}
-      <div className="mt-6 border-t border-line pt-4 text-[11px] leading-relaxed text-muted">
-        <p>공개 자료를 모은 참고표 · 현장 안내 우선</p>
-        <details className="mt-2">
-          <summary className="flex min-h-11 cursor-pointer items-center justify-between text-[12px] font-medium text-ink">
-            확인한 자료 {guide.sources.length}건<ChevronRightIcon size={13} />
-          </summary>
-          <ul className="divide-y divide-line">{guide.sources.map(item => <li key={item.url} className="py-2">
-            <a href={item.url} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center justify-between gap-2 text-[12px] font-medium text-ink">
-              {item.label}<ChevronRightIcon size={13} className="shrink-0" /><span className="sr-only"> (새 창)</span>
-            </a>
-            <p>{item.published ? `작성 ${item.published.replaceAll("-", ".")}` : "원본 작성일 미확인"} · 자료 확인 {item.checked.replaceAll("-", ".")}</p>
-          </li>)}</ul>
-        </details>
-      </div>
     </> : <div className="mt-6 rounded-2xl bg-surface2 px-5 py-7">
       <p className="text-[15px] font-semibold">아직 등록된 기준표가 없어요</p>
-      <p className="mt-2 text-[13px] leading-relaxed text-muted">기타 암장·색상으로 기록하고 하비데이 난이도를 직접 선택할 수 있습니다.</p>
+      <p className="mt-2 text-[13px] leading-relaxed text-muted">기타 클라이밍장·색상으로 기록하고 하비데이 난이도를 직접 선택할 수 있습니다.</p>
     </div>}
   </div>;
 
   return <div className="pt-6">
     <h2 className="text-[22px] font-bold tracking-tight">브랜드별 색상 기준</h2>
-    <p className="mt-2 text-[13px] text-muted">브랜드를 선택해 난이도 순서를 확인하세요.</p>
     <div className="mt-5 flex items-center gap-2.5 rounded-xl bg-surface2 px-3.5 focus-within:ring-2 focus-within:ring-accent-strong">
       <SearchIcon size={19} className="shrink-0 text-muted" />
       <input ref={searchInput} type="search" aria-label="브랜드 또는 지점명 검색" value={query} onChange={event => setQuery(event.target.value)}
         placeholder="브랜드 · 지점명 검색" className="min-h-13 min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-faint" />
     </div>
-    {!query && recentGuides.length > 0 && <div className="mt-6">
-      <h3 className="text-[12px] font-medium text-muted">최근 본 브랜드</h3>
-      <div className="mt-2 flex flex-wrap gap-2">{recentGuides.map(item => <button key={item.id} onClick={() => selectGuide(item)}
-        className="min-h-10 rounded-full border border-line px-3 text-[12px] font-medium">{item.name}</button>)}</div>
-    </div>}
     <div className="mt-6 flex items-center justify-between text-[12px] text-muted"><h3>{query ? "검색 결과" : "브랜드 목록"}</h3><span aria-live="polite">{visible.length}개</span></div>
     {visible.length ? <div>{visible.map(item => <button key={item.id} onClick={() => selectGuide(item)}
       className="flex min-h-24 w-full items-center justify-between gap-3 border-b border-line py-5 text-left">

@@ -300,7 +300,7 @@ export default function Home() {
     : MOCK_GYMS.map((name) => ({ name }));
   /* 별칭까지 아는 이름으로 친다. master 가 "더클라임 B홍대점" 의 옛 이름을
      알고 있는데도 "더클라임 B홍대" 로 열린 모임을 뒤에 또 붙이면, 같은
-     암장이 목록에 두 줄로 앉는다. */
+     클라이밍장이 목록에 두 줄로 앉는다. */
   const knownNames = new Set(
     baseOpts.flatMap((o) => [o.name, ...(o.aliases ?? [])])
   );
@@ -360,7 +360,7 @@ export default function Home() {
           <input ref={searchInput} autoFocus type="search" value={query} onChange={e => setQuery(e.target.value)}
             onKeyDown={e => { if (e.key === "Escape") closeSearch(); }}
             aria-label={tab === "session" ? "모임 검색" : "사람 검색"}
-            placeholder={tab === "session" ? "암장, 모임 내용, 호스트 검색" : "닉네임, 홈 암장 검색"}
+            placeholder={tab === "session" ? "클라이밍장, 모임 내용, 호스트 검색" : "닉네임, 홈 클라이밍장 검색"}
             className="h-full min-w-0 w-full bg-transparent text-[16px] outline-none placeholder:text-faint" />
         </div>
         <button type="button" onClick={closeSearch} className="min-h-11 px-1 text-[13px] font-medium text-muted">취소</button>

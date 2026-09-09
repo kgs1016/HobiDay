@@ -1,6 +1,6 @@
 "use client";
 
-/* 암장 선택 — 모임 만들기가 쓰는 검색형 bottom sheet.
+/* 클라이밍장 선택 — 모임 만들기가 쓰는 검색형 bottom sheet.
    서울/경기 200곳을 칩으로 늘어놓을 수는 없다 — 검색과 지역으로 좁혀서
    목록 행으로 고른다. pill 은 조작 가능한 필터(지역)에만 쓴다. */
 
@@ -58,12 +58,12 @@ export default function GymPicker({
         style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-[16px] font-bold">암장 선택</p>
+        <p className="text-[16px] font-bold">클라이밍장 선택</p>
 
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="암장 이름 · 지역으로 검색"
+          placeholder="클라이밍장 이름 · 지역으로 검색"
           autoFocus
           className="mt-3 w-full rounded-lg bg-surface2 px-3.5 py-3 text-[16px] text-ink placeholder:text-faint focus:outline-none"
         />
@@ -87,7 +87,7 @@ export default function GymPicker({
         <div className="mt-2 min-h-0 flex-1 overflow-y-auto">
           {shown.length === 0 ? (
             <p className="pt-10 text-center text-[13px] text-muted">
-              찾는 암장이 없어요
+              찾는 클라이밍장이 없어요
             </p>
           ) : (
             <div className="flex flex-col divide-y divide-line">

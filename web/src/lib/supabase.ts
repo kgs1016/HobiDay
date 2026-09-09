@@ -1131,7 +1131,7 @@ export async function fetchPublicShoeAchievements(userIds: string[], sessionId?:
   if (!ids.length) return {};
   const sb = getSupabase();
   if (!sb) return null;
-  const { data, error } = await sb.rpc("public_climbing_achievements_v3", {
+  const { data, error } = await sb.rpc("public_climbing_achievements_v4", {
     p_users: ids, p_session: sessionId ?? null,
   });
   if (error || !Array.isArray(data)) return null;

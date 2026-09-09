@@ -1,0 +1,58 @@
+[
+  {
+    "article_id": "08746754-0cf8-4020-9cdc-10fe7cbeb9f0",
+    "image_url": "/images/news/medical-support-v2.webp",
+    "image_alt": "클라이머의 손목 테이핑을 확인하는 스포츠 의료지원 AI 연출 이미지",
+    "kind": "ai",
+    "width": 1200,
+    "height": 800
+  },
+  {
+    "article_id": "adc2135d-0064-46bf-b51d-79cbce303442",
+    "image_url": "/images/news/koper-bronze-v2.jpg",
+    "image_alt": "2026 코페르 대회에서 밴드로 몸을 푸는 서채현",
+    "kind": "photo",
+    "width": 800,
+    "height": 533,
+    "caption": "2026 코페르 대회에서 몸을 푸는 서채현",
+    "credit": "Dimitris Tosidis / World Climbing",
+    "source_url": "https://photo.worldclimbing.com/item/en/1/145182",
+    "license_url": "https://photo.worldclimbing.com/controller/credits"
+  },
+  {
+    "article_id": "3c59bea2-81a2-42b3-b721-b2de91b75361",
+    "image_url": "/images/news/laval-lead-v2.webp",
+    "image_alt": "실내 리드 등반을 주제로 한 AI 연출 이미지",
+    "kind": "ai",
+    "width": 1200,
+    "height": 800
+  },
+  {
+    "article_id": "f9bc2db1-2522-49ec-b92a-9ce5743ff644",
+    "image_url": "/images/news/laval-para-v2.jpg",
+    "image_alt": "2026 라발 월드 클라이밍 파라 시리즈 결승에서 등반하는 선수",
+    "kind": "photo",
+    "width": 800,
+    "height": 533,
+    "caption": "2026 라발 월드 클라이밍 파라 시리즈 결승 현장",
+    "credit": "Slobodan Miskovic / World Climbing",
+    "source_url": "https://photo.worldclimbing.com/item/en/1/144695",
+    "license_url": "https://photo.worldclimbing.com/controller/credits"
+  },
+  {
+    "article_id": "5e62864b-bbe4-4dde-b802-4e23aa2914cf",
+    "image_url": "/images/news/asian-youth-v2.webp",
+    "image_alt": "볼더링 경기장 전경을 주제로 한 AI 연출 이미지",
+    "kind": "ai",
+    "width": 1200,
+    "height": 800
+  },
+  {
+    "article_id": "b1ec9139-3fa5-448b-b789-f0384e2d545e",
+    "image_url": "/images/news/summer-training-v2.webp",
+    "image_alt": "실내 클라이밍장에서 볼더링을 연습하는 AI 연출 이미지",
+    "kind": "ai",
+    "width": 1200,
+    "height": 800
+  }
+]

@@ -31,7 +31,7 @@ export default function GymFallback({
 
   if (shape === "circle") {
     // 공백·기호를 뺀 앞 두 글자. "더클라임 강남점" → "더클", "M2클라이밍" → "M2"
-    const label = (name ?? "").replace(/[\s·\-_()]/g, "").slice(0, 2) || "짐";
+    const label = (name ?? "").replace(/[\s·\-_()]/g, "").slice(0, 2) || "장소";
     return (
       <span
         aria-hidden

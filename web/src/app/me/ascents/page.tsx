@@ -4,10 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import BackButton from "@/components/BackButton";
 import AscentRecordForm from "@/components/AscentRecordForm";
-import { currentUser, fetchGyms } from "@/lib/supabase";
+import { currentUser } from "@/lib/supabase";
 import { ASCENT_PAGE, deleteAscentRecord, fetchAscentHistory, fetchClimbingProgress, isAscentPreview, saveAscentBatch } from "@/lib/climbingAscents";
 import { shoeProgress, type ClimbingProgress } from "@/lib/shoeProgress";
-import { GYM_GRADE_GUIDES } from "@/lib/gymGrades";
 import { ascentDifficulty } from "@/lib/hobiDifficulty";
 import { clearAscentGuideDraft, saveAscentGuideDraft, takeAscentGuideDraft } from "@/lib/ascentGuideDraft";
 import { ascentColorHex, ascentDraftError, ascentGradeLabel, draftFromAscent, emptyAscentDraft, type AscentDraft, type AscentRecord } from "@/lib/ascentRecord";
@@ -20,7 +19,6 @@ export default function AscentsPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [draft, setDraft] = useState<AscentDraft>(emptyAscentDraft);
   const [editing, setEditing] = useState(false);
-  const [gyms, setGyms] = useState(GYM_GRADE_GUIDES.map(guide => guide.name));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [loadError, setLoadError] = useState("");
@@ -50,8 +48,6 @@ export default function AscentsPage() {
           if (saved) setDraft(saved);
           const rows = await load();
           if (alive && saved) setEditing(!!saved.legacyId || !!rows?.some(row => row.id === saved.recordId));
-          const gyms = await fetchGyms();
-          if (alive && gyms) setGyms(gyms.map(gym => gym.name));
         }
       } catch { if (alive) setLoadError("로그인 상태를 확인하지 못했어요"); }
     })();
@@ -115,7 +111,7 @@ export default function AscentsPage() {
           if (busy) { event.preventDefault(); return; } if (userId.current) saveAscentGuideDraft(userId.current, draft);
         }} className="inline-flex min-h-11 items-center text-[12px] font-semibold aria-disabled:opacity-40">단계 기준표 보러가기 →</Link>
       </div>
-      <AscentRecordForm draft={draft} onChange={setDraft} onSubmit={submit} onCancel={reset} editing={editing} busy={busy || loadingMore} gyms={gyms}
+      <AscentRecordForm draft={draft} onChange={setDraft} onSubmit={submit} onCancel={reset} editing={editing} busy={busy || loadingMore}
         onGuide={() => { if (userId.current) saveAscentGuideDraft(userId.current, draft); }} />
       {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
       {notice && <p role="status" className="mt-3 text-sm text-accent-strong">{notice}</p>}
@@ -126,7 +122,7 @@ export default function AscentsPage() {
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-[11px] text-muted">{row.completed_on?.replaceAll("-", ".") ?? "날짜 미입력"}</p>
-                <p className="mt-1 break-words text-[14px] font-semibold">{row.gym}</p>
+                <p className="mt-1 break-words text-[14px] font-semibold">{row.gym === "기타 암장" ? "기타 클라이밍장" : row.gym}</p>
                 {row.kind === "legacy" && <p className="mt-1 break-words text-xs text-muted">{row.legacy_problem}</p>}
               </div>
               <div className="flex shrink-0">

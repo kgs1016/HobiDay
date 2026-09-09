@@ -1,20 +1,19 @@
 "use client";
 
-import { useRef } from "react";
 import Link from "next/link";
-import { ascentColorHex, ascentDraftError, ascentGradeLabel, ascentPalette, ascentToday, changeAscentGym, colorAscentEntry, type AscentDraft, type AscentEntry } from "@/lib/ascentRecord";
-import { findGymGradeGuide, gymGradeGuideHref } from "@/lib/gymGrades";
+import { ascentColorHex, ascentDraftError, ascentGradeLabel, ascentPalette, ascentToday, changeAscentGym, selectAscentBrand, addManualAscentEntry, colorAscentEntry, type AscentDraft, type AscentEntry } from "@/lib/ascentRecord";
+import { findGymGradeGuide, GYM_GRADE_GUIDES, gymGradeGuideHref } from "@/lib/gymGrades";
 import { findGradeMapping, gradeMappingById, gradeMappingLabel } from "@/lib/gymGradeMappings";
 import { ascentDifficulty, colorDifficulty, HOBI_DIFFICULTIES } from "@/lib/hobiDifficulty";
 
 const inputClass = "mt-2 block min-h-12 w-full min-w-0 rounded-xl border border-line bg-surface px-3 py-3 text-[16px] font-normal disabled:opacity-50";
-export default function AscentRecordForm({ draft, onChange, onSubmit, onCancel, onGuide, busy, editing, gyms }: {
+export default function AscentRecordForm({ draft, onChange, onSubmit, onCancel, onGuide, busy, editing }: {
   draft: AscentDraft; onChange: (draft: AscentDraft) => void; onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
-  onCancel: () => void; onGuide: () => void; busy: boolean; editing: boolean; gyms: string[];
+  onCancel: () => void; onGuide: () => void; busy: boolean; editing: boolean;
 }) {
-  const gymInput = useRef<HTMLInputElement>(null);
   const guide = findGymGradeGuide(draft.gym);
-  const palette = ascentPalette(draft.gym);
+  const otherMode = draft.gym_mode === "other" || (!!draft.gym && !guide);
+  const palette = guide ? ascentPalette(draft.gym) : [];
   const selected = draft.items;
   const total = selected.reduce((sum, item) => sum + item.quantity, 0);
   const points = selected.reduce((sum, item) => sum + (ascentDifficulty(draft.gym, item)?.points ?? 0) * item.quantity, 0);
@@ -30,11 +29,6 @@ export default function AscentRecordForm({ draft, onChange, onSubmit, onCancel, 
     if (pending >= 0) onChange({ ...draft, items: selected.map((item, i) => i === pending ? entry : item) });
     else if (selected.length < 20) onChange({ ...draft, items: [...selected, entry] });
   };
-  const addOther = () => {
-    const pending = selected.findIndex(item => !item.color);
-    if (pending >= 0) update(pending, { custom_color: true });
-    else if (selected.length < 20) onChange({ ...draft, items: [...selected, { color: "", quantity: 1, v_grade: null, grade_mapping_id: null, custom_color: true }] });
-  };
   const changeCount = (index: number, quantity: number) => update(index, {
     quantity: Math.max(0, Math.min(99, Number.isFinite(quantity) ? Math.trunc(quantity) : 0)),
   });
@@ -46,26 +40,26 @@ export default function AscentRecordForm({ draft, onChange, onSubmit, onCancel, 
           required min="1900-01-01" max={ascentToday()} className="min-h-11 w-48 min-w-0 rounded-xl border border-line bg-surface px-3 text-[16px] font-normal" />
       </label>
       <div>
-        <div className="flex items-center justify-between gap-2">
-          <label htmlFor="ascent-gym" className="text-[13px] font-semibold">{draft.gym_mode === "other" ? "기타 암장 이름" : "암장"}</label>
-          <button type="button" className="min-h-11 text-[12px] font-medium text-muted" onClick={() => {
-            onChange({ ...changeAscentGym(draft, ""), gym_mode: draft.gym_mode === "other" ? "search" : "other" });
-            gymInput.current?.focus();
-          }}>{draft.gym_mode === "other" ? "목록에서 찾기" : "기타 암장 직접 입력"}</button>
-        </div>
-        <input ref={gymInput} id="ascent-gym" value={draft.gym} onChange={event => onChange(changeAscentGym(draft, event.target.value))}
-          list={draft.gym_mode === "other" ? undefined : "ascent-gyms"} required maxLength={100} autoComplete="off"
-          placeholder={draft.gym_mode === "other" ? "방문한 암장 이름 입력" : "암장 이름 · 지점"} className={inputClass} />
-        <datalist id="ascent-gyms">{gyms.map(name => <option key={name} value={name} />)}</datalist>
+        <label htmlFor="ascent-brand" className="text-[13px] font-semibold">클라이밍장 브랜드</label>
+        <select id="ascent-brand" value={otherMode ? "other" : guide?.id ?? ""} required
+          onChange={event => onChange(selectAscentBrand(draft, event.target.value))} className={inputClass}>
+          <option value="" disabled>브랜드 선택</option>
+          {GYM_GRADE_GUIDES.map(brand => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
+          <option value="other">기타</option>
+        </select>
+        {otherMode && <label className="mt-3 block text-[12px] text-muted">클라이밍장 이름 · 선택
+          <input value={["기타 암장", "기타 클라이밍장"].includes(draft.gym) ? "" : draft.gym}
+            onChange={event => onChange(changeAscentGym(draft, event.target.value || "기타 클라이밍장"))}
+            maxLength={100} autoComplete="off" placeholder="클라이밍장 이름" className={inputClass} />
+        </label>}
       </div>
-      <div>
+      {guide && !otherMode && <div>
         <div className="mb-3 flex items-center justify-between gap-2">
           <p id="ascent-colors" className="text-[13px] font-semibold">난이도 색상</p>
           <Link href={gymGradeGuideHref(draft.gym)} aria-disabled={busy} onClick={event => {
             if (busy) { event.preventDefault(); return; } onGuide();
           }} className="inline-flex min-h-11 items-center text-[12px] font-medium text-muted aria-disabled:opacity-40">색상 기준표 ›</Link>
         </div>
-        <p className="mb-3 text-[12px] text-muted">{guide ? guide.name : "공통 색상 · 없으면 기타로 입력"}</p>
         <div role="group" aria-labelledby="ascent-colors" className="grid grid-cols-5 gap-2">
           {palette.map(color => {
             const entry = selected.find(item => item.color === color.name);
@@ -79,13 +73,12 @@ export default function AscentRecordForm({ draft, onChange, onSubmit, onCancel, 
               {entry && <span aria-hidden="true" className="absolute right-1 top-1 rounded-full bg-ink px-1.5 text-[10px] leading-4 text-white">{entry.quantity}</span>}
             </button>;
           })}
-          <button type="button" onClick={addOther} disabled={selected.length >= 20 && !selected.some(item => !item.color)}
-            className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-line bg-surface py-3 disabled:opacity-30">
-            <span aria-hidden="true" className="flex h-7 w-7 items-center justify-center text-xl text-muted">+</span>
-            <span className="text-[12px] font-medium">기타</span>
-          </button>
         </div>
-      </div>
+      </div>}
+      {otherMode && <button type="button" onClick={() => onChange(addManualAscentEntry(draft))}
+        disabled={selected.length >= 11} className="button-secondary min-h-12 w-full rounded-xl px-3 py-3 text-[13px] font-semibold">
+        + H 난이도 추가
+      </button>}
       {selected.length > 0 && <div className="rounded-2xl border border-line px-3.5">
         {selected.map((item, index) => {
           const mapping = gradeMappingById(item.grade_mapping_id);
@@ -93,9 +86,10 @@ export default function AscentRecordForm({ draft, onChange, onSubmit, onCancel, 
           const autoDifficulty = colorDifficulty(draft.gym, item.color);
           const difficulty = ascentDifficulty(draft.gym, item);
           const name = item.color || "기타 " + (index + 1);
+          const hOnly = otherMode && /^H([1-9]|10|11)$/.test(item.color);
           return <div key={index} className="border-b border-line py-3 last:border-0">
             <div className="flex items-center justify-between gap-2">
-              {item.custom_color || !item.color ? <input aria-label={"기타 색상 " + (index + 1)} placeholder="색상 이름" maxLength={20} required
+              {!hOnly && (item.custom_color || !item.color) ? <input aria-label={"기타 색상 " + (index + 1)} placeholder="색상 이름" maxLength={20} required
                 autoFocus={!item.color} value={item.color} onChange={event => update(index, { color: event.target.value,
                   v_grade: item.grade_mapping_id ? null : item.v_grade, grade_mapping_id: null,
                   manual_difficulty: colorDifficulty(draft.gym, event.target.value) ? null : item.manual_difficulty })}
@@ -116,16 +110,17 @@ export default function AscentRecordForm({ draft, onChange, onSubmit, onCancel, 
             <div className="mt-2 flex items-center justify-between gap-2">
               {autoDifficulty ? <span className="text-[12px] text-muted">하비데이 H{autoDifficulty.level} · {autoDifficulty.points}점/개</span> :
                 <select aria-label={name + " 하비데이 난이도"} value={item.manual_difficulty ?? ""}
-                  onChange={event => update(index, { manual_difficulty: event.target.value === "" ? null : Number(event.target.value) })}
+                  onChange={event => update(index, { manual_difficulty: event.target.value === "" ? null : Number(event.target.value),
+                    ...(hOnly ? { color: `H${event.target.value}` } : {}) })}
                   className="min-h-11 min-w-0 rounded-lg bg-surface2 px-2 text-[13px]">
-                  <option value="">{item.v_grade !== null ? `V기록 참고 · H${difficulty?.level}` : "하비데이 난이도 모름"}</option>
-                  {HOBI_DIFFICULTIES.map(level => <option key={level.level} value={level.level}>H{level.level} · {level.points}점/개</option>)}
+                  {!hOnly && <option value="">{item.v_grade !== null ? `V기록 참고 · H${difficulty?.level}` : "하비데이 난이도 모름"}</option>}
+                  {HOBI_DIFFICULTIES.map(level => <option key={level.level} value={level.level} disabled={hOnly && selected.some((entry, i) => i !== index && entry.color === `H${level.level}`)}>H{level.level} · {level.points}점/개</option>)}
                 </select>}
               <button type="button" aria-label={name + " 선택 삭제"} onClick={() => onChange({ ...draft, items: selected.filter((_, i) => i !== index) })}
                 className="min-h-11 px-2 text-[12px] text-muted">삭제</button>
             </div>
             <p className="text-[12px] font-semibold">{difficulty ? `+${difficulty.points * item.quantity}점` : "개수만 기록"}</p>
-            <details className="mt-1 text-[11px] text-muted">
+            {!hOnly && <details className="mt-1 text-[11px] text-muted">
               <summary className="min-h-11 cursor-pointer content-center">V등급 참고 기록 · 선택</summary>
               <select aria-label={name + " V등급"} value={mapping ? "auto" : item.v_grade ?? ""} onChange={event => {
                 if (event.target.value === "auto" && available) update(index, { v_grade: available.min, grade_mapping_id: available.id });
@@ -138,21 +133,19 @@ export default function AscentRecordForm({ draft, onChange, onSubmit, onCancel, 
               {mapping && <a href={mapping.sourceUrl} target="_blank" rel="noopener noreferrer" className="block min-h-11 content-center underline">
                 {ascentGradeLabel(mapping.min)} · {mapping.publishedOn ?? "작성일 미확인"} 안내판 참고 ↗
               </a>}
-            </details>
+            </details>}
           </div>;
         })}
       </div>}
       {selected.length > 0 && <div className="space-y-1 text-[11px] leading-relaxed text-muted">
         <p className="text-[13px] font-semibold text-ink">이 기록 +{points.toLocaleString()}점</p>
-        <p>색상별 점수 × 완등 수 · 하비데이 자체 기준</p>
-        <p>기타 난이도는 H1(가장 쉬움)~H11(가장 어려움). 난이도를 모르면 개수만 기록됩니다.</p>
       </div>}
       {invalid && total > 0 && draft.gym.trim() && <p role="status" className="text-[12px] text-muted">{invalid}</p>}
     </fieldset>
     <div className="flex gap-2">
       {editing && <button type="button" onClick={onCancel} disabled={busy} className="button-secondary rounded-xl px-4 py-3 text-sm">취소</button>}
       <button type="submit" disabled={busy || !!invalid} className="button-primary min-h-13 flex-1 rounded-xl px-4 py-3 text-[14px] font-semibold">
-        {busy ? "저장 중…" : editing ? total + "개 수정 저장" : total ? total + "개 한 번에 기록하기" : "색상과 개수를 선택해주세요"}
+        {busy ? "저장 중…" : editing ? total + "개 수정 저장" : total ? total + "개 한 번에 기록하기" : otherMode ? "H 난이도와 개수를 선택해주세요" : "색상과 개수를 선택해주세요"}
       </button>
     </div>
   </form>;
