@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import BackButton from "@/components/BackButton";
 import { useRouter } from "next/navigation";
 import { careerLabel, level } from "@/lib/levels";
 import { AvatarFallback, ChevronRightIcon } from "@/components/icons";
@@ -229,8 +230,9 @@ export default function Inbox() {
   if (authed === false)
     return (
       <main className="px-4">
-        <header className="pt-6 pb-4">
-          <h1 className="text-[20px] font-bold tracking-tight">신청함</h1>
+        <header className="flex items-center gap-2 pt-4 pb-3">
+          <BackButton fallback="/" />
+          <h1 className="text-[20px] font-bold tracking-tight">신청 내역</h1>
         </header>
         <div className="mt-14 flex flex-col items-center gap-3 text-center">
           <p className="text-[14px] text-muted">로그인하면 신청 내역이 보여요</p>
@@ -259,8 +261,9 @@ export default function Inbox() {
 
   return (
     <main className="px-4">
-      <header className="pt-6 pb-3">
-        <h1 className="text-[20px] font-bold tracking-tight">신청함</h1>
+      <header className="flex items-center gap-2 pt-4 pb-3">
+        <BackButton fallback="/" />
+        <h1 className="text-[20px] font-bold tracking-tight">신청 내역</h1>
       </header>
 
       {/* 내가 답해야 하는 것과 내가 기다리는 것은 성격이 달라서 나눈다 */}

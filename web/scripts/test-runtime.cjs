@@ -154,6 +154,31 @@ async function checkClock() {
   assert.equal(store.snapshot(), 0, 'new forms cannot initialize from a stale timestamp');
 }
 
+async function checkNewsReader() {
+  const id = '08746754-0cf8-4020-9cdc-10fe7cbeb9f0';
+  const article = { id, kind: 'news', title: 'News', summary: 'Summary' };
+  let result = { data: article, error: null };
+  const requests = [];
+  const { fetchNewsArticle } = load('supabase.ts', {
+    process: { env: { NEXT_PUBLIC_SUPABASE_URL: 'https://local.test', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test' } },
+    require: name => name === '@supabase/supabase-js' ? { createClient: () => ({
+      rpc: async (name, args) => { requests.push({ name, args }); return result; },
+    }) } : {},
+  });
+  for (const invalid of ['', 'not-a-news-id', '../post']) {
+    assert.equal((await fetchNewsArticle(invalid)).article, null);
+  }
+  assert.equal(requests.length, 0, 'malformed links must not send invalid UUIDs to the server');
+  assert.equal((await fetchNewsArticle(id)).article, article);
+  assert.equal(requests[0].args.p_article, id, 'a detail link reads its exact article, independent of list pagination');
+  result = { data: null, error: null };
+  assert.equal((await fetchNewsArticle(id)).error, null, 'a hidden or deleted article is unavailable without a transport error');
+  result = { data: article, error: { message: 'connection failed' } };
+  const failed = await fetchNewsArticle(id);
+  assert.equal(failed.article, null, 'an errored response must not expose stale content');
+  assert.equal(failed.error, 'connection failed', 'network failures must offer retry instead of showing a removed-article message');
+}
+
 (async () => {
   const { findGym, matchesSearch } = load('homeSearch.ts');
   const gyms = [{ name: '더클라임 연남점', aliases: ['The Climb Yeonnam'] }];
@@ -171,5 +196,7 @@ async function checkClock() {
   assert.equal(matchesSearch('  ', [undefined, null]), true, 'clearing search restores every row');
   await checkPolling();
   await checkClock();
+  await checkNewsReader();
   console.log('PASS: gym alias search, combined search terms, serialized polling, queued refresh, cancellation, background/resume, failure recovery, unchanged rows, shared clock and cleanup');
+  console.log('PASS: news detail links, unavailable articles and retryable failures');
 })().catch(error => { console.error(error); process.exitCode = 1; });

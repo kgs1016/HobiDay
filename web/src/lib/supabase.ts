@@ -11,6 +11,7 @@ import type {
   ArticleKind,
   PostDetail,
   PostSummary,
+  PostCategory,
 } from "./community";
 
 let _client: SupabaseClient | null | undefined;
@@ -1127,7 +1128,7 @@ export async function fetchPublicShoeAchievements(userIds: string[], sessionId?:
   if (!ids.length) return {};
   const sb = getSupabase();
   if (!sb) return null;
-  const { data, error } = await sb.rpc("public_climbing_achievements", {
+  const { data, error } = await sb.rpc("public_climbing_achievements_v3", {
     p_users: ids, p_session: sessionId ?? null,
   });
   if (error || !Array.isArray(data)) return null;
@@ -1329,13 +1330,26 @@ export async function fetchArticles(kind: ArticleKind): Promise<Article[] | null
   return data as Article[];
 }
 
+/** 뉴스 상세는 목록의 최근 N개 범위와 별개로 조회한다. 숨긴 글은 서버에서 제외한다. */
+export async function fetchNewsArticle(id: string): Promise<{ article: Article | null; error: string | null }> {
+  if (!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id)) {
+    return { article: null, error: null };
+  }
+  const sb = getSupabase();
+  if (!sb) return { article: null, error: "no_client" };
+  const { data, error } = await sb.rpc("community_news_detail", { p_article: id });
+  return { article: error ? null : (data as Article | null), error: error?.message ?? null };
+}
+
 /** 최신순 한 장. before 를 주면 그보다 오래된 글부터 (다음 장) */
-export async function fetchPosts(before?: string): Promise<PostSummary[] | null> {
+export async function fetchPosts(category: PostCategory = "board", before?: Pick<PostSummary, "id" | "created_at">): Promise<PostSummary[] | null> {
   const sb = getSupabase();
   if (!sb) return null;
-  const { data, error } = await sb.rpc("post_list", { p_before: before ?? null });
+  const { data, error } = await sb.rpc("post_list_by_category", {
+    p_category: category, p_before: before?.created_at ?? null, p_before_id: before?.id ?? null,
+  });
   if (error) {
-    console.error("post_list", error);
+    console.error("post_list_by_category", error);
     return null;
   }
   return data as PostSummary[];
@@ -1363,8 +1377,8 @@ async function callRpc<T = object>(fn: string, args: Record<string, unknown>) {
   return (data ?? {}) as RpcResult<T>;
 }
 
-export const createPost = (title: string, body: string) =>
-  callRpc<{ id: string }>("post_create", { p_title: title, p_body: body });
+export const createPost = (title: string, body: string, category: PostCategory = "board") =>
+  callRpc<{ id: string }>("post_create_in_category", { p_title: title, p_body: body, p_category: category });
 
 export const updatePost = (id: string, title: string, body: string) =>
   callRpc("post_update", { p_post: id, p_title: title, p_body: body });

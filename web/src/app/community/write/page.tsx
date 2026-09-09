@@ -4,12 +4,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQueryId } from "@/lib/queryId";
+import { useQueryId, useQueryParam } from "@/lib/queryId";
 import BackButton from "@/components/BackButton";
-import { MOCK_POSTS, POST_BODY_MAX, POST_TITLE_MAX } from "@/lib/community";
+import { boardHref, MOCK_POSTS, POST_BODY_MAX, POST_TITLE_MAX, type PostCategory } from "@/lib/community";
 import { createPost, fetchPost, hasSupabase, updatePost } from "@/lib/supabase";
-
-const BOARD = "/community?tab=board";
 
 const ERRORS: Record<string, string> = {
   no_auth: "로그인이 필요해요",
@@ -21,12 +19,16 @@ const ERRORS: Record<string, string> = {
 
 export default function WritePost() {
   const id = useQueryId(); // null = 새 글, string = 수정
+  const categoryQuery = useQueryParam("category");
+  const [postCategory, setPostCategory] = useState<PostCategory | null>(null);
+  const category = postCategory ?? (categoryQuery === "gear" ? "gear" : "board");
+  const BOARD = boardHref(category);
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [loaded, setLoaded] = useState(false); // 수정 모드에서 글을 받았는가
   const [busy, setBusy] = useState(false);
-  const ready = id === null || loaded;
+  const ready = categoryQuery !== undefined && (id === null || loaded);
 
   useEffect(() => {
     if (!id) return;
@@ -36,11 +38,12 @@ export default function WritePost() {
         : await Promise.resolve(MOCK_POSTS.find((x) => x.id === id) ?? null);
       if (!p || !p.mine) {
         alert("고칠 수 없는 글이에요");
-        router.replace(BOARD);
+        router.replace("/community");
         return;
       }
       setTitle(p.title);
       setBody(p.body);
+      setPostCategory(p.category ?? "board");
       setLoaded(true);
     })();
   }, [id, router]);
@@ -56,7 +59,7 @@ export default function WritePost() {
     setBusy(true);
     const r = id
       ? await updatePost(id, title.trim(), body.trim())
-      : await createPost(title.trim(), body.trim());
+      : await createPost(title.trim(), body.trim(), category);
     setBusy(false);
     if (r.error) return alert(ERRORS[r.error] ?? `실패: ${r.error}`);
     const postId = id ?? (r as { id?: string }).id;
@@ -84,6 +87,8 @@ export default function WritePost() {
         </button>
       </header>
 
+      <p className="mt-2 text-[13px] font-semibold text-muted">{category === "gear" ? "장비 추천" : "자유게시판"}</p>
+
       {/* iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다 */}
       <input
         value={title}
@@ -94,7 +99,7 @@ export default function WritePost() {
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value.slice(0, POST_BODY_MAX))}
-        placeholder="클라이밍 이야기, 궁금한 것, 같이 갈 사람 찾기… 무엇이든"
+        placeholder={category === "gear" ? "써본 장비의 후기나 궁금한 장비를 이야기해보세요" : "클라이밍 이야기, 궁금한 것, 같이 갈 사람 찾기… 무엇이든"}
         rows={12}
         className="mt-2 w-full resize-none bg-transparent py-3 text-[16px] leading-relaxed text-ink placeholder:text-faint focus:outline-none"
       />

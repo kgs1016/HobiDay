@@ -55,7 +55,7 @@ export default function ChatRequestSheet({
     notifyPush(
       target.id,
       "💬 새 채팅 신청이 왔어요",
-      msg.trim() || "신청함에서 프로필을 확인해보세요",
+      msg.trim() || "신청 내역에서 프로필을 확인해보세요",
       "/inbox"
     );
     onSent?.();

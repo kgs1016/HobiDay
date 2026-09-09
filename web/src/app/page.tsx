@@ -9,7 +9,7 @@ import ProfileTodo from "@/components/ProfileTodo";
 import HomeBanner from "@/components/HomeBanner";
 import { ShoeBadge } from "@/components/PublicShoe";
 import ChatRequestSheet from "@/components/ChatRequestSheet";
-import { AvatarFallback, BellIcon, PlusIcon, SearchIcon } from "@/components/icons";
+import { AvatarFallback, BellIcon, MailIcon, PlusIcon, SearchIcon } from "@/components/icons";
 import { HoldIllust, ShoeIllust } from "@/components/illustrations";
 import { MOCK_SESSIONS, MOCK_PEOPLE, type Session, type Person } from "@/lib/mock";
 import { careerLabel, level } from "@/lib/levels";
@@ -20,6 +20,7 @@ import {
 } from "@/lib/sessionFilter";
 import { findGym, matchesSearch } from "@/lib/homeSearch";
 import { loadMyProfile, type MyProfile } from "@/lib/myProfile";
+import { startPolling } from "@/lib/polling";
 import {
   hasSupabase,
   currentUser,
@@ -31,6 +32,7 @@ import {
   fetchGyms,
   type Gym,
   fetchNotifications,
+  fetchInboxCounts,
   fetchSentRequests,
   signedPhotoUrls,
   toSession,
@@ -64,6 +66,7 @@ export default function Home() {
   const [sentTo, setSentTo] = useState<Set<string>>(new Set());
   // 종 아이콘 배지 — 안 읽은 알림 수만 쓴다
   const [unread, setUnread] = useState(0);
+  const [requests, setRequests] = useState(0);
   const [reqTarget, setReqTarget] = useState<Person | null>(null);
 
   useEffect(() => {
@@ -129,6 +132,16 @@ export default function Home() {
     })();
   }, []);
 
+  // 하단 신청함에 있던 확인 필요 배지를 편지 아이콘에서도 갱신한다.
+  useEffect(() => {
+    if (!authed) return;
+    const poller = startPolling(async signal => {
+      const inbox = await fetchInboxCounts();
+      if (!signal.aborted && inbox) setRequests(inbox.requests);
+    }, 30_000);
+    return () => poller.stop();
+  }, [authed]);
+
   // 오픈 전 대기 화면 — 가입·프로필은 끝냈고 기능만 잠긴 상태.
   // authed 를 함께 보는 이유: 로그인도 안 한 사람에게 "가입 완료!" 가 뜨면
   // 안 된다. 비로그인은 아래 로그인 안내 화면으로 내려보낸다.
@@ -179,7 +192,7 @@ export default function Home() {
               <span className="text-muted"> — 같이 타고 싶은 사람에게 채팅 보내기</span>
             </p>
             <p>
-              <span className="font-medium">라운지</span>
+              <span className="font-medium">영상</span>
               <span className="text-muted"> — 등반 영상 올리고 피드백 받기</span>
             </p>
             <p>
@@ -324,10 +337,17 @@ export default function Home() {
             <SearchIcon size={21} />
           </button>
           <Link href="/notifications" aria-label={unread ? `알림 ${unread}개 안 읽음` : "알림"}
-            className="relative -mr-1 flex h-10 w-10 shrink-0 items-center justify-center text-ink">
+            className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink active:bg-surface2">
             <BellIcon size={21} />
             {unread > 0 && <span aria-hidden="true" className="absolute right-0 top-0 min-w-[15px] rounded-full bg-danger px-1 text-center text-[9.5px] font-bold leading-[15px] text-white">
               {unread > 99 ? "99+" : unread}
+            </span>}
+          </Link>
+          <Link href="/inbox" aria-label={requests ? `신청 내역 ${requests}개 확인 필요` : "신청 내역"}
+            className="relative -mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink active:bg-surface2">
+            <MailIcon size={21} />
+            {requests > 0 && <span aria-hidden="true" className="absolute right-0 top-0 min-w-[15px] rounded-full bg-danger px-1 text-center text-[9.5px] font-bold leading-[15px] text-white">
+              {requests > 99 ? "99+" : requests}
             </span>}
           </Link>
         </div>

@@ -248,7 +248,7 @@ function SessionContent({ id, from }: { id: string | null; from: string | null |
       notifyPush(s.host.id, "🙋 새 모임 신청", `${s.gym} 모임에 신청이 왔어요. 확인해주세요!`, "/inbox");
     // 호스트 승인제 — 신청은 전부 대기로 들어간다
     alert(
-      "신청했어요! 호스트가 확인하면 알려드릴게요.\n신청함 → 보낸 신청에서 상태를 볼 수 있어요."
+      "신청했어요! 호스트가 확인하면 알려드릴게요.\n신청 내역 → 보낸 신청에서 상태를 볼 수 있어요."
     );
     load();
   };
