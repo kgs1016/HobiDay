@@ -1,6 +1,6 @@
 "use client";
 
-/* 커뮤니티 — 영상 피드백 · 자유 게시판 · 대회 · 뉴스.
+/* 라운지 — 영상 피드백 · 자유 게시판 · 대회 · 뉴스.
    대회 정보·클라이밍 뉴스는 크론이 밖에서 가져와 쌓아둔 기사를 읽는다
    (scripts/community-feed.mjs). 자유 게시판은 로그인한 누구나 쓴다.
    칸은 ?tab= 으로 기억한다 — 글을 읽고 돌아와도 같은 칸이 열리게. */
@@ -231,7 +231,7 @@ export default function Community() {
   return (
     <main className="px-4">
       <header className="flex items-center justify-between pt-6 pb-3">
-        <h1 className="text-[20px] font-bold tracking-tight">커뮤니티</h1>
+        <h1 className="text-[20px] font-bold tracking-tight">라운지</h1>
         {(tab === "board" || tab === "video") && authed && (
           <Link
             href={tab === "video" ? "/community/upload" : "/community/write"}
@@ -261,7 +261,7 @@ export default function Community() {
 
       {authed === false ? (
         <div className="mt-14 flex flex-col items-center gap-3 text-center">
-          <p className="text-[14px] text-muted">로그인하면 커뮤니티를 볼 수 있어요</p>
+          <p className="text-[14px] text-muted">로그인하면 라운지를 볼 수 있어요</p>
           <Link
             href="/login"
             className="button-primary rounded-xl px-6 py-2.5 text-[14px] font-semibold"

@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "lint": "eslint",
-    "test": "node scripts/test-runtime.cjs && node scripts/test-shoe-progress.cjs && node scripts/test-photo-upload.cjs && node scripts/test-profile-discovery.cjs",
+    "test": "node scripts/test-runtime.cjs && node scripts/test-shoe-progress.cjs && node scripts/test-photo-upload.cjs && node scripts/test-profile-discovery.cjs && node scripts/test-login.cjs",
     "check": "npm run lint && tsc --noEmit --incremental false && npm test",
     "sync": "node scripts/build-native.mjs"
   },

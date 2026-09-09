@@ -179,7 +179,7 @@ export default function Home() {
               <span className="text-muted"> — 같이 타고 싶은 사람에게 채팅 보내기</span>
             </p>
             <p>
-              <span className="font-medium">커뮤니티</span>
+              <span className="font-medium">라운지</span>
               <span className="text-muted"> — 등반 영상 올리고 피드백 받기</span>
             </p>
             <p>
