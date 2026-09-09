@@ -183,7 +183,7 @@ export default function ProfileNew() {
     if (isPublic && !careerId) return alert("사람 찾기에 공개하려면 구력을 선택해주세요");
     if (height && (Number(height) < 130 || Number(height) > 220))
       return alert("키를 확인해주세요 (130~220cm)");
-    // 키·동네·홈짐·MBTI 는 선택 — 채우고 싶은 사람만
+    // 키·동네·MBTI 는 선택 — 채우고 싶은 사람만
 
     const profile = buildProfile();
 
@@ -406,15 +406,6 @@ export default function ProfileNew() {
             onChange={(e) => setHeight(e.target.value.replace(/\D/g, "").slice(0, 3))}
             inputMode="numeric"
             placeholder="예: 168"
-            className={inputCls}
-          />
-        </Field>
-
-        <Field label="홈짐 (선택)">
-          <input
-            value={homeGym}
-            onChange={(e) => setHomeGym(e.target.value)}
-            placeholder="예: 더클라임 연남"
             className={inputCls}
           />
         </Field>

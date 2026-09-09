@@ -973,6 +973,7 @@ export interface SentRequest {
      소개팅 앱이던 시절의 짝사랑 비노출 규칙이었고, 2026-09 에 없앴다. */
   status: "pending" | "accepted" | "declined";
   to_id: string;
+  photo?: string | null;
   nickname: string;
   age: number;
   level: LevelId | null;

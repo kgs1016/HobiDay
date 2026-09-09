@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import BackButton from "@/components/BackButton";
+import NewsArtwork from "@/components/NewsArtwork";
 import { MOCK_ARTICLES, type Article } from "@/lib/community";
 import { useQueryId } from "@/lib/queryId";
 import { currentUser, fetchNewsArticle, hasSupabase } from "@/lib/supabase";
@@ -72,6 +73,7 @@ function NewsContent({ id }: { id: string | null }) {
       <p className="mt-3 text-[12.5px] text-muted">
         {[article.source, published].filter(Boolean).join(" · ")}
       </p>
+      <NewsArtwork article={article} />
       <div className="mt-6 border-t border-line pt-6">
         {article.summary?.trim() ? (
           <div className="space-y-6 text-[16px] leading-[1.9] text-ink [word-break:keep-all] [overflow-wrap:anywhere]">

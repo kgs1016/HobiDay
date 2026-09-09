@@ -19,7 +19,11 @@ for (const article of editorial.news) {
   assert.ok(article.summary.split('\n\n').length >= 3, 'news includes context across multiple paragraphs');
   assert.ok([...article.summary].length <= 2000, 'operator RPC must not truncate the briefing');
   assert.equal(new URL(article.url).protocol, 'https:');
+  assert.ok(!/(해요|돼요|이에요|예요|있어요|했어요|주세요)[.!?]/.test(article.summary), 'news uses formal article prose');
+  assert.ok(article.summary.split('\n\n').every(p => p.endsWith('니다.')), 'paragraphs end in formal prose');
+  assert.ok(article.image_alt && fs.existsSync(path.join(__dirname, '../public', article.image_url)), 'each news article includes a bundled illustration');
 }
+assert.equal(new Set(editorial.news.map(a => a.image_url)).size, editorial.news.length, 'article illustrations are distinct');
 for (const post of editorial.gear) {
   assert.ok([...post.title].length <= 80);
   assert.ok([...post.body].length <= 3000);

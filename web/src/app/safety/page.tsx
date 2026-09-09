@@ -70,7 +70,7 @@ export default function Safety() {
               <div className="min-w-0 flex-1">
                 <p className="text-[15px] font-semibold">{b.nickname}</p>
                 <p className="mt-0.5 truncate text-[12.5px] text-muted">
-                  {b.age} · {b.home_gym}
+                  {b.age}
                 </p>
               </div>
               <button

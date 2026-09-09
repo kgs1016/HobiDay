@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryId, useQueryParam } from "@/lib/queryId";
 import BackButton from "@/components/BackButton";
+import GearPreparing from "@/components/GearPreparing";
 import { boardHref, BOARD_TOPICS, isBoardTopic, MOCK_POSTS, POST_BODY_MAX, POST_TITLE_MAX, type BoardTopic, type PostCategory } from "@/lib/community";
 import { createPost, fetchPost, hasSupabase, updatePost } from "@/lib/supabase";
 
@@ -56,7 +57,7 @@ export default function WritePost() {
   const canSubmit = title.trim().length > 0 && body.trim().length > 0 && !busy;
 
   const submit = async () => {
-    if (!canSubmit) return;
+    if (!canSubmit || category === "gear") return;
     if (!hasSupabase()) {
       alert("목데이터 모드에서는 저장되지 않아요");
       return router.replace(BOARD);
@@ -75,6 +76,13 @@ export default function WritePost() {
     return (
       <main className="px-4 pt-24 text-center text-[13.5px] text-faint">불러오는 중…</main>
     );
+
+  if (category === "gear") return (
+    <main className="px-4">
+      <header className="flex items-center gap-2 pt-4"><BackButton to={BOARD} /><h1 className="text-[18px] font-bold">장비 추천</h1></header>
+      <GearPreparing />
+    </main>
+  );
 
   return (
     <main className="px-4 pb-10">
@@ -110,7 +118,7 @@ export default function WritePost() {
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value.slice(0, POST_BODY_MAX))}
-        placeholder={category === "gear" ? "써본 장비의 후기나 궁금한 장비를 이야기해보세요" : "클라이밍 이야기, 궁금한 것, 암장 후기… 편하게 남겨주세요"}
+        placeholder="클라이밍 이야기, 궁금한 것, 암장 후기… 편하게 남겨주세요"
         rows={12}
         className="mt-2 w-full resize-none bg-transparent py-3 text-[16px] leading-relaxed text-ink placeholder:text-faint focus:outline-none"
       />

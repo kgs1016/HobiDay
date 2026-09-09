@@ -1,6 +1,6 @@
 "use client";
 
-/* 채팅 보내기 시트 — 사람 찾기 목록과 프로필 화면이 같이 쓴다.
+/* 대화신청 시트 — 사람 찾기 목록과 프로필 화면이 같이 쓴다.
    한 줄 메시지를 붙이면 받는 쪽이 맥락을 보고 판단한다. */
 
 import { useState } from "react";
@@ -23,7 +23,7 @@ export default function ChatRequestSheet({
   onClose,
   onSent,
 }: {
-  target: { id: string; nickname: string; homeGym?: string | null };
+  target: { id: string; nickname: string };
   onClose: () => void;
   /** 보내진 뒤 — "보냈어요" 상태로 바꾸는 데 쓴다 */
   onSent?: () => void;
@@ -37,7 +37,7 @@ export default function ChatRequestSheet({
     setBusy(true);
     if (hasSupabase() && !isProfileComplete(await fetchMyProfileDb())) {
       setBusy(false);
-      alert("채팅을 보내려면 대표 사진과 구력을 입력해주세요. 사람 찾기 공개는 선택입니다.");
+      alert("대화를 신청하려면 대표 사진과 구력을 입력해주세요. 사람 찾기 공개는 선택입니다.");
       router.push("/profile/new");
       return;
     }
@@ -48,19 +48,19 @@ export default function ChatRequestSheet({
       return alert(
         r.status === "accepted"
           ? "이미 채팅이 열려 있어요"
-          : "이미 보낸 채팅 신청이 답을 기다리고 있어요"
+          : "이미 보낸 대화신청이 답을 기다리고 있어요"
       );
     if (r.error) return alert(REQ_ERRORS[r.error] ?? `실패: ${r.error}`);
 
     notifyPush(
       target.id,
-      "💬 새 채팅 신청이 왔어요",
+      "💬 새 대화신청이 왔어요",
       msg.trim() || "신청 내역에서 프로필을 확인해보세요",
       "/inbox"
     );
     onSent?.();
     onClose();
-    alert(`${target.nickname}님에게 채팅을 보냈어요!\n수락하면 채팅이 열려요.`);
+    alert(`${target.nickname}님에게 대화를 신청했어요!\n수락하면 채팅이 열려요.`);
   };
 
   return (
@@ -69,16 +69,12 @@ export default function ChatRequestSheet({
         className="mx-auto w-full max-w-md rounded-t-2xl bg-surface p-5 pb-8"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-[16.5px] font-bold">{target.nickname}님에게 채팅 보내기</p>
+        <p className="text-[16.5px] font-bold">{target.nickname}님에게 대화신청</p>
         <textarea
           value={msg}
           onChange={(e) => setMsg(e.target.value.slice(0, 200))}
           rows={3}
-          placeholder={
-            target.homeGym
-              ? `예: 같은 ${target.homeGym} 다니네요! 주말에 같이 타요`
-              : "예: 주말에 같이 타요"
-          }
+          placeholder="예: 주말에 같이 타요"
           /* iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다 */
           className="mt-3 w-full resize-none rounded-lg bg-surface2 px-3.5 py-3 text-[16px] text-ink placeholder:text-faint focus:outline-none"
         />
@@ -88,7 +84,7 @@ export default function ChatRequestSheet({
           onClick={send}
           className="button-primary mt-2 w-full rounded-xl py-3.5 text-[15px] font-semibold"
         >
-          {busy ? "보내는 중…" : "채팅 보내기"}
+          {busy ? "보내는 중…" : "대화신청"}
         </button>
         <button
           onClick={onClose}

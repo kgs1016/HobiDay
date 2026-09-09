@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import PersonAvatar from "@/components/PersonAvatar";
 import { useRouter } from "next/navigation";
 import { useLocationHash, useQueryParam } from "@/lib/queryId";
 import { useNow } from "@/lib/browserState";
@@ -382,6 +383,8 @@ function ChatFrame({
   sub,
   action,
   onTitle,
+  avatar,
+  titleLabel,
   closedNote,
   onSend,
   children,
@@ -395,6 +398,8 @@ function ChatFrame({
   closedNote?: string | null;
   /** 제목을 누를 때 — 1:1 은 상대 프로필, 모임방은 진행 화면 */
   onTitle?: () => void;
+  avatar?: React.ReactNode;
+  titleLabel?: string;
   onSend: (body: string) => Promise<void>;
   children: React.ReactNode;
 }) {
@@ -441,8 +446,10 @@ function ChatFrame({
             /* 누를 수 있다는 걸 알려야 해서 chevron 을 붙인다 */
             <button
               onClick={onTitle}
-              className="flex max-w-full items-center gap-1 text-left"
+              aria-label={titleLabel}
+              className="flex min-h-11 max-w-full items-center gap-2.5 text-left"
             >
+              {avatar}
               <div className="min-w-0">
                 <h1 className="truncate text-[16px] font-bold tracking-tight">
                   {title}
@@ -654,8 +661,9 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
         sub={[origin(chat), chat.level && level(chat.level).name]
           .filter(Boolean)
           .join(" · ")}
-        /* 제목은 누르지 않는다 — 프로필은 말풍선 옆 아바타로만 연다.
-           단체방은 제목을 누르면 모임 정보로 간다 (SessionThread). */
+        onTitle={openProfile}
+        titleLabel={`${chat.nickname} 프로필 보기`}
+        avatar={<PersonAvatar url={partnerPhoto} />}
         closedNote={
           chat.partner_left
             ? "상대가 대화방을 나갔어요. 더 이상 메시지를 보낼 수 없어요."
@@ -792,8 +800,10 @@ function SessionThread({
     <ChatFrame
       onBack={onBack}
       title={room.gym}
-      sub={`${sessionSub(room)} · ${room.members}명`}
+      sub={sessionSub(room)}
       onTitle={() => router.push(`/session?id=${room.session_id}&from=chat`)}
+      titleLabel={`${room.gym} 모임 정보 보기`}
+      avatar={<GymPhoto src={room.gym_thumb} name={room.gym} size={40} shape="circle" />}
       action={
         <button
           onClick={openPicker}

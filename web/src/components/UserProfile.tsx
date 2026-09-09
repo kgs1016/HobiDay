@@ -91,7 +91,11 @@ export default function UserProfile({
       ? `/chat?room=${sessionId}#session`
       : from === "chat" && matchId
         ? `/chat?thread=${matchId}`
-        : undefined;
+        : from === "inbox-sent"
+          ? "/inbox?tab=sent"
+          : from === "inbox"
+            ? "/inbox"
+            : undefined;
 
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
   const [photo, setPhoto] = useState<string | null>(null);
@@ -219,7 +223,6 @@ export default function UserProfile({
       <section className="mt-6 border-t border-line pt-2">
         {lv && <Row label="등반 수준" value={`${lv.name} · 직접 선택`} />}
         {profile.career && <Row label="구력" value={careerLabel(profile.career) ?? "-"} />}
-        <Row label="홈짐" value={profile.home_gym} />
         <Row label="사는 동네" value={profile.area} />
         {profile.height && <Row label="키" value={`${profile.height}cm`} />}
         {profile.mbti && <Row label="MBTI" value={profile.mbti} />}
@@ -233,14 +236,14 @@ export default function UserProfile({
             sent ? "bg-surface2 text-muted" : "button-primary"
           }`}
         >
-          {sent ? "채팅을 보냈어요" : "채팅 보내기"}
+          {sent ? "신청완료" : "대화신청"}
         </button>
       )}
 
       {sessionId && (
         <Link
           /* 채팅에서 왔으면 모임 정보의 뒤로가기도 채팅으로 이어지게 한다 */
-          href={backTo ? `/session?id=${sessionId}&from=chat` : `/session?id=${sessionId}`}
+          href={from === "chat" ? `/session?id=${sessionId}&from=chat` : `/session?id=${sessionId}`}
           className={`block rounded-xl border border-line bg-surface py-3.5 text-center text-[14px] font-medium text-ink ${
             canRequest ? "mt-2" : "mt-6"
           }`}
@@ -251,7 +254,7 @@ export default function UserProfile({
 
       {requesting && (
         <ChatRequestSheet
-          target={{ id: profile.id, nickname: profile.nickname, homeGym: profile.home_gym }}
+          target={{ id: profile.id, nickname: profile.nickname }}
           onClose={() => setRequesting(false)}
           onSent={() => setSent(true)}
         />

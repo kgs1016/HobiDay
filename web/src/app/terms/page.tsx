@@ -143,7 +143,7 @@ export default function Terms() {
 
       <footer className="mt-12 border-t border-line pt-4 text-[12px] text-muted">
         지아이컴퍼니 · 대표 김경수 · 사업자등록번호 242-20-02430 ·
-        인천광역시 서해구 청라한내로100번길 10, 4층 411,412호 B054호 · 1212ntnt@naver.com
+        인천광역시 서해구 청라한내로100번길 10, 4층 411,412호 B054호 · hobiday12@gmail.com
       </footer>
     </main>
   );
