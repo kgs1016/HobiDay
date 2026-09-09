@@ -3,17 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AvatarFallback } from "@/components/icons";
-import { ago, mockPostSummaries, POST_PAGE, type PostCategory, type PostSummary } from "@/lib/community";
+import { ago, boardTopicLabel, mockPostSummaries, POST_PAGE, type PostCategory, type PostSummary } from "@/lib/community";
 import { fetchPosts, hasSupabase, signedPhotoUrls } from "@/lib/supabase";
 
-function PostRow({ p, photo }: { p: PostSummary; photo?: string }) {
+export function PostRow({ p, photo }: { p: PostSummary; photo?: string }) {
   return (
     <Link
       href={`/community/post?id=${p.id}`}
       className="block py-3.5 transition-colors active:bg-surface2"
     >
+      {p.category !== "gear" && <p className="mb-1.5 text-[11.5px] font-medium text-muted">{boardTopicLabel(p.topic)}</p>}
       <div className="flex items-start justify-between gap-3">
-        <p className="min-w-0 flex-1 truncate text-[15px] font-semibold">{p.title}</p>
+        <p className="min-w-0 flex-1 line-clamp-2 text-[15px] font-semibold leading-relaxed">{p.title}</p>
         {p.comment_count > 0 && (
           <span className="shrink-0 text-[12px] font-medium text-accent-strong">
             💬 {p.comment_count}
@@ -21,7 +22,7 @@ function PostRow({ p, photo }: { p: PostSummary; photo?: string }) {
         )}
       </div>
       <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-muted">
-        {p.preview}
+        {p.preview.replace(/(^|\s)##\s/g, "$1")}
       </p>
       <p className="mt-1.5 flex items-center gap-1.5 text-[12px] text-faint">
         {photo ? (
