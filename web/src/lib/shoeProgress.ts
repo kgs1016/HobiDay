@@ -1,16 +1,20 @@
-/** 앱 암벽화 단계. 암장의 홀드 색이나 기존 자기신고 L등급과는 별개다. */
+import { difficultyScore } from "./hobiDifficulty";
+
+/** 최근 3개월 자체 가중 점수 + 최소 난이도 완등. V등급과 구분한다. */
 export const SHOE_STAGES = [
-  { id: "white", name: "흰색", base: "#E9E8E2", ink: "#51584E", minV: null, required: 0 },
-  { id: "yellow", name: "노랑", base: "#F0C83E", ink: "#775E15", minV: 1, required: 3 },
-  { id: "orange", name: "주황", base: "#EF8953", ink: "#AC542E", minV: 2, required: 5 },
-  { id: "green", name: "초록", base: "#63A889", ink: "#36765B", minV: 3, required: 8 },
-  { id: "blue", name: "파랑", base: "#6C9EDB", ink: "#456D9F", minV: 4, required: 10 },
-  { id: "purple", name: "보라", base: "#A28BCC", ink: "#775D9A", minV: 6, required: 12 },
-  { id: "black", name: "검정", base: "#4B5260", ink: "#444D5A", minV: 8, required: 15 },
+  { id: "white", name: "흰색", base: "#E9E8E2", ink: "#51584E", minLevel: null, required: 0, points: 0 },
+  { id: "green", name: "초록", base: "#63A889", ink: "#36765B", minLevel: 4, required: 5, points: 50 },
+  { id: "blue", name: "파랑", base: "#6C9EDB", ink: "#456D9F", minLevel: 5, required: 10, points: 160 },
+  { id: "red", name: "빨강", base: "#D96365", ink: "#A33E45", minLevel: 6, required: 15, points: 360 },
+  { id: "pink", name: "핑크", base: "#DB93B4", ink: "#9D4F78", minLevel: 7, required: 20, points: 720 },
+  { id: "purple", name: "보라", base: "#A28BCC", ink: "#775D9A", minLevel: 8, required: 25, points: 1300 },
+  { id: "gray", name: "회색", base: "#929CA9", ink: "#5D6978", minLevel: 9, required: 30, points: 2200 },
+  { id: "brown", name: "갈색", base: "#9B765D", ink: "#77543E", minLevel: 10, required: 35, points: 3500 },
+  { id: "black", name: "검정", base: "#4B5260", ink: "#444D5A", minLevel: 11, required: 40, points: 5500 },
 ] as const;
 
 export type ShoeColorId = (typeof SHOE_STAGES)[number]["id"];
-export type ClimbingProgress = { total: number; grade_counts: Record<string, number> };
+export type ClimbingProgress = { total: number; grade_counts: Record<string, number>; difficulty_counts: Record<string, number>; recent_total?: number; undated_total?: number; period_start?: string; period_end?: string };
 /** 다른 회원에게는 문제별 기록 대신 서버가 계산한 성취 요약만 공개한다. */
 export type PublicShoeAchievement = { stage: ShoeColorId; total: number };
 
@@ -22,14 +26,24 @@ export function parseShoeAchievement(value: unknown): PublicShoeAchievement | un
   return { stage: row.stage as ShoeColorId, total: row.total };
 }
 
-/** 서버가 본인 기록 전체에서 집계한 분포. 기간·영상 수는 승급에 쓰지 않는다. */
+/** 서버가 최근 3개월의 실제 완등일로 집계한 분포. total은 기간 제한 없는 전체 기록 수다. */
 export function shoeProgress(progress: ClimbingProgress) {
+  const points = difficultyScore(progress.difficulty_counts);
   const stages = SHOE_STAGES.map(stage => ({
     ...stage,
-    count: stage.minV === null ? progress.total : Object.entries(progress.grade_counts)
-      .reduce((sum, [grade, count]) => sum + (Number(grade) >= stage.minV! ? count : 0), 0),
+    count: stage.minLevel === null ? (progress.recent_total ?? progress.total) : Object.entries(progress.difficulty_counts)
+      .reduce((sum, [level, count]) => sum + (Number(level) >= stage.minLevel! && Number(level) <= 11 ? count : 0), 0),
   }));
-  const current = [...stages].reverse().find(stage => stage.count >= stage.required)!;
+  const current = [...stages].reverse().find(stage => stage.count >= stage.required && points >= stage.points)!;
   const next = stages[stages.indexOf(current) + 1] ?? null;
-  return { stages, current, next };
+  return { stages, current, next, points };
+}
+
+/** 한국 날짜를 받은 뒤 3개월 전 같은 날을 구한다. 없는 날짜는 해당 월 마지막 날로 맞춘다. */
+export function shoePeriodStart(today: string): string {
+  const [year, month, day] = today.split("-").map(Number);
+  const first = new Date(Date.UTC(year, month - 4, 1));
+  const last = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
+  first.setUTCDate(Math.min(day, last));
+  return first.toISOString().slice(0, 10);
 }

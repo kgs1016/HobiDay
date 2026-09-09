@@ -65,6 +65,14 @@ export function InboxIcon(p: IconProps) {
   );
 }
 
+export function MailIcon(p: IconProps) {
+  return <Base {...p}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></Base>;
+}
+
+export function BoardIcon(p: IconProps) {
+  return <Base {...p}><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 8h8M8 12h8M8 16h5" /></Base>;
+}
+
 /* 커뮤니티 — 말풍선 둘. 채팅(말풍선 하나)과 헷갈리지 않게 겹쳐 그린다 */
 export function CommunityIcon(p: IconProps) {
   return (

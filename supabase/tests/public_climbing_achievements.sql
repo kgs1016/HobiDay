@@ -4,12 +4,14 @@ set local lock_timeout = '5s';
 set local statement_timeout = '30s';
 insert into auth.users(id) values
  ('fa700000-0000-4000-8000-000000000001'), ('fa700000-0000-4000-8000-000000000002'),
- ('fa700000-0000-4000-8000-000000000003'), ('fa700000-0000-4000-8000-000000000004');
+ ('fa700000-0000-4000-8000-000000000003'), ('fa700000-0000-4000-8000-000000000004'),
+ ('fa700000-0000-4000-8000-000000000005');
 insert into profiles(id,nickname,gender,age,area,level,career,height,home_gym,is_public,photo) values
  ('fa700000-0000-4000-8000-000000000001','shoe-viewer','m',25,'test',5,6,170,'test',false,'test/viewer.webp'),
  ('fa700000-0000-4000-8000-000000000002','shoe-public','f',25,'test',1,1,170,'test',true,'test/public.webp'),
  ('fa700000-0000-4000-8000-000000000003','shoe-private','m',25,'test',5,6,170,'test',false,'test/private.webp'),
- ('fa700000-0000-4000-8000-000000000004','shoe-empty','f',25,'test',5,6,170,'test',true,'test/empty.webp');
+ ('fa700000-0000-4000-8000-000000000004','shoe-empty','f',25,'test',5,6,170,'test',true,'test/empty.webp'),
+ ('fa700000-0000-4000-8000-000000000005','shoe-unrelated','f',25,'test',1,1,170,'test',false,'test/unrelated.webp');
 insert into climbing_ascents(id,user_id,gym,problem,v_grade)
 select gen_random_uuid(), 'fa700000-0000-4000-8000-000000000002', 'private gym', 'problem-'||n,
   case when n <= 6 then 4 when n <= 9 then 5 when n = 10 then 6 when n <= 30 then 1 else null end
@@ -33,13 +35,15 @@ begin
   assert (select count(*) from jsonb_object_keys(to_jsonb(r))) = 3, 'only user id, stage and total are exposed';
   assert (select count(*) from public_climbing_achievements(array[
     'fa700000-0000-4000-8000-000000000002'::uuid,'fa700000-0000-4000-8000-000000000002'::uuid])) = 1, 'duplicate ids counted once';
-  assert (select count(*) from public_climbing_achievements(array['fa700000-0000-4000-8000-000000000003'::uuid])) = 0, 'private profile hidden';
+  -- profile_visible 통합 뒤에는 확정 모임을 함께한 상대는 별도 모임 ID 없이도 보인다.
+  assert (select count(*) from public_climbing_achievements(array['fa700000-0000-4000-8000-000000000003'::uuid])) = 1, 'confirmed co-member remains visible';
+  assert (select count(*) from public_climbing_achievements(array['fa700000-0000-4000-8000-000000000005'::uuid])) = 0, 'unrelated private profile hidden';
   assert (select count(*) from public_climbing_achievements(array['fa700000-0000-4000-8000-000000000099'::uuid])) = 0, 'missing profile hidden';
   select * into r from public_climbing_achievements(array['fa700000-0000-4000-8000-000000000004'::uuid]);
   assert r.stage = 'white' and r.total = 0, 'experienced user with no records is not assigned a skill color';
   assert (select count(*) from public_climbing_achievements(array['fa700000-0000-4000-8000-000000000003'::uuid],
     'fa700000-0000-4000-8000-000000000010')) = 1, 'visible session member can expose summary';
-  assert (select count(*) from public_climbing_achievements(array['fa700000-0000-4000-8000-000000000003'::uuid],
+  assert (select count(*) from public_climbing_achievements(array['fa700000-0000-4000-8000-000000000005'::uuid],
     'fa700000-0000-4000-8000-000000000099')) = 0, 'invalid session does not bypass private profile';
   assert (select count(*) from public_climbing_achievements(null)) = 0, 'empty request';
   begin

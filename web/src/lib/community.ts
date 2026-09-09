@@ -3,6 +3,11 @@
    서버 기준은 supabase/migrations/20260906120000_community.sql */
 
 export type ArticleKind = "competition" | "news";
+export type PostCategory = "board" | "gear";
+
+export function boardHref(category: PostCategory = "board") {
+  return category === "gear" ? "/community?tab=gear" : "/community";
+}
 
 export interface Article {
   id: string;
@@ -22,6 +27,7 @@ export interface Article {
 
 export interface PostSummary {
   id: string;
+  category?: PostCategory;
   title: string;
   preview: string;
   /** 탈퇴한 글쓴이는 null */
@@ -45,6 +51,7 @@ export interface PostComment {
 
 export interface PostDetail {
   id: string;
+  category?: PostCategory;
   title: string;
   body: string;
   author_id: string | null;
@@ -76,10 +83,10 @@ export const COMMENT_MAX = 1000;
 export const POST_PAGE = 30;
 
 export const COMMUNITY_TABS = [
-  { id: "video", label: "영상 피드백" },
-  { id: "board", label: "자유 게시판" },
+  { id: "board", label: "자유게시판" },
   { id: "competition", label: "대회 정보" },
   { id: "news", label: "클라이밍 뉴스" },
+  { id: "gear", label: "장비 추천" },
 ] as const;
 export type CommunityTab = (typeof COMMUNITY_TABS)[number]["id"];
 
@@ -229,6 +236,19 @@ export const MOCK_ARTICLES: Record<ArticleKind, Article[]> = {
 
 export const MOCK_POSTS: PostDetail[] = [
   {
+    id: "gear1",
+    category: "gear",
+    title: "첫 암벽화, 어떤 기준으로 골랐나요?",
+    body: "대여화만 신다가 첫 암벽화를 사보려고 해요.\n발볼이나 사이즈는 어떻게 골랐는지 경험을 나눠주세요 🧗",
+    author_id: "u_me",
+    nickname: "나",
+    photo: null,
+    created_at: iso(0, 10),
+    updated_at: iso(0, 10),
+    mine: true,
+    comments: [],
+  },
+  {
     id: "p1",
     title: "성수 쪽 저녁 타임 사람 많나요?",
     body: "퇴근하고 7시쯤 가려는데 평일 저녁 얼마나 붐비는지 궁금해요.\n초보라 사람 많으면 좀 눈치 보여서요 🙈",
@@ -264,9 +284,10 @@ export const MOCK_POSTS: PostDetail[] = [
   },
 ];
 
-export function mockPostSummaries(): PostSummary[] {
-  return MOCK_POSTS.map((p) => ({
+export function mockPostSummaries(category: PostCategory = "board"): PostSummary[] {
+  return MOCK_POSTS.filter((p) => !p.video_path && (p.category ?? "board") === category).map((p) => ({
     id: p.id,
+    category: p.category ?? "board",
     title: p.title,
     preview: p.body.replace(/\s+/g, " ").slice(0, 140),
     author_id: p.author_id,

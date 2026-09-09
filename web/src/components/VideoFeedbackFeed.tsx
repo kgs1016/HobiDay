@@ -50,7 +50,7 @@ export default function VideoFeedbackFeed({ mine = false }: { mine?: boolean }) 
   return (
     <section className="pb-8 pt-4" aria-label="영상 피드백 목록">
       {rows.length > 0 && <div className="grid grid-cols-2 gap-x-3 gap-y-6">
-        {rows.map((p) => <Link key={p.id} href={`/community/post?id=${p.id}&from=video`} className="min-w-0">
+        {rows.map((p) => <Link key={p.id} href={`/videos/post?id=${p.id}${mine ? "&from=mine" : ""}`} className="min-w-0">
           <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-surface2">
             {urls[p.thumbnail_path] && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -65,7 +65,7 @@ export default function VideoFeedbackFeed({ mine = false }: { mine?: boolean }) 
       </div>}
       {loaded && !rows.length && !error && <div className="py-16 text-center">
         <p className="text-[15px] font-semibold">{mine ? "아직 올린 영상이 없어요" : "아직 올라온 영상이 없어요"}</p>
-        <Link href="/community/upload" className="button-primary mt-4 inline-block rounded-xl px-5 py-3 text-sm font-semibold">영상 올리기</Link>
+        <Link href="/videos/upload" className="button-primary mt-4 inline-block rounded-xl px-5 py-3 text-sm font-semibold">영상 올리기</Link>
       </div>}
       {busy && <p role="status" className="py-6 text-center text-sm text-faint">불러오는 중…</p>}
       {error && <div role="alert" className="py-6 text-center text-sm">

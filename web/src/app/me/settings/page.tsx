@@ -93,10 +93,11 @@ export default function Settings() {
 
       <section className="px-4">
         <MenuRow href="/profile/new" label="프로필 수정" />
-        {/* 커뮤니티에 올린 내 영상 */}
+        {/* 영상 탭에 올린 내 영상 */}
         <MenuRow href="/me/videos" label="내 영상" count={videoCount} />
         {/* 오픈 전 잠금 중엔 모임 화면이 닫혀 있어 눌러도 홈으로 튕긴다 — 숨긴다 */}
         {!locked && <MenuRow href="/session/mine" label="내가 만든 모임" />}
+        {!locked && <MenuRow href="/inbox" label="신청 내역" />}
         {/* 끝난 모임은 홈에서도 채팅에서도 사라진다 — 여기가 유일한 통로 */}
         {!locked && <MenuRow href="/me/history" label="함께한 모임" />}
         {/* 끝난 모임의 리뷰 — 알림을 놓쳐도 일주일 동안 여기서 쓴다 */}

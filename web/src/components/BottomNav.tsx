@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { currentUser, hasSupabase, fetchAppFlags, fetchInboxCounts } from "@/lib/supabase";
-import { HomeIcon, ChatIcon, InboxIcon, CommunityIcon, UserIcon } from "@/components/icons";
+import { HomeIcon, ChatIcon, BoardIcon, PlayIcon, UserIcon } from "@/components/icons";
 
 const TABS = [
   { href: "/", label: "홈", Icon: HomeIcon },
   { href: "/chat", label: "채팅", Icon: ChatIcon },
-  { href: "/inbox", label: "신청함", Icon: InboxIcon },
-  { href: "/community", label: "라운지", Icon: CommunityIcon },
+  { href: "/community", label: "게시판", Icon: BoardIcon },
+  { href: "/videos", label: "영상", Icon: PlayIcon },
   { href: "/me", label: "내 프로필", Icon: UserIcon },
 ];
 
@@ -45,7 +45,7 @@ export default function BottomNav() {
     const load = async () => {
       const c = await fetchInboxCounts();
       if (!alive || !c) return;
-      setBadges({ "/inbox": c.requests, "/chat": c.unread_messages });
+      setBadges({ "/chat": c.unread_messages });
 
       // 홈 화면에 추가한 PWA 는 앱 아이콘에도 숫자를 띄울 수 있다 (iOS 16.4+)
       const total = c.requests + c.unread_messages;
@@ -90,6 +90,7 @@ export default function BottomNav() {
             <Link
               key={t.href}
               href={t.href}
+              aria-current={active ? "page" : undefined}
               className={`flex h-14 flex-col items-center justify-center gap-0.5 text-[11px] ${
                 active ? "font-semibold text-accent" : "font-medium text-faint"
               }`}
