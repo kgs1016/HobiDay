@@ -8,7 +8,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import GearPreparing from "@/components/GearPreparing";
-import NewsArtwork from "@/components/NewsArtwork";
+import NewsFeed from "@/components/NewsFeed";
 import FreeBoardFeed from "@/components/FreeBoardFeed";
 import { useRouter } from "next/navigation";
 import { useQueryParam } from "@/lib/queryId";
@@ -101,25 +101,6 @@ function CompetitionRow({ a }: { a: Article }) {
   );
 }
 
-function NewsRow({ a }: { a: Article }) {
-  return (
-    <Link href={`/community/news?id=${a.id}`} className="flex items-start gap-3 py-4 transition-colors active:bg-surface2">
-      <div className="min-w-0 flex-1">
-      <p className="text-[14.5px] font-semibold leading-snug">{a.title}</p>
-      {a.summary && (
-        <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-muted">
-          {a.summary}
-        </p>
-      )}
-      <p className="mt-1 text-[12px] text-faint">
-        {ago(a.published_at)}
-      </p>
-      </div>
-      <NewsArtwork article={a} thumbnail />
-    </Link>
-  );
-}
-
 export default function Community() {
   const mockMode = !hasSupabase();
   const q = useQueryParam("tab");
@@ -157,7 +138,7 @@ export default function Community() {
 
   // 뉴스와 대회 데이터는 분류별로 읽고 캐시한다.
   useEffect(() => {
-    if ((tab !== "news" && tab !== "competition") || !authed || mockMode || articles[tab]) return;
+    if (tab !== "competition" || !authed || mockMode || articles[tab]) return;
     let alive = true;
     fetchArticles(tab).then(rows => {
       if (!alive) return;
@@ -230,7 +211,7 @@ export default function Community() {
         </div>
       ) : !tab || authed === null ? null : tab === "board" ? (
         topicQuery === undefined || searchQuery === undefined ? null : <FreeBoardFeed {...boardFilters} onChange={selectBoardFilters} />
-      ) : articleError ? (
+      ) : tab === "news" ? <NewsFeed /> : articleError ? (
         <div role="alert" className="py-12 text-center text-sm">
           <p>소식을 불러오지 못했어요</p>
           <button onClick={() => { setArticleError(false); setRetry(v => v + 1); }} className="mt-3 font-semibold text-accent-strong">다시 시도</button>
@@ -239,12 +220,6 @@ export default function Community() {
         <p className="pt-16 text-center text-[13.5px] text-faint">불러오는 중…</p>
       ) : list.length === 0 ? (
         <Empty title="아직 모인 소식이 없어요" />
-      ) : tab === "news" ? (
-        <div className="flex flex-col divide-y divide-line pb-6">
-          {list.map((a) => (
-            <NewsRow key={a.id} a={a} />
-          ))}
-        </div>
       ) : (
         <div className="flex flex-col gap-6 py-2 pb-6">
           {upcoming.length > 0 && (

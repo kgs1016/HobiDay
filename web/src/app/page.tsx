@@ -18,7 +18,7 @@ import {
   EMPTY_FILTER,
   applySessionFilter,
 } from "@/lib/sessionFilter";
-import { findGym, matchesSearch } from "@/lib/homeSearch";
+import { findGym, matchesSearch, matchesSessionPlace } from "@/lib/homeSearch";
 import { loadMyProfile, type MyProfile } from "@/lib/myProfile";
 import { startPolling } from "@/lib/polling";
 import {
@@ -317,10 +317,7 @@ export default function Home() {
     setQuery("");
     searchButton.current?.focus();
   };
-  const shown = applySessionFilter(sessions, filter).filter(session => {
-    const gym = findGym(gymChoices, session.gym);
-    return matchesSearch(query, [session.gym, session.note, session.host?.nickname, gym?.region, gym?.city_district, ...(gym?.aliases ?? [])]);
-  });
+  const shown = applySessionFilter(sessions, filter).filter(session => matchesSessionPlace(query, session, gymChoices));
   const shownPeople = people.filter(person => {
     const gym = findGym(gymChoices, person.homeGym);
     return matchesSearch(query, [person.nickname, person.homeGym, person.area, person.intro, ...(gym?.aliases ?? [])]);
@@ -359,8 +356,8 @@ export default function Home() {
           <SearchIcon size={17} className="shrink-0 text-muted" />
           <input ref={searchInput} autoFocus type="search" value={query} onChange={e => setQuery(e.target.value)}
             onKeyDown={e => { if (e.key === "Escape") closeSearch(); }}
-            aria-label={tab === "session" ? "모임 검색" : "사람 검색"}
-            placeholder={tab === "session" ? "클라이밍장, 모임 내용, 호스트 검색" : "닉네임, 홈 클라이밍장 검색"}
+            aria-label={tab === "session" ? "장소 검색" : "사람 검색"}
+            placeholder={tab === "session" ? "클라이밍장 이름 · 지역 검색" : "닉네임, 홈 클라이밍장 검색"}
             className="h-full min-w-0 w-full bg-transparent text-[16px] outline-none placeholder:text-faint" />
         </div>
         <button type="button" onClick={closeSearch} className="min-h-11 px-1 text-[13px] font-medium text-muted">취소</button>

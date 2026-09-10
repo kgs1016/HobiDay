@@ -14,3 +14,9 @@ export function matchesSearch(query: string, values: (string | null | undefined)
   const haystack = normalize(values.filter(Boolean).join(" "));
   return query.trim().split(/\s+/).every(word => haystack.includes(normalize(word)));
 }
+
+/** 모임 검색은 장소명·별칭·지역만 대상이다. 호스트나 소개글은 포함하지 않는다. */
+export function matchesSessionPlace(query: string, session: { gym: string }, gyms: GymOption[]) {
+  const gym = findGym(gyms, session.gym);
+  return matchesSearch(query, [session.gym, gym?.region, gym?.city_district, ...(gym?.aliases ?? [])]);
+}
