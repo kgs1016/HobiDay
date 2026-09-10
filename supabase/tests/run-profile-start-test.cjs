@@ -52,6 +52,8 @@ function fn(src, name) {
   await db.exec(read('20260910060000_shoe_start_reset.sql'));
   await db.exec(fs.readFileSync(path.join(__dirname,'profile_frequency_and_shoe_start.sql'),'utf8'));
   await db.exec(fs.readFileSync(path.join(__dirname,'shoe_start_reset.sql'),'utf8'));
+  await db.exec(read('20260910070000_shoe_reset_record_window.sql'));
+  await db.exec(fs.readFileSync(path.join(__dirname,'shoe_reset_record_window.sql'),'utf8'));
   await db.close();
-  console.log('PASS: optional frequency, initial shoe and one-time correction, no fabricated records, expiry/earned precedence, public access and deletion lifecycle');
+  console.log('PASS: profile/start compatibility, reset accumulation boundary, preserved history, immediate promotion, public access and rolling window');
 })().catch(e => { console.error(e.message, e.where); process.exitCode = 1; });

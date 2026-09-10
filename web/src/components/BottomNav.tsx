@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { currentUser, hasSupabase, fetchAppFlags, fetchInboxCounts } from "@/lib/supabase";
+import { currentUser, hasSupabase, fetchInboxCounts } from "@/lib/supabase";
 import { HomeIcon, ChatIcon, BoardIcon, PlayIcon, UserIcon } from "@/components/icons";
 
 const TABS = [
@@ -22,17 +22,12 @@ export default function BottomNav() {
   // 키가 없는 개발 폴백(목데이터)에서는 화면을 못 옮기니 그대로 띄운다.
   // null = 확인 중 — 깜빡임을 막으려고 이때도 그리지 않는다.
   const [authed, setAuthed] = useState<boolean | null>(hasSupabase() ? null : true);
-  // 오픈 전 잠금이면 홈·내 정보만 남긴다 (테스터에겐 서버가 열린 값을 준다)
-  const [locked, setLocked] = useState(false);
 
   useEffect(() => {
     if (!hasSupabase()) return;
     let alive = true;
     currentUser().then((u) => {
       if (alive) setAuthed(!!u);
-    });
-    fetchAppFlags().then((f) => {
-      if (alive && f) setLocked(!f.sessions_open && !f.people_open);
     });
     return () => {
       alive = false;
@@ -72,18 +67,14 @@ export default function BottomNav() {
 
   if (!authed) return null;
 
-  const tabs = locked
-    ? TABS.filter((t) => t.href === "/" || t.href === "/me")
-    : TABS;
-
   return (
     // pb-[safe] — 홈 화면에 추가해 전체화면으로 뜰 때 아이폰 홈바에 가리지 않게
     <nav
       className="fixed bottom-0 inset-x-0 z-20 border-t border-line bg-surface"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <div className={`mx-auto max-w-md grid ${locked ? "grid-cols-2" : "grid-cols-5"}`}>
-        {tabs.map((t) => {
+      <div className="mx-auto max-w-md grid grid-cols-5">
+        {TABS.map((t) => {
           const active =
             t.href === "/" ? pathname === "/" : pathname.startsWith(t.href);
           return (

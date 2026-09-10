@@ -66,6 +66,25 @@ html {
   background: var(--color-bg);
 }
 
+/* 첫 문서 로드에만 표시하고, hydration이나 네트워크 응답을 기다리지 않는다. */
+.app-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  animation: app-splash-out 150ms ease-out 450ms forwards;
+}
+
+@keyframes app-splash-out {
+  to { opacity: 0; visibility: hidden; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-splash { animation-duration: 0s; }
+}
+
 body {
   background: var(--color-bg);
   color: var(--color-ink);

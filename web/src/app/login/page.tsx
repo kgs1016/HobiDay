@@ -123,7 +123,7 @@ export default function Login() {
   const hydrated = useHydrated();
 
   useEffect(() => {
-    // 소개 페이지의 "지금 사전 가입하기" 는 옛 주소(?mode=signup)로 온다.
+    // 이전 소개 페이지에서 배포한 가입 주소(?mode=signup)도 계속 지원한다.
     // useSearchParams 를 쓰면 이 페이지가 Suspense 를 요구해서 window 로 읽는다.
     if (new URLSearchParams(window.location.search).get("mode") === "signup") {
       router.replace("/signup");

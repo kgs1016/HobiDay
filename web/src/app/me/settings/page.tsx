@@ -15,7 +15,6 @@ import {
   hasSupabase,
   currentUser,
   deleteAccount,
-  fetchAppFlags,
   fetchMyVideoCount,
 } from "@/lib/supabase";
 
@@ -40,7 +39,6 @@ export default function Settings() {
   // 카카오 계정은 이메일이 없을 수 있다 — 로그아웃·탈퇴는 로그인 여부로 판단한다
   const [authed, setAuthed] = useState(false);
   const [videoCount, setVideoCount] = useState(0);
-  const [locked, setLocked] = useState(false); // 오픈 전 잠금 (테스터는 false)
   const [leaving, setLeaving] = useState(false); // 탈퇴 확인 패널
   const [confirmText, setConfirmText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -54,8 +52,7 @@ export default function Settings() {
         return;
       }
       setAuthed(true);
-      const [flags, vids] = await Promise.all([fetchAppFlags(), fetchMyVideoCount()]);
-      if (flags) setLocked(!flags.sessions_open && !flags.people_open);
+      const vids = await fetchMyVideoCount();
       setVideoCount(vids);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -95,13 +92,12 @@ export default function Settings() {
         <MenuRow href="/profile/new" label="프로필 수정" />
         {/* 영상 탭에 올린 내 영상 */}
         <MenuRow href="/me/videos" label="내 영상" count={videoCount} />
-        {/* 오픈 전 잠금 중엔 모임 화면이 닫혀 있어 눌러도 홈으로 튕긴다 — 숨긴다 */}
-        {!locked && <MenuRow href="/session/mine" label="내가 만든 모임" />}
-        {!locked && <MenuRow href="/inbox" label="신청 내역" />}
+        <MenuRow href="/session/mine" label="내가 만든 모임" />
+        <MenuRow href="/inbox" label="신청 내역" />
         {/* 끝난 모임은 홈에서도 채팅에서도 사라진다 — 여기가 유일한 통로 */}
-        {!locked && <MenuRow href="/me/history" label="함께한 모임" />}
+        <MenuRow href="/me/history" label="함께한 모임" />
         {/* 끝난 모임의 리뷰 — 알림을 놓쳐도 일주일 동안 여기서 쓴다 */}
-        {!locked && <MenuRow href="/me/reviews" label="리뷰 작성" />}
+        <MenuRow href="/me/reviews" label="리뷰 작성" />
         <MenuRow href="/safety" label="안전 설정 · 차단 목록" />
         <MenuRow href="/support" label="고객센터 · 문의" />
       </section>

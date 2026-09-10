@@ -11,7 +11,7 @@ import LoadErrorNotice from "@/components/LoadErrorNotice";
 import { ShoeBadge } from "@/components/PublicShoe";
 import ChatRequestSheet from "@/components/ChatRequestSheet";
 import { AvatarFallback, BellIcon, MailIcon, PlusIcon, SearchIcon } from "@/components/icons";
-import { HoldIllust, ShoeIllust } from "@/components/illustrations";
+import { ShoeIllust } from "@/components/illustrations";
 import { MOCK_SESSIONS, MOCK_PEOPLE, type Session, type Person } from "@/lib/mock";
 import { level } from "@/lib/levels";
 import { visitFrequencyLabel } from "@/lib/visitFrequency";
@@ -28,8 +28,6 @@ import {
   hasSupabase,
   currentUser,
   fetchMyProfileDb,
-  fetchAppFlags,
-  type AppFlags,
   fetchGyms,
   type Gym,
   fetchNotifications,
@@ -48,7 +46,6 @@ export default function Home() {
   const [tab, setTab] = useState<"session" | "people">("session");
   const [me, setMe] = useState<MyProfile | null>(null);
   const [authed, setAuthed] = useState<boolean | null>(null);
-  const [flags, setFlags] = useState<AppFlags | null>(null);
   const [ready, setReady] = useState(mockMode);
   const [loading, setLoading] = useState(!mockMode);
   const [homeError, setHomeError] = useState(false);
@@ -101,10 +98,8 @@ export default function Home() {
 
       // 비로그인은 DB가 아무것도 안 내려준다. 목데이터가 실제 모임처럼
       // 보이는 걸 막으려고 조회 자체를 하지 않는다.
-      // 플래그만 읽는다(로그인 불필요) — 오픈 전 안내 카드에 쓴다.
       if (!user) {
-        const f = await fetchAppFlags().catch(() => null);
-        if (alive) { setFlags(f); setHomeError(false); }
+        setHomeError(false);
         return;
       }
 
@@ -114,13 +109,7 @@ export default function Home() {
       if (!isBasicProfileComplete(prof)) throw new Error("profile_unavailable");
       setMe(prof);
 
-      // 오픈 전에는 모임·사람을 잠근다 (대시보드 app_config 로 켠다)
-      const f = await fetchAppFlags();
-      if (!alive) return;
-      if (!f) throw new Error("flags_unavailable");
-      setFlags(f);
       setHomeError(false);
-      if (f && !f.sessions_open && !f.people_open) return;
 
       // 사진·장소 필터·배지 실패는 모임 목록 조회와 별개로 처리한다.
       void fetchGyms().then(gymRows => { if (alive && gymRows) setMasterGyms(gymRows); }).catch(() => {});
@@ -169,93 +158,8 @@ export default function Home() {
     <LoadErrorNotice message="홈 화면을 불러오지 못했어요" loading={loading} onRetry={retry} />
   </main>;
 
-  // 오픈 전 대기 화면 — 가입·프로필은 끝냈고 기능만 잠긴 상태.
-  // authed 를 함께 보는 이유: 로그인도 안 한 사람에게 "가입 완료!" 가 뜨면
-  // 안 된다. 비로그인은 아래 로그인 안내 화면으로 내려보낸다.
-  if (authed && flags && !flags.sessions_open && !flags.people_open) {
-    const openDay = flags.open_at
-      ? new Date(flags.open_at).toLocaleDateString("ko-KR", {
-          month: "long",
-          day: "numeric",
-        })
-      : null;
-    return (
-      <main className="px-4">
-        <header className="pt-10 text-center">
-          <p className="text-[14px] font-bold tracking-[2px] text-accent">
-            HOBIDAY
-          </p>
-          <div className="mt-7 flex justify-center">
-            <HoldIllust size={76} />
-          </div>
-          <h1 className="mt-5 text-[21px] font-bold leading-snug tracking-tight">
-            가입 완료
-            {openDay && (
-              <>
-                <br />
-                {openDay}에 모임이 열려요
-              </>
-            )}
-          </h1>
-          {flags.notice && (
-            <p className="mt-3 text-[13.5px] leading-relaxed text-muted">
-              {flags.notice}
-            </p>
-          )}
-        </header>
-
-        <section className="mx-auto mt-6 max-w-sm rounded-xl bg-surface2 p-5">
-          <p className="text-[13.5px] font-semibold">오픈하면 할 수 있는 것</p>
-          <div className="mt-3 flex flex-col gap-2.5 text-[13px] leading-relaxed">
-            <p>
-              <span className="font-medium">모임 찾기</span>
-              <span className="text-muted">
-                {" "}
-                — 2~8명이 모여 함께 볼더링
-              </span>
-            </p>
-            <p>
-              <span className="font-medium">사람 찾기</span>
-              <span className="text-muted"> — 같이 타고 싶은 사람에게 대화신청</span>
-            </p>
-            <p>
-              <span className="font-medium">영상</span>
-              <span className="text-muted"> — 완등 자랑부터 등반 이야기까지</span>
-            </p>
-            <p>
-              <span className="font-medium">채팅</span>
-              <span className="text-muted"> — 수락하면 1:1, 확정되면 단체방</span>
-            </p>
-          </div>
-        </section>
-
-        <div className="mx-auto mt-4 max-w-sm">
-          <Link
-            href="/profile/new"
-            className="button-secondary block rounded-xl py-3.5 text-center text-[14px] font-semibold"
-          >
-            내 프로필 다듬기
-          </Link>
-        </div>
-
-        <p className="mt-6 text-center text-[12px] text-faint">
-          오픈 소식은 가입하신 이메일로 알려드려요.
-        </p>
-      </main>
-    );
-  }
-
   // 비로그인 게이트 — authed 가 null 인 동안(확인 중)은 띄우지 않아 깜빡임이 없다
   if (authed === false) {
-    // 오픈 전(잠금)일 때만 사전 가입 안내를 띄운다. 날짜는 DB(open_at)가
-    // 유일한 출처다 — 하드코딩하면 날짜를 옮길 때마다 화면과 어긋난다.
-    const preOpen = flags && !flags.sessions_open && !flags.people_open;
-    const openDay = flags?.open_at
-      ? new Date(flags.open_at).toLocaleDateString("ko-KR", {
-          month: "long",
-          day: "numeric",
-        })
-      : null;
     return (
       <main className="px-4">
         <header className="pt-16 text-center">
@@ -284,17 +188,6 @@ export default function Home() {
           </Link>
         </div>
 
-        {preOpen && (
-          <section className="mx-auto mt-7 max-w-sm rounded-xl bg-surface2 px-5 py-4 text-center">
-            <p className="text-[13px] font-semibold">
-              {openDay ? `${openDay} 오픈 · ` : ""}지금은 사전 가입 중이에요
-            </p>
-            <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted">
-              오픈하면 가입하신 이메일로 알려드릴게요.
-            </p>
-          </section>
-        )}
-
         <p className="mt-6 text-center text-[12px] text-faint">
           참여자 프로필을 보호하려고 로그인 후에만 공개해요.
         </p>
@@ -302,7 +195,7 @@ export default function Home() {
     );
   }
 
-  // 위 화면들(온보딩·잠금·비로그인) 중 어느 것도 아닌데 아직 조회가 안 끝난 상태.
+  // 위 화면들(온보딩·비로그인) 중 어느 것도 아닌데 아직 조회가 안 끝난 상태.
   // 여기서 목록을 그리면 빈 목록이나 목데이터가 잠깐 보인다.
   if (!ready) {
     return (
