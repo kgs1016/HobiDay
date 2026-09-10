@@ -40,7 +40,7 @@ const mockPost = async (id: string) => MOCK_POSTS.find((p) => p.id === id) ?? nu
 
 const ERRORS: Record<string, string> = {
   no_auth: "로그인이 필요해요",
-  no_profile: "프로필을 먼저 만들어주세요",
+  no_profile: "회원 정보를 불러오지 못했어요. 다시 시도해주세요",
   empty: "내용을 적어주세요",
   too_fast: "잠시 후 다시 써주세요",
   not_found: "글이 지워졌어요",

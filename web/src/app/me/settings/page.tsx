@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
-import { resetProfileGate } from "@/components/RequireProfile";
 import { ChevronRightIcon } from "@/components/icons";
 import { unregisterPush } from "@/lib/nativePush";
 import {
@@ -64,7 +63,6 @@ export default function Settings() {
     await unregisterPush();
     await getSupabase()?.auth.signOut();
     // SPA 라 리로드가 없다 — 프로필 게이트 캐시를 지워야 다음 계정에 안 샌다
-    resetProfileGate();
     router.replace("/login");
   };
 
@@ -76,7 +74,6 @@ export default function Settings() {
       alert("탈퇴 처리에 실패했어요. 잠시 후 다시 시도해주세요.");
       return;
     }
-    resetProfileGate();
     alert("탈퇴가 완료됐어요. 그동안 함께해줘서 고마워요.");
     router.replace("/login");
   };

@@ -9,7 +9,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { onNativeAuthReturn } from "@/lib/nativeAuth";
 import { isNativePush, onPushTap, registerPush } from "@/lib/nativePush";
-import { currentUser, fetchMyProfileDb } from "@/lib/supabase";
+import { currentUser } from "@/lib/supabase";
 
 export default function NativeAuthBridge() {
   const router = useRouter();
@@ -26,8 +26,7 @@ export default function NativeAuthBridge() {
         registerPush();
         // 주소를 직접 바꾸지 않고 라우터로 옮긴다 — 앱에는 서버가 없어서
         // 주소로 이동하면 파일을 찾는 단계를 다시 타게 된다.
-        const profile = await fetchMyProfileDb();
-        router.replace(profile ? "/me" : "/profile/new");
+        router.replace("/");
       }),
     [router]
   );

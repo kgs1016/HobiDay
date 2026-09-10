@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import StartingShoePicker from "@/components/StartingShoePicker";
 import { fetchClimbingProgress, isAscentPreview } from "@/lib/climbingAscents";
 import { currentUser, hasSupabase } from "@/lib/supabase";
-import { isBasicProfileComplete } from "@/lib/profileGate";
-import { loadMyProfile } from "@/lib/myProfile";
 
 export default function ProfileShoeSetup() {
   const router = useRouter();
@@ -20,11 +18,6 @@ export default function ProfileShoeSetup() {
       try {
         if (hasSupabase() ? !(await currentUser()) : !isAscentPreview()) {
           if (active) router.replace("/login");
-          return;
-        }
-        // 운영에서는 RequireProfile이 기본 정보 완료 여부를 확인한다.
-        if (isAscentPreview() && !isBasicProfileComplete(loadMyProfile())) {
-          if (active) router.replace("/profile/new");
           return;
         }
         const progress = await fetchClimbingProgress();
@@ -45,7 +38,7 @@ export default function ProfileShoeSetup() {
   const finish = () => router.replace("/me");
   return <main className="px-5 pb-4">
     <header className="pt-6">
-      <p className="text-[12px] font-medium text-muted">프로필 완성 · 2 / 2</p>
+      <p className="text-[12px] font-medium text-muted">암벽화 설정 · 선택</p>
       <h1 className="mt-2 text-[22px] font-bold tracking-tight">시작 암벽화를 골라주세요</h1>
       <p className="mt-2 text-[12px] leading-relaxed text-muted">최근 완등 기록에 따라 바뀌어요</p>
     </header>

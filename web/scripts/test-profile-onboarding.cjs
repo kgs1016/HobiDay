@@ -50,11 +50,11 @@ const valid={nickname:'가입 테스트',gender:'f',age:27,area:'',level:null,ho
   for(const onboarding of [true,false])for(const isPublic of [false,true])for(const failsFirst of [false,true]){
     let saved,settle,destination,calls=0;
     const alerts=[];
-    const profile={...valid,isPublic,...(onboarding?{photo:undefined}:{})};
+    const profile={...valid,isPublic,...(onboarding?{photo:undefined,gender:null,age:null}:{})};
     const router={push:url=>{destination=url;},replace:url=>{destination=url;}};
     const form=harness('app/profile/new/page.tsx',{
       'next/navigation':{useRouter:()=>router},
-      '@/components/BackButton':{default:'back'},'@/components/icons':{CameraIcon:'camera'},
+      '@/components/BackButton':{default:'back'},'@/lib/defaultAvatar':load('lib/defaultAvatar.ts'),
       '@/lib/levels':levels,'@/lib/visitFrequency':frequency,'@/lib/profileGate':gate,
       '@/lib/imageResize':{downscaleImage:async file=>file},
       '@/lib/myProfile':{loadMyProfile:()=>profile,saveMyProfile:p=>{saved=p;}},
@@ -100,7 +100,7 @@ const valid={nickname:'가입 테스트',gender:'f',age:27,area:'',level:null,ho
     page.render();await flush();let tree=page.render();
     if(scenario==='chosen')assert.equal(destination,'/me');
     if(scenario==='logged-out')assert.equal(destination,'/login');
-    if(scenario==='incomplete')assert.equal(destination,'/profile/new');
+    if(scenario==='incomplete')assert.equal(destination,undefined,'optional profile does not block shoe setup');
     if(scenario==='offline'){
       assert.equal(destination,undefined);assert.ok(find(tree,n=>n.props?.role==='alert'));
       button(tree,'다시 불러오기').props.onClick();offline=false;page.render();await flush();tree=page.render();

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
-import { CameraIcon } from "@/components/icons";
+import { defaultAvatar, isDefaultAvatar } from "@/lib/defaultAvatar";
 import { CAREERS, LEVELS, type CareerId, type LevelId } from "@/lib/levels";
 import { VISIT_FREQUENCIES, type VisitFrequencyId } from "@/lib/visitFrequency";
 import { loadMyProfile, saveMyProfile, type MyProfile } from "@/lib/myProfile";
@@ -69,7 +69,8 @@ export default function ProfileNew() {
   const [isPublic, setIsPublic] = useState(false);
 
   const [nickname, setNickname] = useState("");
-  const [gender, setGender] = useState<"m" | "f">("f");
+  const [gender, setGender] = useState<"m" | "f" | null>(null);
+  const [genderFixed, setGenderFixed] = useState(false);
   const [age, setAge] = useState("");
   const [area, setArea] = useState("");
   /* 레벨은 선택 — 기본값을 두면 "안 고른 사람" 과 "L2 인 사람" 이 안 갈린다 */
@@ -77,7 +78,6 @@ export default function ProfileNew() {
   const [showLevelGuide, setShowLevelGuide] = useState(false);
   const [careerId, setCareerId] = useState<CareerId | null>(null);
   const [visitFrequency, setVisitFrequency] = useState<VisitFrequencyId | null>(null);
-  const [height, setHeight] = useState("");
   const [homeGym, setHomeGym] = useState("");
   const [mbti, setMbti] = useState("");
   const [intro, setIntro] = useState("");
@@ -144,16 +144,16 @@ export default function ProfileNew() {
       setIsPublic(p.isPublic ?? false);
       setNickname(p.nickname);
       setGender(p.gender);
-      setAge(String(p.age));
+      setGenderFixed(p.gender === "m" || p.gender === "f");
+      setAge(p.age == null ? "" : String(p.age));
       setArea(p.area);
       setLevel(p.level);
       setCareerId(p.careerId ?? null);
       setVisitFrequency(p.visitFrequency ?? null);
-      setHeight(p.height ? String(p.height) : "");
       setHomeGym(p.homeGym);
       setMbti(p.mbti);
       setIntro(p.intro ?? "");
-      if (p.photo) {
+      if (p.photo && !isDefaultAvatar(p.photo)) {
         setPhoto(p.photo);
         setPhotoUrl((await signedPhotoUrls([p.photo]))[p.photo] ?? null);
       }
@@ -165,12 +165,11 @@ export default function ProfileNew() {
   const buildProfile = (): MyProfile => ({
     nickname: nickname.trim(),
     gender,
-    age: Number(age),
+    age: age ? Number(age) : null,
     area: area.trim(),
     level,
     careerId: careerId ?? undefined,
     visitFrequency: visitFrequency ?? undefined,
-    height: Number(height) || undefined,
     homeGym: homeGym.trim(),
     mbti,
     intro: intro.trim() || undefined,
@@ -182,13 +181,9 @@ export default function ProfileNew() {
     e.preventDefault();
     if (loading || submitting.current || photoInFlight.current) return;
     const n = Number(age);
-    if (!photo?.trim()) return alert("대표 사진을 1장 올려주세요");
     if (!nickname.trim()) return alert("닉네임을 입력해주세요");
-    if (!n || n < 19 || n > 60) return alert("나이를 확인해주세요");
-    if (isPublic && !careerId) return alert("사람 찾기에 공개하려면 구력을 선택해주세요");
-    if (height && (Number(height) < 130 || Number(height) > 220))
-      return alert("키를 확인해주세요 (130~220cm)");
-    // 키·동네·MBTI 는 선택 — 채우고 싶은 사람만
+    if (age && (!n || n < 19 || n > 60)) return alert("나이를 확인해주세요");
+    // 동네·MBTI 는 선택 — 채우고 싶은 사람만
 
     const profile = buildProfile();
 
@@ -215,7 +210,7 @@ export default function ProfileNew() {
   return (
     <main className="px-4">
       <header className="flex items-center gap-2 pt-4 pb-4">
-        {!onboarding && <BackButton />}
+        <BackButton />
         <h1 className="text-[18px] font-bold tracking-tight">
           {onboarding
             ? "기본 정보 등록"
@@ -227,25 +222,16 @@ export default function ProfileNew() {
       </header>
 
       <form className="flex flex-col gap-6 pb-8" onSubmit={submit}>
-        <Field label="대표 사진 (필수)">
+        <Field label="프로필 사진(선택)">
           <div className="flex items-center gap-4">
             {/* 네이티브에서도 파일 선택창을 그대로 쓴다 — iOS 가
                 "사진 보관함/사진 찍기/파일 선택" 시트를 한국어로 띄워준다.
                 카메라 플러그인의 자체 선택창을 써봤더니 영어인 데다
                 보관함 버튼이 동작하지 않아 되돌렸다. */}
             <label className="relative shrink-0 cursor-pointer">
-              {photoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={photoUrl}
-                  alt="대표 사진"
-                  className="h-20 w-20 rounded-full object-cover"
-                />
-              ) : (
-                <span className="flex h-20 w-20 items-center justify-center rounded-full border border-dashed border-line bg-surface2 text-faint">
-                  <CameraIcon size={26} />
-                </span>
-              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photoUrl || defaultAvatar(gender)} alt="프로필 사진"
+                className="h-20 w-20 rounded-full object-cover" />
               <input
                 type="file"
                 accept="image/*"
@@ -264,8 +250,9 @@ export default function ProfileNew() {
               ) : (
                 <>
                   <p className="font-semibold text-ink">
-                    {photo ? "사진 바꾸기" : "얼굴이 보이는 사진 1장"}
+                    {photo ? "사진 바꾸기" : "사진 올리기"}
                   </p>
+                  {photo && <button type="button" disabled={photoBusy || busy} onClick={() => { setPhoto(undefined); setPhotoUrl(null); }} className="mt-1 text-[12px] underline underline-offset-2">기본 이미지로</button>}
                   <p className="mt-0.5">
                     {isPublic ? "사람 찾기에 공개" : "모임·채팅에서 사용"} · 최대 5MB
                   </p>
@@ -287,8 +274,8 @@ export default function ProfileNew() {
         {/* 성별은 처음 한 번만 고른다. 성비 매칭이 없어진 뒤로 판정에는
             안 쓰지만, signups 에 신청 시점 성별이 남아 있어 나중에 바꾸면
             기록과 어긋난다 (DB 트리거가 막는다). */}
-        <Field label="성별">
-          {editing ? (
+        <Field label="성별 (선택)">
+          {genderFixed ? (
             <>
               <span className="inline-block rounded-full border border-line bg-surface2 px-3.5 py-2 text-[13px] font-medium text-muted">
                 {gender === "f" ? "여성" : "남성"}
@@ -310,7 +297,7 @@ export default function ProfileNew() {
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="나이">
+          <Field label="나이 (선택)">
             <input
               value={age}
               onChange={(e) => setAge(e.target.value.replace(/\D/g, ""))}
@@ -390,7 +377,7 @@ export default function ProfileNew() {
           <p className="mt-1.5 text-[12px] text-muted">최근 한 달 기준</p>
         </Field>
 
-        <Field label={`구력 (클라이밍 시작한 지)${isPublic ? "" : " · 선택"}`}>
+        <Field label="구력 (클라이밍 시작한 지) · 선택">
           <div className="flex flex-wrap gap-1.5">
             {CAREERS.map((c) => (
               <Chip
@@ -402,16 +389,6 @@ export default function ProfileNew() {
               </Chip>
             ))}
           </div>
-        </Field>
-
-        <Field label="키 (선택)">
-          <input
-            value={height}
-            onChange={(e) => setHeight(e.target.value.replace(/\D/g, "").slice(0, 3))}
-            inputMode="numeric"
-            placeholder="예: 168"
-            className={inputCls}
-          />
         </Field>
 
         <Field label="MBTI (선택)">
@@ -458,6 +435,7 @@ export default function ProfileNew() {
         >
           {loading ? "불러오는 중…" : busy ? "저장 중…" : onboarding ? "다음 · 암벽화 설정" : "저장"}
         </button>
+        {onboarding && <button type="button" onClick={() => router.replace("/")} className="py-2 text-[14px] text-muted">나중에 설정</button>}
       </form>
     </main>
   );

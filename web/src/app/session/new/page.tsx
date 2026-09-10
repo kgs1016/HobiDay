@@ -13,12 +13,10 @@ import {
 import {
   hasSupabase,
   currentUser,
-  fetchMyProfileDb,
   fetchGyms,
   createSession,
   type Gym,
 } from "@/lib/supabase";
-import { isProfileComplete } from "@/lib/profileGate";
 import Calendar, { monthOf, ymd } from "@/components/Calendar";
 import BackButton from "@/components/BackButton";
 import GymPicker from "@/components/GymPicker";
@@ -135,7 +133,7 @@ function NewSessionForm({ now }: { now: number }) {
     in90.setDate(in90.getDate() + 90);
     return { min: ymd(new Date(now)), max: ymd(in90) };
   })();
-  /* 최대 정원 = 호스트를 포함해 여기까지만 받는다 (2~8명).
+  /* 최대 정원 = 호스트를 포함해 여기까지만 받는다 (2~6명).
      채워야 하는 수가 아니다 — 둘만 모여도 모임은 열린다. */
   const [capacity, setCapacity] = useState(4);
   const [levelMin, setLevelMin] = useState<LevelId>(2);
@@ -210,18 +208,6 @@ function NewSessionForm({ now }: { now: number }) {
       router.push("/login");
       return;
     }
-    const profile = await fetchMyProfileDb();
-    if (!isProfileComplete(profile)) {
-      setBusy(false);
-      alert(
-        profile
-          ? "프로필을 먼저 완성해주세요 (대표 사진·구력)"
-          : "먼저 프로필을 만들어주세요 (모임 참여의 기본 정보예요)"
-      );
-      router.push("/profile/new");
-      return;
-    }
-
     const r = await createSession({
       gym,
       gymId,

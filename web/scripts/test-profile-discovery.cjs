@@ -15,18 +15,13 @@ function load(file, globals = {}) {
 }
 
 (async () => {
-  const { isBasicProfileComplete, isProfileComplete } = load('profileGate.ts');
+  const { isBasicProfileComplete } = load('profileGate.ts');
   const basic = { nickname: '선택 공개 회원', gender: 'f', age: 27, photo: 'member/photo.jpg', area: '', level: null, homeGym: '', mbti: '', isPublic: false };
   assert.equal(isBasicProfileComplete(basic), true, 'a private member with a photo can browse without a career');
-  assert.equal(isProfileComplete(basic), false, 'meeting/chat participation still needs a complete profile');
   const complete = { ...basic, careerId: 2 };
-  assert.equal(isProfileComplete(complete), true, 'a complete private profile can participate without opting in to discovery');
-  assert.equal(isProfileComplete({ ...complete, visitFrequency: undefined }), true, 'frequency is optional');
   for (const isPublic of [false, true]) {
     for (const photo of [undefined, '', ' ']) {
-      const withoutPhoto = { ...complete, photo, isPublic };
-      assert.equal(isBasicProfileComplete(withoutPhoto), false, 'a photo is required even when discovery is private');
-      assert.equal(isProfileComplete(withoutPhoto), false, 'participation also requires a photo');
+      assert.equal(isBasicProfileComplete({ ...complete, photo, isPublic }), true, 'photo is optional');
     }
   }
   for (const invalid of [null, { ...basic, nickname: '' }, { ...basic, age: 18 }, { ...basic, age: 61 }]) {
@@ -34,15 +29,20 @@ function load(file, globals = {}) {
   }
 
   let stored;
+  let readError = null;
+  const signedPaths = [];
+  const avatars = load("defaultAvatar.ts");
   const sb = {
     auth: { getSession: async () => ({ data: { session: { user: { id: 'member' } } } }) },
+    storage: { from: () => ({ createSignedUrls: async paths => { signedPaths.push(...paths); return { data: paths.map(path => ({path, signedUrl:"https://storage.test/"+path})) }; } }) },
+    rpc: async name => { assert.equal(name,"ensure_my_profile"); stored = { nickname:"클라이머-member",gender:null,age:null,photo:avatars.defaultAvatar(),is_public:false }; return { data:stored,error:null }; },
     from: () => ({
       upsert: async row => { stored = row; return { error: null }; },
-      select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: stored, error: null }) }) }),
+      select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: stored, error: readError }) }) }),
     }),
   };
   const api = load('supabase.ts', {
-    require: name => name === '@supabase/supabase-js' ? { createClient: () => sb } : {},
+    require: name => name === '@supabase/supabase-js' ? { createClient: () => sb } : name === './defaultAvatar' ? avatars : {},
     process: { env: { NEXT_PUBLIC_SUPABASE_URL: 'http://local.test', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test' } },
   });
   await api.upsertMyProfileDb(basic, false);
@@ -68,6 +68,18 @@ function load(file, globals = {}) {
   assert.equal(stored.visit_frequency, null, 'clearing a choice persists null');
   assert.equal((await api.fetchMyProfileDb()).visitFrequency, undefined);
 
+  stored = null;
+  readError = { message: 'offline' };
+  assert.equal(await api.fetchMyProfileDb(), null, 'failed query never creates or overwrites a profile');
+  readError = null;
+  const empty = await api.fetchMyProfileDb();
+  assert.equal(empty.gender, null); assert.equal(empty.age, null); assert.equal(empty.isPublic, false);
+  const defaults = [avatars.defaultAvatar('m'), avatars.defaultAvatar('f'), avatars.defaultAvatar(null)];
+  const urls = await api.signedPhotoUrls([...defaults, 'member/real.jpg']);
+  for (const key of defaults) assert.equal(urls[key], key, 'bundled avatars need no storage signature');
+  assert.deepEqual(signedPaths, ['member/real.jpg']);
+  assert.equal(avatars.isDefaultAvatar('https://untrusted.test/photo.svg'), false);
+
   const storage = new Map();
   const local = load('myProfile.ts', { window: {}, localStorage: {
     getItem: key => storage.get(key) ?? null,
@@ -77,5 +89,5 @@ function load(file, globals = {}) {
     local.saveMyProfile({ ...complete, isPublic });
     assert.equal(local.loadMyProfile().isPublic, isPublic, 'local previews retain the same explicit visibility choice');
   }
-  console.log('PASS: private browsing, participation requirements, opt-in/out persistence and profile editing');
+  console.log('PASS: optional photos, private browsing, opt-in/out persistence and profile editing');
 })().catch(error => { console.error(error); process.exitCode = 1; });

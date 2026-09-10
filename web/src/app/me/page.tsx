@@ -6,7 +6,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import ProfileTodo from "@/components/ProfileTodo";
 import ProfileShoe from "@/components/ProfileShoe";
 import PlayerReviews from "@/components/PlayerReviews";
 import { AvatarFallback, ChevronRightIcon } from "@/components/icons";
@@ -79,7 +78,7 @@ export default function Me() {
               className="h-16 w-16 shrink-0 rounded-full object-cover"
             />
           ) : (
-            <AvatarFallback size={64} />
+            <AvatarFallback size={64} gender={profile?.gender} />
           )}
           <div className="min-w-0 flex-1">
             {profile ? (
@@ -101,11 +100,6 @@ export default function Me() {
             {visitFrequencyLabel(profile?.visitFrequency) && <p className="mt-1 text-[12px] text-muted">클라이밍 {visitFrequencyLabel(profile?.visitFrequency)}</p>}
           </div>
         </div>
-        {profile && (
-          <div className="mt-3">
-            <ProfileTodo profile={profile} />
-          </div>
-        )}
       </section>
 
       <ProfileShoe />

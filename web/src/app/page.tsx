@@ -3,10 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { isBasicProfileComplete } from "@/lib/profileGate";
 import HomeSessionList from "@/components/HomeSessionList";
 import SessionFilterBar from "@/components/SessionFilterBar";
-import ProfileTodo from "@/components/ProfileTodo";
 import HomeBanner from "@/components/HomeBanner";
 import LoadErrorNotice from "@/components/LoadErrorNotice";
 import { ShoeBadge } from "@/components/PublicShoe";
@@ -106,10 +104,9 @@ export default function Home() {
         return;
       }
 
-      // 대표 사진을 포함한 기본 정보가 있으면 사람 찾기에 공개하지 않아도 둘러볼 수 있다.
+      // 프로필 입력 여부와 무관하게 로그인한 회원은 이용한다.
       const prof = await fetchMyProfileDb();
       if (!alive) return;
-      if (!isBasicProfileComplete(prof)) throw new Error("profile_unavailable");
       setMe(prof);
 
       setHomeError(false);
@@ -334,11 +331,6 @@ export default function Home() {
             </Link>
           )}
 
-          {me && (
-            <div className="pt-3">
-              <ProfileTodo profile={me} />
-            </div>
-          )}
 
           {/* 공개 프로필이 아직 없으면 비어 보인다. 아무것도 안 그리면
               고장난 것처럼 보인다 — 왜 비었는지 말해준다. */}

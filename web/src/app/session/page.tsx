@@ -8,7 +8,6 @@ import { useQueryId, useQueryParam } from "@/lib/queryId";
 import { notifyPush } from "@/lib/nativePush";
 import { useNow } from "@/lib/browserState";
 import { level, levelRangeLabel } from "@/lib/levels";
-import { isProfileComplete } from "@/lib/profileGate";
 import { MOCK_PEOPLE, MOCK_SESSIONS, slotsLeft, type Session } from "@/lib/mock";
 import { capacityLabel, totalSeats } from "@/lib/capacity";
 import { AvatarFallback, ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
@@ -19,7 +18,6 @@ import {
   deleteSession,
   fetchSession,
   fetchSessionMembers,
-  fetchMyProfileDb,
   joinSession,
   signedPhotoUrls,
   toSession,
@@ -222,17 +220,6 @@ function SessionContent({ id, from }: { id: string | null; from: string | null |
       setBusy(false);
       alert("신청하려면 로그인이 필요해요");
       router.push("/login");
-      return;
-    }
-    const profile = await fetchMyProfileDb();
-    if (!isProfileComplete(profile)) {
-      setBusy(false);
-      alert(
-        profile
-          ? "프로필을 먼저 완성해주세요 (대표 사진·구력)"
-          : "먼저 프로필을 만들어주세요 (모임 조건을 맞추는 기본 정보예요)"
-      );
-      router.push("/profile/new");
       return;
     }
     const r = await joinSession(s.id);

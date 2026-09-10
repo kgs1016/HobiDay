@@ -6,6 +6,7 @@ import type { CareerId, LevelId } from "./levels";
 import type { VisitFrequencyId } from "./visitFrequency";
 import type { Session } from "./mock";
 import type { MyProfile } from "./myProfile";
+import { isDefaultAvatar } from "./defaultAvatar";
 import { parseShoeAchievement, type PublicShoeAchievement } from "./shoeProgress";
 import type {
   Article,
@@ -187,8 +188,8 @@ export async function fetchSession(id: string): Promise<DbSession | null> {
 export interface UserProfile {
   id: string;
   nickname: string;
-  gender: "m" | "f";
-  age: number;
+  gender: "m" | "f" | null;
+  age: number | null;
   area: string;
   level: LevelId | null;
   career: CareerId | null;
@@ -242,7 +243,7 @@ export interface SessionMember {
   id: string;
   nickname: string;
   photo: string | null;
-  gender: "m" | "f";
+  gender: "m" | "f" | null;
   age: number | null;
   area: string | null;
   level: LevelId | null;
@@ -467,7 +468,7 @@ export async function fetchMyHostedSessions(): Promise<MyHostedSession[] | null>
 export interface MatchMate {
   id: string;
   nickname: string;
-  gender: "m" | "f";
+  gender: "m" | "f" | null;
   level: number;
   photo: string | null;
   is_host: boolean;
@@ -548,8 +549,8 @@ export interface HostedRequest {
   created_at: string;
   user_id: string;
   nickname: string;
-  age: number;
-  gender: "m" | "f";
+  age: number | null;
+  gender: "m" | "f" | null;
   level: LevelId | null;
   career: CareerId | null;
   height: number | null;
@@ -616,7 +617,13 @@ export async function fetchMyProfileDb(): Promise<(MyProfile & { isPublic: boole
   const sb = getSupabase();
   const user = await currentUser();
   if (!sb || !user) return null;
-  const { data } = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  const result = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  let data = result.data;
+  // 기존 계정 중 회원 행이 없는 경우도 입력 화면으로 보내지 않고 본인 행만 만든다.
+  if (!data && !result.error) {
+    const created = await sb.rpc("ensure_my_profile");
+    if (!created.error) data = created.data;
+  }
   if (!data) return null;
   return {
     nickname: data.nickname,
@@ -626,7 +633,6 @@ export async function fetchMyProfileDb(): Promise<(MyProfile & { isPublic: boole
     level: data.level,
     careerId: data.career ?? undefined,
     visitFrequency: data.visit_frequency ?? undefined,
-    height: data.height ?? undefined,
     homeGym: data.home_gym ?? "",
     mbti: data.mbti ?? "",
     intro: data.intro ?? undefined,
@@ -648,7 +654,6 @@ export async function upsertMyProfileDb(p: MyProfile, isPublic: boolean) {
     level: p.level,
     career: p.careerId ?? null,
     visit_frequency: p.visitFrequency ?? null,
-    height: p.height ?? null,
     home_gym: p.homeGym?.trim() || null,
     mbti: p.mbti || null,
     intro: p.intro ?? null,
@@ -681,7 +686,7 @@ export interface Chat {
   gym: string | null;
   partner_id: string;
   nickname: string;
-  age: number;
+  age: number | null;
   level: LevelId | null;
   home_gym: string;
   photo: string | null;
@@ -849,18 +854,22 @@ export async function signedPhotoUrls(
 ): Promise<Record<string, string>> {
   const sb = getSupabase();
   const uniq = [...new Set(paths.filter(Boolean))];
-  if (!sb || uniq.length === 0) return {};
+  if (uniq.length === 0) return {};
 
   const cache = photoUrlCache();
   const now = Date.now();
   const out: Record<string, string> = {};
   const need: string[] = [];
   for (const p of uniq) {
+    if (isDefaultAvatar(p)) {
+      out[p] = p;
+      continue;
+    }
     const c = cache.get(p);
     if (c && c.exp > now) out[p] = c.url;
     else need.push(p);
   }
-  if (need.length === 0) return out;
+  if (!sb || need.length === 0) return out;
 
   const { data } = await sb.storage.from(PHOTO_BUCKET).createSignedUrls(need, seconds);
   // 만료 1시간 전까지만 재사용 — 화면에 뜬 채로 만료되는 걸 피한다
@@ -931,7 +940,7 @@ export interface ReceivedRequest {
   created_at: string;
   from_id: string;
   nickname: string;
-  age: number;
+  age: number | null;
   level: LevelId | null;
   career: CareerId | null;
   height: number | null;
@@ -953,7 +962,7 @@ export interface SentRequest {
   to_id: string;
   photo?: string | null;
   nickname: string;
-  age: number;
+  age: number | null;
   level: LevelId | null;
   home_gym: string;
 }
@@ -1136,9 +1145,7 @@ export async function fetchPeople(me?: { id: string }) {
     .select(
       "id, nickname, age, gender, level, career, visit_frequency, height, home_gym, mbti, area, intro, photo"
     )
-    .eq("is_public", true)
-    // 사진 없는 카드는 목록에 넣지 않는다 (DB 제약과 이중으로)
-    .not("photo", "is", null);
+    .eq("is_public", true);
 
   if (me) q = q.neq("id", me.id);
 
@@ -1150,8 +1157,8 @@ export async function fetchPeople(me?: { id: string }) {
   return data.map((d) => ({
     id: d.id as string,
     nickname: d.nickname as string,
-    age: d.age as number,
-    gender: d.gender as "m" | "f",
+    age: d.age as number | null,
+    gender: d.gender as "m" | "f" | null,
     level: d.level as LevelId,
     careerId: (d.career ?? undefined) as CareerId | undefined,
     visitFrequency: (d.visit_frequency ?? undefined) as VisitFrequencyId | undefined,
@@ -1284,7 +1291,7 @@ export interface BlockedPerson {
   blocked_id: string;
   created_at: string;
   nickname: string;
-  age: number;
+  age: number | null;
   home_gym: string;
 }
 

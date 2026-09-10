@@ -45,11 +45,7 @@ export default function SessionCard({
     </span>
   ) : full ? (
     <span className="shrink-0 text-[12px] text-faint">마감</span>
-  ) : (
-    <span className="shrink-0 text-[12.5px] text-muted">
-      <b className="font-semibold text-ink">{s.joined}</b> / {total}명
-    </span>
-  );
+  ) : null;
 
   return (
     <Link
@@ -61,14 +57,20 @@ export default function SessionCard({
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* 장소 */}
-        <p className="truncate text-[15px] font-semibold tracking-tight">
-          <span className="align-middle">{s.gym}</span>
-          {s.isAway && (
-            <span className="ml-1.5 align-middle text-[11px] font-normal text-faint">
-              원정
-            </span>
-          )}
-        </p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="min-w-0 truncate text-[15px] font-semibold tracking-tight">
+            <span className="align-middle">{s.gym}</span>
+            {s.isAway && (
+              <span className="ml-1.5 align-middle text-[11px] font-normal text-faint">
+                원정
+              </span>
+            )}
+          </p>
+          <span aria-label={`현재 ${s.joined}명 / 정원 ${total}명`}
+            className="shrink-0 rounded-md bg-surface2 px-2 py-1 text-[13px] font-semibold leading-none tabular-nums text-ink">
+            {s.joined}/{total}
+          </span>
+        </div>
 
         {/* 일시 */}
         <p className="mt-[3px] text-[13px] text-muted">

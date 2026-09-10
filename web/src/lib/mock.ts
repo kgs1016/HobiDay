@@ -54,8 +54,8 @@ export interface SessionHost {
 export interface Person {
   id: string;
   nickname: string;
-  age: number;
-  gender: "m" | "f";
+  age: number | null;
+  gender: "m" | "f" | null;
   /* 레벨은 선택 입력 — 없으면 카드·프로필에서 그 칸을 접는다 */
   level: LevelId | null;
   careerId?: CareerId;
