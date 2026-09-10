@@ -3,6 +3,7 @@
 import { useId, useRef, useState } from "react";
 import Link from "next/link";
 import ClimbingShoe from "@/components/ClimbingShoe";
+import { PlayIcon } from "@/components/icons";
 
 const BANNERS = [
   {
@@ -20,6 +21,14 @@ const BANNERS = [
     action: "클라이밍 뉴스 보러가기",
     label: "클라이밍 뉴스 배너 보기",
     background: "bg-[#f1f4f8]",
+  },
+  {
+    id: "video",
+    href: "/videos",
+    title: ["오늘의 등반을,", "영상으로 나눠요"],
+    action: "클라이밍 영상 보러가기",
+    label: "클라이밍 영상 배너 보기",
+    background: "bg-[#edf4ff]",
   },
 ] as const;
 
@@ -73,7 +82,7 @@ export default function HomeBanner() {
                   <div className="absolute top-1/2 right-0 h-24 w-24 -translate-y-1/2 rounded-full bg-white/70" />
                   <ClimbingShoe color="blue" className="absolute top-1/2 right-0 w-[116px] -translate-y-1/2 -rotate-12 min-[380px]:w-[132px]" />
                 </>
-              ) : (
+              ) : banner.id === "news" ? (
                 <div className="absolute top-1/2 right-2 w-[90px] -translate-y-1/2 rotate-[9deg] rounded-xl bg-white p-3 shadow-[0_5px_16px_rgba(25,31,40,0.08)]">
                   <p className="text-[8px] font-bold tracking-[1.5px] text-accent-strong">HOBIDAY</p>
                   <p className="text-[21px] font-extrabold tracking-tight text-ink">NEWS</p>
@@ -81,6 +90,19 @@ export default function HomeBanner() {
                   <div className="mt-1.5 h-1 w-4/5 rounded-full bg-line" />
                   <div className="mt-1 h-1 w-3/5 rounded-full bg-line" />
                 </div>
+              ) : (
+                <>
+                  <div className="absolute top-1/2 right-5 h-[86px] w-[64px] -translate-y-1/2 -rotate-12 rounded-xl bg-accent/20" />
+                  <div className="absolute top-1/2 right-2 w-[76px] -translate-y-1/2 rotate-[8deg] rounded-xl bg-white p-1.5 shadow-[0_5px_16px_rgba(25,31,40,0.08)]">
+                    <div className="relative flex h-[82px] items-center justify-center overflow-hidden rounded-lg bg-[#233b55]">
+                      <div className="absolute -top-3 -right-3 h-14 w-14 rounded-full bg-accent/35" />
+                      <div className="absolute -bottom-5 -left-2 h-16 w-16 rounded-full bg-accent/20" />
+                      <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white text-accent-strong">
+                        <PlayIcon size={23} className="ml-0.5" />
+                      </span>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           </Link>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { isBasicProfileComplete } from "@/lib/profileGate";
 import HomeSessionList from "@/components/HomeSessionList";
 import SessionFilterBar from "@/components/SessionFilterBar";
@@ -39,6 +40,7 @@ import {
 import type { GymOption } from "@/components/SessionFilterBar";
 
 export default function Home() {
+  const router = useRouter();
   // Supabase 키가 없을 때만 목데이터로 화면을 본다 (개발 폴백).
   // 실제 배포에선 목데이터를 초기값으로 두면 안 된다 — 확인이 끝나기 전에
   // 존재하지 않는 모임이 1초쯤 그려진다.
@@ -100,6 +102,7 @@ export default function Home() {
       // 보이는 걸 막으려고 조회 자체를 하지 않는다.
       if (!user) {
         setHomeError(false);
+        router.replace("/login");
         return;
       }
 
@@ -142,7 +145,7 @@ export default function Home() {
       retrying.current = false;
     });
     return () => { alive = false; };
-  }, [loadAttempt]);
+  }, [loadAttempt, router]);
 
   // 하단 신청함에 있던 확인 필요 배지를 편지 아이콘에서도 갱신한다.
   useEffect(() => {
@@ -158,44 +161,10 @@ export default function Home() {
     <LoadErrorNotice message="홈 화면을 불러오지 못했어요" loading={loading} onRetry={retry} />
   </main>;
 
-  // 비로그인 게이트 — authed 가 null 인 동안(확인 중)은 띄우지 않아 깜빡임이 없다
-  if (authed === false) {
-    return (
-      <main className="px-4">
-        <header className="pt-16 text-center">
-          <p className="text-[14px] font-bold tracking-[2px] text-accent">
-            HOBIDAY
-          </p>
-          <h1 className="mt-4 text-[22px] font-bold leading-snug tracking-tight">
-            취미로 시작해서,
-            <br />
-            사람으로 끝나는 하루
-          </h1>
-        </header>
+  // 로그인 화면으로 이동하는 동안 중간 안내나 빈 모임 목록을 표시하지 않는다.
+  if (authed === false) return null;
 
-        <div className="mx-auto mt-9 flex max-w-sm flex-col gap-2">
-          <Link
-            href="/login"
-            className="button-primary rounded-xl py-3.5 text-center text-[15px] font-semibold"
-          >
-            로그인 하기
-          </Link>
-          <Link
-            href="/intro.html"
-            className="button-secondary rounded-xl py-3.5 text-center text-[14px] font-medium"
-          >
-            하비데이가 뭔가요?
-          </Link>
-        </div>
-
-        <p className="mt-6 text-center text-[12px] text-faint">
-          참여자 프로필을 보호하려고 로그인 후에만 공개해요.
-        </p>
-      </main>
-    );
-  }
-
-  // 위 화면들(온보딩·비로그인) 중 어느 것도 아닌데 아직 조회가 안 끝난 상태.
+  // 아직 조회가 끝나지 않은 상태.
   // 여기서 목록을 그리면 빈 목록이나 목데이터가 잠깐 보인다.
   if (!ready) {
     return (
