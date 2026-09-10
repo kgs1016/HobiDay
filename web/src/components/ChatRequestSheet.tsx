@@ -1,4 +1,7 @@
 "use client";
+import { useRouter } from "next/navigation";
+import { useParticipationDraft } from "@/lib/useParticipationDraft";
+import { requireParticipationProfile, handleParticipationError } from "@/lib/participation";
 
 /* 대화신청 시트 — 사람 찾기 목록과 프로필 화면이 같이 쓴다.
    한 줄 메시지를 붙이면 받는 쪽이 맥락을 보고 판단한다. */
@@ -26,15 +29,20 @@ export default function ChatRequestSheet({
   /** 보내진 뒤 — "보냈어요" 상태로 바꾸는 데 쓴다 */
   onSent?: () => void;
 }) {
+  const router = useRouter();
   const [msg, setMsg] = useState("");
+  const clearDraft = useParticipationDraft(`request:${target.id}`, msg, setMsg);
+  const returnTo = `/user?id=${encodeURIComponent(target.id)}&request=1`;
   const [busy, setBusy] = useState(false);
 
   const send = async () => {
     if (busy) return;
     setBusy(true);
+    if (!(await requireParticipationProfile(router, returnTo))) { setBusy(false); return; }
     const r = await sendRequest(target.id, msg);
     setBusy(false);
 
+    if (handleParticipationError(r.error, router, returnTo)) return;
     if (r.error === "already")
       return alert(
         r.status === "accepted"
@@ -49,6 +57,7 @@ export default function ChatRequestSheet({
       msg.trim() || "신청 내역에서 프로필을 확인해보세요",
       "/inbox"
     );
+    clearDraft();
     onSent?.();
     onClose();
     alert(`${target.nickname}님에게 대화를 신청했어요!\n수락하면 채팅이 열려요.`);

@@ -1,3 +1,4 @@
+import ParticipationRouteGate from "@/components/ParticipationRouteGate";
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
@@ -51,8 +52,8 @@ export default function RootLayout({
             paddingBottom: "calc(5rem + env(safe-area-inset-bottom))",
           }}
         >
-          {/* 프로필이 없으면 어느 화면으로 들어와도 여기서 막힌다 */}
-          {children}
+          {/* 작성 화면만 참여 조건을 확인하며 둘러보기는 그대로 열어둔다. */}
+          <ParticipationRouteGate>{children}</ParticipationRouteGate>
         </div>
         <BottomNav />
       </body>

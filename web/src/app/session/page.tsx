@@ -1,4 +1,5 @@
 "use client";
+import { requireParticipationProfile, handleParticipationError } from "@/lib/participation";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -206,6 +207,7 @@ function SessionContent({ id, from }: { id: string | null; from: string | null |
   };
 
   const onJoin = async () => {
+    if (busy || !(await requireParticipationProfile(router))) return;
     if (!hasSupabase()) {
       alert(
         full
@@ -224,6 +226,7 @@ function SessionContent({ id, from }: { id: string | null; from: string | null |
     }
     const r = await joinSession(s.id);
     setBusy(false);
+    if (handleParticipationError(r.error, router)) return;
     if (r.error === "is_host") return alert("내가 연 모임이에요!");
     if (r.error === "full") return alert("자리가 이미 다 찼어요.");
     // 목록에서 사라지기 전에 열어둔 화면에서 누른 경우

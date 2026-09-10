@@ -76,6 +76,7 @@ export default function UserProfile({
   sessionId,
   matchId,
   from,
+  initialRequest = false,
 }: {
   /** 없으면 sessionId 의 호스트 — 예전 주소(/session/host?id=)가 그렇게 온다 */
   userId: string | null;
@@ -84,6 +85,7 @@ export default function UserProfile({
   /** 1:1 채팅방에서 왔을 때 그 방 — 돌아갈 곳 */
   matchId: string | null;
   from: string | null;
+  initialRequest?: boolean;
 }) {
   const router = useRouter();
   /* 채팅방은 상태로만 열려 있어 router.back() 으로는 목록에 떨어진다.
@@ -105,7 +107,7 @@ export default function UserProfile({
   const [me, setMe] = useState<string | null>(null);
   /* 답을 기다리는 중이거나 이미 열린 채팅 신청이 있으면 버튼을 잠근다 */
   const [sent, setSent] = useState(false);
-  const [requesting, setRequesting] = useState(false);
+  const [requesting, setRequesting] = useState(initialRequest);
   const [reporting, setReporting] = useState(false);
 
   useEffect(() => {
@@ -215,7 +217,7 @@ export default function UserProfile({
 
       {!hasSupabase() && (
         <p className="mt-4 text-center text-[11.5px] text-faint">
-          미리보기 데이터 · 암벽화 성취도 예시예요
+          미리보기 데이터 · 클라이밍화 성취도 예시예요
         </p>
       )}
       <PublicShoe achievement={profile.achievement} />

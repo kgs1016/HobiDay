@@ -17,16 +17,18 @@ function load(file, globals = {}) {
 (async () => {
   const { isBasicProfileComplete } = load('profileGate.ts');
   const basic = { nickname: '선택 공개 회원', gender: 'f', age: 27, photo: 'member/photo.jpg', area: '', level: null, homeGym: '', mbti: '', isPublic: false };
-  assert.equal(isBasicProfileComplete(basic), true, 'a private member with a photo can browse without a career');
+  assert.equal(isBasicProfileComplete(basic), false, 'career is required for participation, not browsing');
   const complete = { ...basic, careerId: 2 };
   for (const isPublic of [false, true]) {
     for (const photo of [undefined, '', ' ']) {
       assert.equal(isBasicProfileComplete({ ...complete, photo, isPublic }), true, 'photo is optional');
     }
   }
-  for (const invalid of [null, { ...basic, nickname: '' }, { ...basic, age: 18 }, { ...basic, age: 61 }]) {
+  for (const invalid of [null, { ...basic, nickname: '' }, { ...complete, gender: null }, { ...complete, careerId: 7 }]) {
     assert.equal(isBasicProfileComplete(invalid), false, 'required member information remains validated');
   }
+
+  assert.equal(isBasicProfileComplete({...complete, age:null}),true,'age is optional');
 
   let stored;
   let readError = null;

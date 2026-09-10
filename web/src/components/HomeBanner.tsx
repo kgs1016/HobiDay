@@ -11,8 +11,8 @@ const BANNERS = [
     id: "shoe",
     href: "/me",
     title: ["오늘의 완등을,", "나만의 색으로"],
-    action: "내 암벽화 보기",
-    label: "암벽화 배너 보기",
+    action: "내 클라이밍화 보기",
+    label: "클라이밍화 배너 보기",
     background: "bg-accent-soft",
   },
   {

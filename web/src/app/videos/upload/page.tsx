@@ -1,4 +1,5 @@
 "use client";
+import { requireParticipationProfile, handleParticipationError } from "@/lib/participation";
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -60,12 +61,14 @@ export default function UploadVideo() {
     setBusy(true);
     setError("");
     try {
+      if (!(await requireParticipationProfile(router))) return;
       const media = draft ?? await uploadFeedbackMedia(file, thumbnail);
       setDraft(media);
       const id = await publishFeedbackVideo(media, body.trim());
       router.replace(`/videos/post?id=${id}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "영상을 올리지 못했어요");
+      if (!handleParticipationError(e instanceof Error ? e.message : undefined, router))
+        setError(e instanceof Error ? e.message : "영상을 올리지 못했어요");
     } finally {
       submitting.current = false;
       setBusy(false);

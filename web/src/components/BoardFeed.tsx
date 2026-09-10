@@ -88,9 +88,6 @@ export default function BoardFeed({ category }: { category: PostCategory }) {
     </div>
     {rows?.length === 0 && !error && <div className="py-16 text-center">
       <p className="text-[15px] font-semibold">아직 글이 없어요</p>
-      <Link href={`/community/write?category=${category}`} className="mt-3 inline-block text-sm font-semibold text-accent-strong">
-        {category === "gear" ? "첫 장비 추천 남기기" : "첫 이야기 남기기"}
-      </Link>
     </div>}
     {busy && <p role="status" className="py-8 text-center text-sm text-faint">불러오는 중…</p>}
     {error && <div role="alert" className="py-8 text-center text-sm">
