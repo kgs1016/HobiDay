@@ -663,6 +663,14 @@ export async function upsertMyProfileDb(p: MyProfile, isPublic: boolean) {
   return { error: error?.message };
 }
 
+export async function setMyProfileVisibility(isPublic: boolean) {
+  const sb = getSupabase();
+  const user = await currentUser();
+  if (!sb || !user) return { error: "no_auth" };
+  const { error } = await sb.from("profiles").update({ is_public: isPublic }).eq("id", user.id);
+  return { error: error?.message };
+}
+
 /* ── 내 영상 — 커뮤니티에 올린 것들 ── */
 
 /* 예전에는 모임 진행 화면에 올린 "등반 인증" 영상을 셌다. 그 화면과

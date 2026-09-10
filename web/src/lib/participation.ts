@@ -1,5 +1,6 @@
 import { currentUser, fetchMyProfileDb, hasSupabase } from './supabase';
 import { loadMyProfile } from './myProfile';
+import { fetchClimbingProgress } from './climbingAscents';
 import { isBasicProfileComplete } from './profileGate';
 
 export const PROFILE_REQUIRED_MESSAGE = '프로필을 완성해주세요';
@@ -33,7 +34,14 @@ export async function requireParticipationProfile(router: ParticipationRouter, r
     const profile = hasSupabase() ? await fetchMyProfileDb() : loadMyProfile();
     if (signal?.aborted) return false;
     if (hasSupabase() && !profile) throw new Error('profile_unavailable');
-    if (isBasicProfileComplete(profile)) return true;
+    if (isBasicProfileComplete(profile)) {
+      const progress = await fetchClimbingProgress();
+      if (signal?.aborted) return false;
+      if (progress.starting_shoe) return true;
+      alert(PROFILE_REQUIRED_MESSAGE);
+      router.push('/profile/shoe?returnTo=' + encodeURIComponent(safeParticipationReturn(returnTo ?? participationReturn()) ?? '/'));
+      return false;
+    }
     alert(PROFILE_REQUIRED_MESSAGE);
     router.push(participationProfileHref(returnTo ?? participationReturn()));
   } catch { if (!signal?.aborted) alert('회원 정보를 확인하지 못했어요. 다시 시도해주세요'); }

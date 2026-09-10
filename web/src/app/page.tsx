@@ -283,7 +283,7 @@ export default function Home() {
         </>
       ) : (
         <div className="pb-6">
-          {mockMode && <p className="mt-3 rounded-lg bg-surface2 px-4 py-2.5 text-center text-[11.5px] text-faint">미리보기 데이터 · 암벽화 성취도 예시예요</p>}
+          {mockMode && <p className="mt-3 rounded-lg bg-surface2 px-4 py-2.5 text-center text-[11.5px] text-faint">미리보기 데이터 · 클라이밍화 성취도 예시예요</p>}
           {/* 내 공개 설정 — 비공개 프로필도 본인에게만 상태를 보여준다. */}
           {me ? (
             <div className="flex items-center gap-3.5 border-b border-line py-4">

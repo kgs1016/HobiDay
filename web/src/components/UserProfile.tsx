@@ -217,7 +217,7 @@ export default function UserProfile({
 
       {!hasSupabase() && (
         <p className="mt-4 text-center text-[11.5px] text-faint">
-          미리보기 데이터 · 암벽화 성취도 예시예요
+          미리보기 데이터 · 클라이밍화 성취도 예시예요
         </p>
       )}
       <PublicShoe achievement={profile.achievement} />

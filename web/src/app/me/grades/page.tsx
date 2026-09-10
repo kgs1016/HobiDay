@@ -13,7 +13,7 @@ import {
 } from "@/lib/gymGrades";
 
 type GuideTab = "stages" | "gyms";
-const TABS = [{ id: "stages", label: "암벽화 단계" }, { id: "gyms", label: "브랜드별 난이도" }] as const;
+const TABS = [{ id: "stages", label: "클라이밍화 단계" }, { id: "gyms", label: "브랜드별 난이도" }] as const;
 
 export default function GradesPage() {
   const tab = useQueryParam("tab");
@@ -62,7 +62,7 @@ function StageGuide({ stage, onGyms }: { stage: string; onGyms: () => void }) {
     <div className="flex min-h-32 items-center justify-between gap-2 py-5">
       <div>
         <p className="text-[11px] font-semibold tracking-[0.14em] text-accent-strong">HOBIDAY</p>
-        <h2 className="mt-1.5 text-[22px] font-bold leading-snug tracking-tight">완등이 쌓이면,<br />암벽화도 한 단계</h2>
+        <h2 className="mt-1.5 text-[22px] font-bold leading-snug tracking-tight">완등이 쌓이면,<br />클라이밍화도 한 단계</h2>
       </div>
       <ClimbingShoe color={selected?.id ?? "blue"} className="w-28 shrink-0" />
     </div>
@@ -73,7 +73,7 @@ function StageGuide({ stage, onGyms }: { stage: string; onGyms: () => void }) {
     <table className="w-full table-fixed text-left text-[13px]">
       <caption className="sr-only">최근 3개월에 성취 점수와 해당 하비데이 난이도 완등 조건을 모두 충족하면 승급</caption>
       <thead className="border-b border-line text-[11px] text-muted"><tr>
-        <th scope="col" className="w-[34%] pb-2.5 font-normal">암벽화 색</th>
+        <th scope="col" className="w-[34%] pb-2.5 font-normal">클라이밍화 색</th>
         <th scope="col" className="w-[24%] pb-2.5 font-normal">점수</th>
         <th scope="col" className="pb-2.5 text-right font-normal">완등 조건</th>
       </tr></thead>

@@ -6,7 +6,7 @@ import { SHOE_STAGES, type PublicShoeAchievement } from "@/lib/shoeProgress";
 export function ShoeBadge({ achievement }: { achievement?: PublicShoeAchievement }) {
   if (!achievement) return null;
   const stage = SHOE_STAGES.find(stage => stage.id === achievement.stage)!;
-  return <span title={`${stage.name} 암벽화 · ${achievement.stage_source === "starting" ? "시작 설정" : "최근 3개월 완등 성취"}`} className="inline-flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white">
+  return <span title={`${stage.name} 클라이밍화 · ${achievement.stage_source === "starting" ? "시작 설정" : "최근 3개월 완등 성취"}`} className="inline-flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white">
     <ClimbingShoe color={stage.id} className="h-6 w-6" />
   </span>;
 }
@@ -26,7 +26,7 @@ export default function PublicShoe({ achievement }: { achievement?: PublicShoeAc
       <ClimbingShoe color={stage.id} className="h-20 w-20 shrink-0 bg-white" />
       <div className="min-w-0">
         <p className="text-[17px] font-bold" style={{ color: stage.ink }}>
-          {stage.name} 암벽화
+          {stage.name} 클라이밍화
         </p>
         <p className="mt-1 text-[12px] leading-relaxed text-muted">
           {achievement.stage_source === "starting" ? "시작 설정" : stage.minLevel === null ? "시작 단계" : `${stage.points.toLocaleString()}점 · H${stage.minLevel}+ ${stage.required}개`}

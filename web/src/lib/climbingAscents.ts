@@ -48,16 +48,16 @@ export async function fetchClimbingProgress(): Promise<ClimbingProgress> {
 }
 
 export async function resetStartingShoe(stage: ShoeColorId): Promise<ClimbingProgress> {
-  if (!SHOE_STAGES.some(item => item.id === stage)) throw new Error("암벽화 색을 선택해주세요");
+  if (!SHOE_STAGES.some(item => item.id === stage)) throw new Error("클라이밍화 색을 선택해주세요");
   const sb = getSupabase();
   if (!sb) {
     if (!isAscentPreview()) throw new Error("로그인 후 설정할 수 있어요");
-    if (!previewStartingShoe) throw new Error("시작 암벽화를 먼저 설정해주세요");
+    if (!previewStartingShoe) throw new Error("시작 클라이밍화를 먼저 설정해주세요");
     if (previewStartingShoeReset) {
       if (previewStartingShoe.stage === stage) return fetchClimbingProgress();
-      throw new Error("시작 암벽화는 한 번만 다시 고를 수 있어요");
+      throw new Error("시작 클라이밍화는 한 번만 다시 고를 수 있어요");
     }
-    if (previewStartingShoe.expires_on <= ascentToday()) throw new Error("시작 암벽화 적용 기간이 끝났어요");
+    if (previewStartingShoe.expires_on <= ascentToday()) throw new Error("시작 클라이밍화 적용 기간이 끝났어요");
     if (previewStartingShoe.stage === stage) throw new Error("다른 색을 선택해주세요");
     previewStartingShoe = { stage, expires_on: shoeStartExpiresOn(ascentToday()) };
     previewStartingShoeReset = true;
@@ -67,26 +67,26 @@ export async function resetStartingShoe(stage: ShoeColorId): Promise<ClimbingPro
   const { data, error } = await sb.rpc("climbing_shoe_start_reset", { p_stage: stage });
   if (error) throw new Error("재설정 결과를 확인하지 못했어요. 다시 시도해주세요");
   const errors: Record<string, string> = { no_auth: "로그인이 필요해요", no_profile: "회원 정보를 불러오지 못했어요. 다시 시도해주세요",
-    not_set: "시작 암벽화를 먼저 설정해주세요", reset_used: "시작 암벽화는 한 번만 다시 고를 수 있어요",
-    expired: "시작 암벽화 적용 기간이 끝났어요", same_stage: "다른 색을 선택해주세요", bad_stage: "암벽화 색을 선택해주세요" };
-  if (!data?.ok || !data.progress?.difficulty_counts) throw new Error(errors[data?.error] ?? "암벽화를 다시 설정하지 못했어요");
+    not_set: "시작 클라이밍화를 먼저 설정해주세요", reset_used: "시작 클라이밍화는 한 번만 다시 고를 수 있어요",
+    expired: "시작 클라이밍화 적용 기간이 끝났어요", same_stage: "다른 색을 선택해주세요", bad_stage: "클라이밍화 색을 선택해주세요" };
+  if (!data?.ok || !data.progress?.difficulty_counts) throw new Error(errors[data?.error] ?? "클라이밍화를 다시 설정하지 못했어요");
   return data.progress as ClimbingProgress;
 }
 
 export async function setStartingShoe(stage: ShoeColorId): Promise<ClimbingProgress> {
-  if (!SHOE_STAGES.some(item => item.id === stage)) throw new Error("암벽화 색을 선택해주세요");
+  if (!SHOE_STAGES.some(item => item.id === stage)) throw new Error("클라이밍화 색을 선택해주세요");
   const sb = getSupabase();
   if (!sb) {
     if (!isAscentPreview()) throw new Error("로그인 후 설정할 수 있어요");
-    if (previewStartingShoe && previewStartingShoe.stage !== stage) throw new Error("시작 암벽화는 이미 설정했어요");
+    if (previewStartingShoe && previewStartingShoe.stage !== stage) throw new Error("시작 클라이밍화는 이미 설정했어요");
     previewStartingShoe ??= { stage, expires_on: shoeStartExpiresOn(ascentToday()) };
     return fetchClimbingProgress();
   }
   const { data, error } = await sb.rpc("climbing_shoe_start_set", { p_stage: stage });
   if (error) throw new Error("설정 결과를 확인하지 못했어요. 같은 색으로 다시 시도해주세요");
   const errors: Record<string, string> = { no_auth: "로그인이 필요해요", no_profile: "회원 정보를 불러오지 못했어요. 다시 시도해주세요",
-    already_set: "시작 암벽화는 이미 설정했어요. 프로필을 다시 불러와주세요", bad_stage: "암벽화 색을 선택해주세요" };
-  if (!data?.ok || !data.progress?.difficulty_counts) throw new Error(errors[data?.error] ?? "암벽화를 설정하지 못했어요");
+    already_set: "시작 클라이밍화는 이미 설정했어요. 프로필을 다시 불러와주세요", bad_stage: "클라이밍화 색을 선택해주세요" };
+  if (!data?.ok || !data.progress?.difficulty_counts) throw new Error(errors[data?.error] ?? "클라이밍화를 설정하지 못했어요");
   return data.progress as ClimbingProgress;
 }
 

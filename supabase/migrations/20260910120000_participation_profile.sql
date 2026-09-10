@@ -1,12 +1,13 @@
--- Browse freely; require only nickname, gender and age when creating or joining.
--- Photos, career, skill and shoe setup remain optional. Existing content is retained.
+-- Browse freely; require only nickname, gender, career and selected shoe when creating or joining.
+-- Photos, age and self-reported skill remain optional. Existing content is retained.
 begin;
 
 create function public.my_participation_profile_ready() returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (
     select 1 from public.profiles where id = auth.uid()
-      and length(btrim(nickname)) > 0 and gender in ('m','f') and age between 19 and 60
+      and length(btrim(nickname)) > 0 and gender in ('m','f') and career between 1 and 6
+      and exists(select 1 from public.climbing_shoe_starts where user_id = profiles.id)
   )
 $$;
 revoke all on function public.my_participation_profile_ready() from public, anon;
@@ -48,9 +49,24 @@ execute function public.require_participation_profile();
 
 -- Check NEW values so completing and publishing in the same save succeeds.
 update public.profiles set is_public = false
-where is_public and not coalesce(length(btrim(nickname)) > 0 and gender in ('m','f') and age between 19 and 60, false);
+where is_public and (not coalesce(length(btrim(nickname)) > 0 and gender in ('m','f') and career between 1 and 6, false)
+  or not exists(select 1 from public.climbing_shoe_starts where user_id = profiles.id));
 alter table public.profiles add constraint profiles_public_needs_basic_info
-check (not is_public or coalesce(length(btrim(nickname)) > 0 and gender in ('m','f') and age between 19 and 60, false));
+check (not is_public or coalesce(length(btrim(nickname)) > 0 and gender in ('m','f') and career between 1 and 6, false));
+
+-- A separate trigger checks the selected shoe without a cross-table CHECK.
+create function public.require_public_profile_shoe() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.is_public and not exists(select 1 from public.climbing_shoe_starts where user_id = new.id) then
+    raise exception 'profile_incomplete' using errcode = 'P0001';
+  end if;
+  return new;
+end
+$$;
+revoke all on function public.require_public_profile_shoe() from public, anon, authenticated;
+create trigger participation_profile_publish before insert or update of is_public on public.profiles
+for each row execute function public.require_public_profile_shoe();
 
 -- Block media upload before publishing, but leave profile-photo uploads and
 -- removal of unattached media available for completion and cleanup.

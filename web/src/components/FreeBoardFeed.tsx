@@ -60,8 +60,7 @@ function FilteredPosts({ topic, query, onPins }: Filters & { onPins: (pins: Boar
       {rows?.map(p => <PostRow key={p.id} p={p} photo={p.photo ? photos[p.photo] : undefined} />)}
     </div>
     {rows?.length === 0 && !error && <div className="py-14 text-center">
-      <p className="text-[14px] font-medium text-muted">{query ? "검색 결과가 없어요" : topic ? "아직 이 주제의 글이 없어요" : "첫 이야기를 기다리고 있어요"}</p>
-      {!query && <Link href={`/community/write?category=board${topic ? `&topic=${topic}` : ""}`} className="mt-3 inline-block text-[13px] font-semibold text-accent-strong">첫 이야기 남기기</Link>}
+      <p className="text-[14px] font-medium text-muted">{query ? "검색 결과가 없어요" : topic ? "아직 이 주제의 글이 없어요" : "아직 글이 없어요"}</p>
     </div>}
     {busy && <p role="status" className="py-8 text-center text-sm text-faint">불러오는 중…</p>}
     {error && <div role="alert" className="py-6 text-center text-sm">

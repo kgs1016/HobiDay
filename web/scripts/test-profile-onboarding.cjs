@@ -29,6 +29,7 @@ function harness(file,imports,globals={}) {
   const react={
     useState: initial => {const i=index++; if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;
       return [slots[i],value=>{slots[i]=typeof value==='function'?value(slots[i]):value;}];},
+    useCallback: fn=>fn,
     useRef: initial=>{const i=index++; return slots[i]??=( {current:initial} );},
     useEffect: (effect,deps) => {const i=index++; if(!slots[i] || deps.some((d,j)=>d!==slots[i][j])){
       cleanups[i]?.(); slots[i]=deps; cleanups[i]=effect();
@@ -58,6 +59,7 @@ const valid={nickname:'가입 테스트',gender:'f',age:27,area:'',level:null,ho
       '@/lib/queryId':{useQueryParam:()=>null},
       '@/lib/participation':{safeParticipationReturn:()=>null,PROFILE_REQUIRED_MESSAGE:'프로필을 완성해주세요'},
       '@/lib/levels':levels,'@/lib/visitFrequency':frequency,'@/lib/profileGate':gate,
+      '@/lib/climbingAscents':{fetchClimbingProgress:async()=>({starting_shoe:onboarding?null:{stage:'white'}})},
       '@/lib/imageResize':{downscaleImage:async file=>file},
       '@/lib/myProfile':{loadMyProfile:()=>profile,saveMyProfile:p=>{saved=p;}},
       '@/lib/supabase':{hasSupabase:()=>true,currentUser:async()=>({id:'member'}),fetchMyProfileDb:async()=>profile,
@@ -68,7 +70,7 @@ const valid={nickname:'가입 테스트',gender:'f',age:27,area:'',level:null,ho
     if(onboarding){
       const genderField=find(form.render(),n=>n.props?.label==='성별');
       find(genderField,n=>text(n)==='여성' && typeof n.props?.onClick==='function').props.onClick();
-      find(find(form.render(),n=>n.props?.label==='나이'),n=>n.type==='input').props.onChange({target:{value:'27'}});
+      find(find(form.render(),n=>n.props?.label==='나이 (선택)'),n=>n.type==='input').props.onChange({target:{value:'27'}});
       const input=find(form.render(),n=>n.type==='input'&&n.props.type==='file');
       input.props.onChange({target:{files:[{size:1000}],value:'photo'}});await flush();
     }
@@ -76,15 +78,15 @@ const valid={nickname:'가입 테스트',gender:'f',age:27,area:'',level:null,ho
     const pending=submit();await submit();
     assert.equal(calls,1,'double submit cannot duplicate profile writes');
     assert.equal(destination,undefined,'no navigation before a successful save');
-    assert.equal(saved.isPublic,isPublic,'public opt-in survives the new flow');
+    assert.equal(saved.isPublic,isPublic && !onboarding,'public opt-in survives the new flow');
     settle({error:failsFirst?'network':null});await pending;
     if(failsFirst){
       assert.equal(destination,undefined,'failed profile save stays on the first step');
       assert.equal(alerts.length,1);
       assert.equal(find(form.render(),n=>n.type==='button'&&n.props.type==='submit').props.disabled,false);
-      const retry=submit();assert.equal(calls,2);settle({error:null});await retry;
+      const retry=submit();await flush();assert.equal(calls,2);settle({error:null});await retry;
     }else assert.equal(alerts.length,0);
-    assert.equal(destination,onboarding?'/profile/shoe':isPublic?'/#people':'/me');
+    assert.equal(destination,onboarding?'/profile/shoe?returnTo='+encodeURIComponent(isPublic?'/#people':'/me')+(isPublic?'&publish=1':''):isPublic?'/#people':'/me');
     assert.equal(saved.photo,'fixture.webp');
   }
 
@@ -99,21 +101,23 @@ const valid={nickname:'가입 테스트',gender:'f',age:27,area:'',level:null,ho
       'next/navigation':{useRouter:()=>router},'@/components/StartingShoePicker':{default:'picker'},
       '@/lib/climbingAscents':{isAscentPreview:()=>scenario==='incomplete',fetchClimbingProgress:async()=>{
         if(offline)throw Error('offline');return result;}},
-      '@/lib/supabase':{hasSupabase:()=>scenario!=='incomplete',currentUser:async()=>scenario==='logged-out'?null:{id:'member'}},
-      '@/lib/profileGate':gate,'@/lib/myProfile':{loadMyProfile:()=>({...valid,photo:undefined})},
-    });
+      '@/lib/supabase':{hasSupabase:()=>scenario!=='incomplete',fetchMyProfileDb:async()=>valid,currentUser:async()=>scenario==='logged-out'?null:{id:'member'}},
+      '@/lib/profileGate':gate,'@/lib/myProfile':{loadMyProfile:()=>({...valid,photo:undefined,careerId:scenario==='incomplete'?undefined:1})},
+      '@/lib/queryId':{useQueryParam:()=>null},
+      '@/lib/participation':{safeParticipationReturn:()=>null,participationProfileHref:()=>'/profile/new',PROFILE_REQUIRED_MESSAGE:'프로필을 완성해주세요'},
+    },{alert:()=>{}});
     page.render();await flush();let tree=page.render();
     if(scenario==='chosen')assert.equal(destination,'/me');
     if(scenario==='logged-out')assert.equal(destination,'/login');
-    if(scenario==='incomplete')assert.equal(destination,undefined,'optional profile does not block shoe setup');
+    if(scenario==='incomplete')assert.equal(destination,'/profile/new','basic information is required before shoe completion');
     if(scenario==='offline'){
       assert.equal(destination,undefined);assert.ok(find(tree,n=>n.props?.role==='alert'));
       button(tree,'다시 불러오기').props.onClick();offline=false;page.render();await flush();tree=page.render();
     }
     if(scenario==='ready'||scenario==='offline'){
       const picker=find(tree,n=>n.type==='picker');assert.ok(picker);
-      picker.props.onSkip();assert.equal(destination,'/me');destination=undefined;
-      picker.props.onSaved({total:0});assert.equal(destination,'/me');
+      picker.props.onSkip();assert.equal(destination,'/');destination=undefined;
+      await picker.props.onSaved({total:0});assert.equal(destination,'/me');
     }
   }
 
