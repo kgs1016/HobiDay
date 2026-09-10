@@ -3,12 +3,13 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import ClimbingShoe from "@/components/ClimbingShoe";
-import { setStartingShoe } from "@/lib/climbingAscents";
+import { resetStartingShoe, setStartingShoe } from "@/lib/climbingAscents";
 import { SHOE_STAGES, type ClimbingProgress, type ShoeColorId } from "@/lib/shoeProgress";
 
 /** 가입 마지막 단계와 기존 회원의 설정 창이 같은 선택·저장 규칙을 쓴다. */
-export default function StartingShoePicker({ onboarding = false, onSkip, onSaved, onBusyChange }: {
+export default function StartingShoePicker({ onboarding = false, reset = false, onSkip, onSaved, onBusyChange }: {
   onboarding?: boolean;
+  reset?: boolean;
   onSkip: () => void;
   onSaved: (progress: ClimbingProgress) => void;
   onBusyChange?: (busy: boolean) => void;
@@ -24,7 +25,7 @@ export default function StartingShoePicker({ onboarding = false, onSkip, onSaved
     submitting.current = true;
     setBusy(true); onBusyChange?.(true); setError("");
     try {
-      const progress = await setStartingShoe(selected);
+      const progress = await (reset ? resetStartingShoe(selected) : setStartingShoe(selected));
       onSaved(progress);
     } catch (e) {
       setError(e instanceof Error ? e.message : "설정하지 못했어요");
@@ -53,13 +54,13 @@ export default function StartingShoePicker({ onboarding = false, onSkip, onSaved
       {stage ? stage.minLevel ? `유지 기준 H${stage.minLevel} 이상 ${stage.required}개 · ${stage.points.toLocaleString()}점` : "기록과 함께 시작하는 흰색 암벽화" : "평소 완등하는 난이도를 참고해 선택해주세요"}
     </p>
     {onboarding && <div className="mb-4 text-center">
-      {busy ? <span className="text-[12px] text-muted">전체 단계 기준 보기</span> :
-        <Link href={`/me/grades${selected ? `?stage=${selected}` : ""}`} className="inline-flex min-h-11 items-center text-[12px] text-muted underline underline-offset-4">전체 단계 기준 보기</Link>}
+      {busy ? <span className="text-[13px] font-semibold text-ink">전체 단계 기준 보기</span> :
+        <Link href={`/me/grades${selected ? `?stage=${selected}` : ""}`} className="inline-flex min-h-11 items-center text-[13px] font-semibold text-ink underline underline-offset-4">전체 단계 기준 보기</Link>}
     </div>}
     {error && <p role="alert" className="mb-3 text-[13px] text-danger">{error}</p>}
     <button type="button" onClick={save} disabled={!selected || busy} className="button-primary min-h-12 w-full rounded-xl text-[14px] font-semibold">
-      {busy ? "설정하는 중…" : stage ? "이 색으로 시작하기" : "색을 선택해주세요"}
+      {busy ? "설정하는 중…" : stage ? reset ? "이 색으로 다시 시작하기" : "이 색으로 시작하기" : "색을 선택해주세요"}
     </button>
-    <button type="button" onClick={onSkip} disabled={busy} className="mt-1 min-h-11 w-full text-[13px] text-muted">나중에 설정</button>
+    <button type="button" onClick={onSkip} disabled={busy} className="mt-1 min-h-11 w-full text-[13px] text-muted">{reset ? "취소" : "나중에 설정"}</button>
   </>;
 }

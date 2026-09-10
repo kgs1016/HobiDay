@@ -113,11 +113,12 @@ const valid={nickname:'가입 테스트',gender:'f',age:27,area:'',level:null,ho
   }
 
   // Shared selector does not write on skip, blocks double saves and preserves selection for retry.
-  let calls=0,skips=0,saved,settle;
+  let calls=0,resetCalls=0,skips=0,saved,settle;
   const picker=harness('components/StartingShoePicker.tsx',{
     'next/link':{default:'a'},'@/components/ClimbingShoe':{default:'shoe'},'@/lib/shoeProgress':shoe,
     '@/lib/climbingAscents':{setStartingShoe:async stage=>{calls++;assert.equal(stage,'purple');
-      return new Promise((resolve,reject)=>{settle={resolve,reject};});}},
+      return new Promise((resolve,reject)=>{settle={resolve,reject};});},resetStartingShoe:async stage=>{resetCalls++;assert.equal(stage,'blue');
+      return {total:0,difficulty_counts:{},starting_shoe:{stage:'blue',expires_on:'2026-12-10'},can_reset_start:false};}},
   });
   const props={onboarding:true,onSkip:()=>{skips++;},onSaved:p=>{saved=p;}};
   let tree=picker.render(props);
@@ -134,5 +135,14 @@ const valid={nickname:'가입 테스트',gender:'f',age:27,area:'',level:null,ho
   const retry=button(tree,'이 색으로 시작하기').props.onClick();
   settle.resolve({total:0,difficulty_counts:{}});await retry;
   assert.equal(saved.total,0);assert.equal(calls,2);
-  console.log('PASS: committed basic profile → shoe step; edit routes; authentication, repeat setup and retry; skip without writes; duplicate saves');
+  const resetPicker=harness('components/StartingShoePicker.tsx',{
+    'next/link':{default:'a'},'@/components/ClimbingShoe':{default:'shoe'},'@/lib/shoeProgress':shoe,
+    '@/lib/climbingAscents':{setStartingShoe:async()=>{throw Error('wrong action');},resetStartingShoe:async stage=>{resetCalls++;assert.equal(stage,'blue');
+      return {total:0,difficulty_counts:{},starting_shoe:{stage:'blue',expires_on:'2026-12-10'},can_reset_start:false};}},
+  });
+  const resetProps={...props,reset:true};tree=resetPicker.render(resetProps);
+  find(tree,n=>n.props?.['aria-label']==='파랑').props.onClick();tree=resetPicker.render(resetProps);
+  await button(tree,'이 색으로 다시 시작하기').props.onClick();
+  assert.equal(resetCalls,1);
+  console.log('PASS: committed basic profile → shoe step; edit routes; authentication, repeat setup/reset and retry; skip without writes; duplicate saves');
 })().catch(error=>{console.error(error);process.exitCode=1;});

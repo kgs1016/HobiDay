@@ -5,11 +5,12 @@ import { PlusIcon } from "@/components/icons";
 import { shoeProgress, type ClimbingProgress } from "@/lib/shoeProgress";
 
 /** 실제 성취와 최초 시작 설정을 구분한다. 등반 수준 필드와는 별개다. */
-export default function ShoeAchievement({ progress, error = "", onRetry, onStart }: {
+export default function ShoeAchievement({ progress, error = "", onRetry, onStart, onReset }: {
   progress: ClimbingProgress | null;
   error?: string;
   onRetry?: () => void;
   onStart?: () => void;
+  onReset?: () => void;
 }) {
   const result = progress ? shoeProgress(progress) : null;
   const current = result?.current;
@@ -39,9 +40,11 @@ export default function ShoeAchievement({ progress, error = "", onRetry, onStart
 
         {progress.can_set_start && onStart && <button type="button" onClick={onStart}
           className="button-secondary mb-3 min-h-12 w-full rounded-xl text-[14px] font-semibold">시작 암벽화 설정</button>}
-        {result?.starting && progress.starting_shoe && <p className="mb-3 text-[12px] text-muted">
-          {progress.starting_shoe.expires_on.replaceAll("-", ".")}부터 최근 완등 기록으로 계산
-        </p>}
+        {progress.starting_shoe && <div className="mb-3 flex items-center justify-between gap-3">
+          <p className="text-[12px] text-muted">3개월 후부터 최근 완등 기록에 따라 바뀌어요.</p>
+          {progress.can_reset_start && onReset && <button type="button" onClick={onReset}
+            className="min-h-11 shrink-0 text-[12px] font-semibold text-accent-strong underline underline-offset-4">시작 색 초기화</button>}
+        </div>}
 
         <div className="rounded-xl bg-surface2 px-4 py-3.5">
           {next ? <>

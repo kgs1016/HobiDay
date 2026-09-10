@@ -9,7 +9,7 @@ import { type ClimbingProgress } from "@/lib/shoeProgress";
 export default function ProfileShoe() {
   const [progress, setProgress] = useState<ClimbingProgress | null>(null);
   const [error, setError] = useState("");
-  const [choosing, setChoosing] = useState(false);
+  const [choosing, setChoosing] = useState<"set" | "reset" | null>(null);
   const load = async () => {
     try { const data = await fetchClimbingProgress(); setProgress(data); setError(""); }
     catch (e) { setError(e instanceof Error ? e.message : "기록을 불러오지 못했어요"); }
@@ -24,9 +24,9 @@ export default function ProfileShoe() {
   }, []);
 
   return <>
-    <ShoeAchievement progress={progress} error={error} onRetry={load} onStart={() => setChoosing(true)} />
-    {choosing && <StartingShoeDialog onClose={() => setChoosing(false)} onSaved={data => {
-      setProgress(data); setError(""); setChoosing(false);
+    <ShoeAchievement progress={progress} error={error} onRetry={load} onStart={() => setChoosing("set")} onReset={() => setChoosing("reset")} />
+    {choosing && <StartingShoeDialog reset={choosing === "reset"} onClose={() => setChoosing(null)} onSaved={data => {
+      setProgress(data); setError(""); setChoosing(null);
     }} />}
   </>;
 }
