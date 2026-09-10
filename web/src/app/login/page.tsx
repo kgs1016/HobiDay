@@ -11,7 +11,6 @@ import { getSupabase } from "@/lib/supabase";
 import { useHydrated } from "@/lib/browserState";
 import { readRememberedEmail, rememberEmail } from "@/lib/loginPreferences";
 import OAuthButtons from "@/components/OAuthButtons";
-import { ChevronLeftIcon } from "@/components/icons";
 
 const inputCls =
   // iOS 는 16px 미만 입력창에 포커스하면 화면을 강제로 확대한다 — 16px 유지
@@ -143,18 +142,7 @@ export default function Login() {
 
   return (
     <main className="px-4">
-      {/* 로그아웃이 replace 로 와서 히스토리가 꼬여 있을 수 있다 —
-          항상 첫 화면(하비데이가 뭔가요? 가 있는)으로 보낸다 */}
-      <div className="pt-5">
-        <Link
-          href="/"
-          aria-label="처음으로"
-          className="-ml-2 flex h-10 w-10 items-center justify-center text-ink"
-        >
-          <ChevronLeftIcon size={22} />
-        </Link>
-      </div>
-      <header className="pt-3 pb-6 text-center">
+      <header className="pt-16 pb-6 text-center">
         <p className="text-[14px] font-bold tracking-[2px] text-accent">
           HOBIDAY
         </p>
