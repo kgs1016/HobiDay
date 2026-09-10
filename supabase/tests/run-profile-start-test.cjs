@@ -49,7 +49,9 @@ function fn(src, name) {
   await db.exec(catalog.slice(0, catalog.indexOf('create function climbing_ascent_batch_save_v3')));
   for (const name of ['climbing_progress_for_v4','climbing_progress_v4','public_climbing_achievements_v4']) await db.exec(fn(catalog, name));
   await db.exec(read('20260910050000_profile_frequency_and_shoe_start.sql'));
+  await db.exec(read('20260910060000_shoe_start_reset.sql'));
   await db.exec(fs.readFileSync(path.join(__dirname,'profile_frequency_and_shoe_start.sql'),'utf8'));
+  await db.exec(fs.readFileSync(path.join(__dirname,'shoe_start_reset.sql'),'utf8'));
   await db.close();
-  console.log('PASS: optional frequency, one-time/idempotent start, no fabricated records, expiry/earned precedence, public access and deletion lifecycle');
+  console.log('PASS: optional frequency, initial shoe and one-time correction, no fabricated records, expiry/earned precedence, public access and deletion lifecycle');
 })().catch(e => { console.error(e.message, e.where); process.exitCode = 1; });

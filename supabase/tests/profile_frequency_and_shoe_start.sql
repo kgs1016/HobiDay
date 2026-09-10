@@ -13,6 +13,7 @@ do $$declare p jsonb; saved_date text; begin
   assert not has_table_privilege('authenticated','climbing_shoe_starts','delete');
   assert not has_function_privilege('authenticated','climbing_progress_for_v5(uuid)','execute');
   assert not has_function_privilege('anon','climbing_shoe_start_set(text)','execute');
+  assert not has_function_privilege('anon','climbing_shoe_start_reset(text)','execute');
   assert not has_function_privilege('anon','climbing_progress_v5()','execute');
   assert not has_function_privilege('anon','public_climbing_achievements_v5(uuid[],uuid)','execute');
   assert not has_function_privilege('anon','user_profile_v2(uuid,uuid)','execute');
@@ -24,18 +25,28 @@ do $$declare p jsonb; saved_date text; begin
   begin update profiles set visit_frequency=5 where id=auth.uid(); raise exception 'invalid frequency accepted'; exception when check_violation then null; end;
   begin update profiles set visit_frequency=0 where id=auth.uid(); raise exception 'invalid frequency accepted'; exception when check_violation then null; end;
   p:=climbing_progress_v5();
-  assert p->>'can_set_start'='true' and p->>'stage'='white';
+  assert p->>'can_set_start'='true' and p->>'can_reset_start'='false' and p->>'stage'='white';
   assert climbing_shoe_start_set('gold')->>'error'='bad_stage';
   assert climbing_shoe_start_set(null)->>'error'='bad_stage';
   assert climbing_shoe_start_set('purple')->>'ok'='true';
   p:=climbing_progress_v5();
   assert p->>'stage'='purple' and p->>'stage_source'='starting';
-  assert p->>'can_set_start'='false' and p->>'points'='0' and p->>'total'='0';
+  assert p->>'can_set_start'='false' and p->>'can_reset_start'='true' and p->>'points'='0' and p->>'total'='0';
   assert p->'difficulty_counts'='{}'::jsonb and p->>'policy'='color-v2';
   saved_date:=p->'starting_shoe'->>'expires_on';
   assert saved_date=(((now() at time zone 'Asia/Seoul')::date+interval '3 months')::date)::text;
   assert climbing_shoe_start_set('purple')->>'ok'='true', 'same choice retry is idempotent';
   assert climbing_shoe_start_set('black')->>'error'='already_set';
+  assert climbing_progress_v5()->'starting_shoe'->>'expires_on'=saved_date;
+  assert climbing_shoe_start_reset('gold')->>'error'='bad_stage';
+  assert climbing_shoe_start_reset('purple')->>'error'='same_stage';
+  assert climbing_shoe_start_reset('blue')->>'ok'='true';
+  p:=climbing_progress_v5();
+  assert p->>'stage'='blue' and p->>'stage_source'='starting';
+  assert p->>'can_reset_start'='false' and p->>'points'='0' and p->>'total'='0';
+  assert p->'starting_shoe'->>'expires_on'=saved_date;
+  assert climbing_shoe_start_reset('red')->>'error'='reset_used';
+  assert climbing_shoe_start_reset('blue')->>'ok'='true', 'lost response retry returns saved correction';
   assert climbing_progress_v5()->'starting_shoe'->>'expires_on'=saved_date;
   assert climbing_progress_v4()->>'points'='0', 'legacy actual achievement unchanged';
   assert (select stage from public_climbing_achievements_v4(array[auth.uid()]))='white';
@@ -45,7 +56,7 @@ select set_config('request.jwt.claim.sub','fc100000-0000-4000-8000-000000000002'
 do $$declare r record; begin
   assert (select count(*) from climbing_shoe_starts)=0, 'start metadata is private';
   select * into r from public_climbing_achievements_v5(array['fc100000-0000-4000-8000-000000000001'::uuid]);
-  assert r.stage='purple' and r.stage_source='starting' and r.total=0;
+  assert r.stage='blue' and r.stage_source='starting' and r.total=0;
   assert (select count(*) from jsonb_object_keys(to_jsonb(r)))=4, 'no dates or private records exposed';
   assert (select count(*) from public_climbing_achievements_v5(array['fc100000-0000-4000-8000-000000000003'::uuid]))=0;
   assert user_profile_v2('fc100000-0000-4000-8000-000000000003')->>'error'='not_found';
@@ -54,11 +65,13 @@ end $$;
 select set_config('request.jwt.claim.sub','fc100000-0000-4000-8000-000000000004',true);
 do $$begin
   assert climbing_shoe_start_set('blue')->>'error'='no_profile';
+  assert climbing_shoe_start_reset('blue')->>'error'='no_profile';
   assert climbing_progress_v5()->>'can_set_start'='false';
 end $$;
 select set_config('request.jwt.claim.sub','',true);
 do $$begin
   assert climbing_shoe_start_set('blue')->>'error'='no_auth';
+  assert climbing_shoe_start_reset('blue')->>'error'='no_auth';
   assert (select count(*) from public_climbing_achievements_v5(array['fc100000-0000-4000-8000-000000000001'::uuid]))=0;
 end $$;
 reset role;
@@ -82,9 +95,10 @@ update climbing_shoe_starts set expires_on=(now() at time zone 'Asia/Seoul')::da
 where user_id='fc100000-0000-4000-8000-000000000001';
 do $$begin
   assert climbing_progress_v5()->>'stage'='white' and climbing_progress_v5()->>'stage_source'='records';
-  assert climbing_shoe_start_set('purple')->'progress'->>'stage'='white';
-  assert climbing_shoe_start_set('blue')->>'error'='already_set';
-  assert climbing_progress_v5()->>'can_set_start'='false';
+  assert climbing_shoe_start_set('blue')->'progress'->>'stage'='white';
+  assert climbing_shoe_start_set('purple')->>'error'='already_set';
+  assert climbing_shoe_start_reset('purple')->>'error'='reset_used';
+  assert climbing_progress_v5()->>'can_set_start'='false' and climbing_progress_v5()->>'can_reset_start'='false';
   assert climbing_display_stage_v1('white','purple','2026-12-10','2026-12-09')='purple';
   assert climbing_display_stage_v1('white','purple','2026-12-10','2026-12-10')='white';
   assert climbing_display_stage_v1('black','purple','2026-12-10','2026-12-09')='black';

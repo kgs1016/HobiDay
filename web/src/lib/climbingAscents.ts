@@ -8,6 +8,7 @@ import { ascentDifficulty, HOBI_POLICY } from "./hobiDifficulty";
 export const isAscentPreview = () => process.env.NODE_ENV === "development" && !getSupabase();
 const previewRecords = new Map<string, AscentRecord>();
 let previewStartingShoe: StartingShoe | null = null;
+let previewStartingShoeReset = false;
 
 export type ClimbingAscent = {
   id: string; gym: string; problem: string; v_grade: number | null; created_at: string;
@@ -33,11 +34,37 @@ export async function fetchClimbingProgress(): Promise<ClimbingProgress> {
     }
     return { total, grade_counts: counts, difficulty_counts: difficulties, recent_total: Object.values(counts).reduce((sum, n) => sum + n, 0),
       undated_total: undated, period_start: start, period_end: end,
-      starting_shoe: previewStartingShoe, can_set_start: isAscentPreview() && !previewStartingShoe };
+      starting_shoe: previewStartingShoe, can_set_start: isAscentPreview() && !previewStartingShoe,
+      can_reset_start: isAscentPreview() && !!previewStartingShoe && !previewStartingShoeReset && previewStartingShoe.expires_on > end };
   }
   const { data, error } = await sb.rpc("climbing_progress_v5");
   if (error || !data?.difficulty_counts || data.policy !== HOBI_POLICY) throw new Error("완등 기록을 불러오지 못했어요");
   return data as ClimbingProgress;
+}
+
+export async function resetStartingShoe(stage: ShoeColorId): Promise<ClimbingProgress> {
+  if (!SHOE_STAGES.some(item => item.id === stage)) throw new Error("암벽화 색을 선택해주세요");
+  const sb = getSupabase();
+  if (!sb) {
+    if (!isAscentPreview()) throw new Error("로그인 후 설정할 수 있어요");
+    if (!previewStartingShoe) throw new Error("시작 암벽화를 먼저 설정해주세요");
+    if (previewStartingShoeReset) {
+      if (previewStartingShoe.stage === stage) return fetchClimbingProgress();
+      throw new Error("시작 암벽화는 한 번만 다시 고를 수 있어요");
+    }
+    if (previewStartingShoe.expires_on <= ascentToday()) throw new Error("시작 암벽화 적용 기간이 끝났어요");
+    if (previewStartingShoe.stage === stage) throw new Error("다른 색을 선택해주세요");
+    previewStartingShoe = { stage, expires_on: shoeStartExpiresOn(ascentToday()) };
+    previewStartingShoeReset = true;
+    return fetchClimbingProgress();
+  }
+  const { data, error } = await sb.rpc("climbing_shoe_start_reset", { p_stage: stage });
+  if (error) throw new Error("재설정 결과를 확인하지 못했어요. 다시 시도해주세요");
+  const errors: Record<string, string> = { no_auth: "로그인이 필요해요", no_profile: "기본 정보를 먼저 등록해주세요",
+    not_set: "시작 암벽화를 먼저 설정해주세요", reset_used: "시작 암벽화는 한 번만 다시 고를 수 있어요",
+    expired: "시작 암벽화 적용 기간이 끝났어요", same_stage: "다른 색을 선택해주세요", bad_stage: "암벽화 색을 선택해주세요" };
+  if (!data?.ok || !data.progress?.difficulty_counts) throw new Error(errors[data?.error] ?? "암벽화를 다시 설정하지 못했어요");
+  return data.progress as ClimbingProgress;
 }
 
 export async function setStartingShoe(stage: ShoeColorId): Promise<ClimbingProgress> {

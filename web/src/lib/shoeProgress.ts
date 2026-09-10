@@ -15,7 +15,7 @@ export const SHOE_STAGES = [
 
 export type ShoeColorId = (typeof SHOE_STAGES)[number]["id"];
 export type StartingShoe = { stage: ShoeColorId; expires_on: string };
-export type ClimbingProgress = { total: number; grade_counts: Record<string, number>; difficulty_counts: Record<string, number>; recent_total?: number; undated_total?: number; period_start?: string; period_end?: string; starting_shoe?: StartingShoe | null; can_set_start?: boolean };
+export type ClimbingProgress = { total: number; grade_counts: Record<string, number>; difficulty_counts: Record<string, number>; recent_total?: number; undated_total?: number; period_start?: string; period_end?: string; starting_shoe?: StartingShoe | null; can_set_start?: boolean; can_reset_start?: boolean };
 /** 다른 회원에게는 문제별 기록 대신 서버가 계산한 성취 요약만 공개한다. */
 export type PublicShoeAchievement = { stage: ShoeColorId; total: number; stage_source?: "starting" | "records" };
 
