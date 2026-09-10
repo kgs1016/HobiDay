@@ -9,6 +9,7 @@ export const isAscentPreview = () => process.env.NODE_ENV === "development" && !
 const previewRecords = new Map<string, AscentRecord>();
 let previewStartingShoe: StartingShoe | null = null;
 let previewStartingShoeReset = false;
+let previewResetAt: string | null = null;
 
 export type ClimbingAscent = {
   id: string; gym: string; problem: string; v_grade: number | null; created_at: string;
@@ -20,12 +21,16 @@ export async function fetchClimbingProgress(): Promise<ClimbingProgress> {
   if (!sb) {
     const counts: Record<string, number> = {};
     const difficulties: Record<string, number> = {};
-    const end = ascentToday(); const start = shoePeriodStart(end);
+    const end = ascentToday();
+    const rollingStart = shoePeriodStart(end);
+    const resetDate = previewResetAt ? ascentToday(new Date(previewResetAt)) : null;
+    const start = resetDate && resetDate > rollingStart ? resetDate : rollingStart;
     let total = 0; let undated = 0;
     if (isAscentPreview()) for (const row of previewRecords.values()) for (const item of row.items) {
       total += item.quantity;
       if (!row.completed_on) undated += item.quantity;
-      if (row.completed_on && row.completed_on >= start && row.completed_on <= end) {
+      if (row.completed_on && row.completed_on >= start && row.completed_on <= end &&
+        (!previewResetAt || row.created_at >= previewResetAt)) {
         const key = item.v_grade === null ? "unknown" : String(item.v_grade);
         counts[key] = (counts[key] ?? 0) + item.quantity;
         const level = ascentDifficulty(row.gym, item)?.level ?? "unknown";
@@ -56,6 +61,7 @@ export async function resetStartingShoe(stage: ShoeColorId): Promise<ClimbingPro
     if (previewStartingShoe.stage === stage) throw new Error("다른 색을 선택해주세요");
     previewStartingShoe = { stage, expires_on: shoeStartExpiresOn(ascentToday()) };
     previewStartingShoeReset = true;
+    previewResetAt = new Date().toISOString();
     return fetchClimbingProgress();
   }
   const { data, error } = await sb.rpc("climbing_shoe_start_reset", { p_stage: stage });

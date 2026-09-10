@@ -47,7 +47,7 @@ export default function ProfileShoeSetup() {
     <header className="pt-6">
       <p className="text-[12px] font-medium text-muted">프로필 완성 · 2 / 2</p>
       <h1 className="mt-2 text-[22px] font-bold tracking-tight">시작 암벽화를 골라주세요</h1>
-      <p className="mt-2 text-[12px] leading-relaxed text-muted">처음 한 번 설정할 수 있어요.<br />3개월 후부터는 최근 완등 기록에 따라 바뀌어요.</p>
+      <p className="mt-2 text-[12px] leading-relaxed text-muted">최근 완등 기록에 따라 바뀌어요</p>
     </header>
     {ready ? <StartingShoePicker onboarding onSkip={finish} onSaved={finish} /> : error ? <div role="alert" className="py-10 text-center">
       <p className="text-[13px] text-muted">{error}</p>

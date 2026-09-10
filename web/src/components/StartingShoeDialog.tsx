@@ -21,8 +21,9 @@ export default function StartingShoeDialog({ reset = false, onClose, onSaved }: 
     className="fixed inset-x-0 bottom-0 top-auto mx-auto mb-0 max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-surface p-5 text-ink backdrop:bg-black/40">
     <h2 id="starting-shoe-title" className="text-[18px] font-bold">{reset ? "시작 암벽화 다시 고르기" : "시작 암벽화 설정"}</h2>
     <p id="starting-shoe-terms" className="mt-2 text-[12px] leading-relaxed text-muted">
-      {reset ? <>잘못 고른 시작 색은 한 번 다시 선택할 수 있어요.<br />새 선택일부터 3개월 후에는 최근 완등 기록에 따라 바뀌어요.</> : <>처음 한 번 설정할 수 있어요.<br />3개월 후부터는 최근 완등 기록에 따라 바뀌어요.</>}
+      최근 완등 기록에 따라 바뀌어요
     </p>
+    {reset && <p className="mt-2 text-[12px] leading-relaxed text-muted">초기화는 한 번 가능하며, 새로 선택한 시점부터 기록을 집계해요. 이전 완등 내역은 남아 있어요.</p>}
     <StartingShoePicker reset={reset} onSkip={onClose} onSaved={onSaved} onBusyChange={setBusy} />
   </dialog>;
 }

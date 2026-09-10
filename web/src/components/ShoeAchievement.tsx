@@ -41,7 +41,7 @@ export default function ShoeAchievement({ progress, error = "", onRetry, onStart
         {progress.can_set_start && onStart && <button type="button" onClick={onStart}
           className="button-secondary mb-3 min-h-12 w-full rounded-xl text-[14px] font-semibold">시작 암벽화 설정</button>}
         {progress.starting_shoe && <div className="mb-3 flex items-center justify-between gap-3">
-          <p className="text-[12px] text-muted">3개월 후부터 최근 완등 기록에 따라 바뀌어요.</p>
+          <p className="text-[12px] text-muted">최근 완등 기록에 따라 바뀌어요</p>
           {progress.can_reset_start && onReset && <button type="button" onClick={onReset}
             className="min-h-11 shrink-0 text-[12px] font-semibold text-accent-strong underline underline-offset-4">시작 색 초기화</button>}
         </div>}

@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
-import LaunchGate from "@/components/LaunchGate";
+import AppSplash from "@/components/AppSplash";
 import NativeAuthBridge from "@/components/NativeAuthBridge";
 import RequireProfile from "@/components/RequireProfile";
 
@@ -43,8 +43,7 @@ export default function RootLayout({
       <body className="min-h-full">
         {/* 앱에서 소셜 로그인을 마치고 돌아오는 걸 받는다 (웹에서는 무동작) */}
         <NativeAuthBridge />
-        {/* 오픈 전에는 잠긴 화면 진입을 홈(대기 화면)으로 돌려보낸다 */}
-        <LaunchGate />
+        <AppSplash />
         {/* 상단은 노치, 하단은 홈바 + 네비 높이만큼 비운다 */}
         <div
           className="mx-auto max-w-md min-h-dvh"
