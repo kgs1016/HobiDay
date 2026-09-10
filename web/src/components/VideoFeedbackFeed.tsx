@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { PlayIcon } from "@/components/icons";
 import { ago, VIDEO_PAGE, type VideoSummary } from "@/lib/community";
 import { feedbackMediaUrls, fetchFeedbackVideos, fetchMyFeedbackVideos } from "@/lib/feedbackVideo";
 
-/** mine 이면 내가 올린 영상만 — 내 정보의 "내 영상" 이 같은 격자를 쓴다 */
+/** mine 이면 내가 올린 영상만 — 내 정보의 "내 영상" 이 같은 목록을 쓴다 */
 export default function VideoFeedbackFeed({ mine = false }: { mine?: boolean }) {
   const fetchPage = mine ? fetchMyFeedbackVideos : fetchFeedbackVideos;
   const [rows, setRows] = useState<VideoSummary[]>([]);
@@ -49,19 +50,11 @@ export default function VideoFeedbackFeed({ mine = false }: { mine?: boolean }) 
 
   return (
     <section className="pb-8 pt-4" aria-label="영상 피드백 목록">
-      {rows.length > 0 && <div className="grid grid-cols-2 gap-x-3 gap-y-6">
-        {rows.map((p) => <Link key={p.id} href={`/videos/post?id=${p.id}${mine ? "&from=mine" : ""}`} className="min-w-0">
-          <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-surface2">
-            {urls[p.thumbnail_path] && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={urls[p.thumbnail_path]} alt="" loading="lazy" className="h-full w-full object-cover" />
-            )}
-            <span aria-hidden="true" className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2.5 py-1 text-xs text-white">▶</span>
-          </div>
-          <p className="mt-2 line-clamp-2 break-words text-sm font-semibold leading-snug">{p.preview}</p>
-          <p className="mt-1 truncate text-xs text-faint">{p.nickname ?? "탈퇴한 회원"} · {ago(p.created_at)}</p>
-          <p className="mt-1 text-xs text-muted">좋아요 {p.like_count} · 댓글 {p.comment_count}</p>
-        </Link>)}
+      <div className="flex items-center justify-between border-b border-line pb-2.5 text-[11.5px] text-faint">
+        <span>{mine ? "내가 올린 영상" : "클라이머들의 영상"}</span><span>최신순</span>
+      </div>
+      {rows.length > 0 && <div className="divide-y divide-line">
+        {rows.map(p => <VideoFeedRow key={p.id} video={p} thumbnail={urls[p.thumbnail_path]} mine={mine} />)}
       </div>}
       {loaded && !rows.length && !error && <div className="py-16 text-center">
         <p className="text-[15px] font-semibold">{mine ? "아직 올린 영상이 없어요" : "아직 올라온 영상이 없어요"}</p>
@@ -76,4 +69,25 @@ export default function VideoFeedbackFeed({ mine = false }: { mine?: boolean }) 
         className="button-secondary mt-5 w-full rounded-xl py-3 text-sm">더 보기</button>}
     </section>
   );
+}
+
+export function VideoFeedRow({ video: p, thumbnail, mine = false }: { video: VideoSummary; thumbnail?: string; mine?: boolean }) {
+  return <Link href={`/videos/post?id=${p.id}${mine ? "&from=mine" : ""}`} className="flex min-w-0 items-start gap-4 py-4 active:bg-surface2">
+          <div className="flex min-h-28 min-w-0 flex-1 flex-col">
+            <p className="line-clamp-2 break-words text-[14px] font-semibold leading-relaxed">{p.preview}</p>
+            <p className="mt-2 truncate text-[11px] text-faint">{p.nickname ?? "탈퇴한 회원"} · {ago(p.created_at)}</p>
+            <div className="mt-auto flex gap-3 pt-3 text-[11px] text-muted">
+              <span>좋아요 {p.like_count}</span><span>댓글 {p.comment_count}</span>
+            </div>
+          </div>
+          <div className="relative aspect-[3/4] w-[84px] shrink-0 overflow-hidden rounded-xl bg-surface2">
+            {thumbnail && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={thumbnail} alt="" loading="lazy" className="h-full w-full object-cover" />
+            )}
+            <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white"><PlayIcon size={16} /></span>
+            </span>
+          </div>
+        </Link>;
 }

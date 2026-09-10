@@ -180,7 +180,7 @@ async function checkNewsReader() {
 }
 
 (async () => {
-  const { findGym, matchesSearch } = load('homeSearch.ts');
+  const { findGym, matchesSearch, matchesSessionPlace } = load('homeSearch.ts');
   const gyms = [{ name: '더클라임 연남점', aliases: ['The Climb Yeonnam'] }];
   assert.equal(findGym(gyms, 'theclimb yeonnam'), gyms[0], 'gym aliases ignore case and spacing');
   for (const missingGym of [null, undefined, '', '   ']) {
@@ -194,6 +194,11 @@ async function checkNewsReader() {
   assert.equal(matchesSearch('연남 서연', ['더클라임 연남점', '서연']), true, 'all search words may match different visible fields');
   assert.equal(matchesSearch('연남 지훈', ['더클라임 연남점', '서연']), false, 'unmatched search words filter out the row');
   assert.equal(matchesSearch('  ', [undefined, null]), true, 'clearing search restores every row');
+  const session = {gym:'더클라임 연남점',host:{nickname:'서연'},note:'저녁 맛집 탐방'};
+  assert.equal(matchesSessionPlace('연남',session,gyms),true);
+  assert.equal(matchesSessionPlace('The Climb',session,gyms),true);
+  assert.equal(matchesSessionPlace('서연',session,gyms),false,'host is not a place');
+  assert.equal(matchesSessionPlace('맛집',session,gyms),false,'note is not a place');
   await checkPolling();
   await checkClock();
   await checkNewsReader();

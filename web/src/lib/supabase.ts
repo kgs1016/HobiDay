@@ -1333,6 +1333,17 @@ export async function fetchArticles(kind: ArticleKind): Promise<Article[] | null
   return data as Article[];
 }
 
+/** 날짜 조건은 DB에서 적용해 최신 목록 밖의 뉴스도 찾는다. */
+export async function fetchNewsPage(date: string, before?: Article): Promise<Article[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+  const { data, error } = await sb.rpc("community_news_feed", {
+    p_date: date || null, p_before: before?.published_at ?? null, p_before_id: before?.id ?? null,
+  });
+  if (error || !Array.isArray(data)) throw new Error("뉴스를 불러오지 못했어요");
+  return data as Article[];
+}
+
 /** 뉴스 상세는 목록의 최근 N개 범위와 별개로 조회한다. 숨긴 글은 서버에서 제외한다. */
 export async function fetchNewsArticle(id: string): Promise<{ article: Article | null; error: string | null }> {
   if (!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id)) {
