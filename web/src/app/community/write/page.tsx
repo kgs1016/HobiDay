@@ -1,4 +1,5 @@
 "use client";
+import { requireParticipationProfile, handleParticipationError } from "@/lib/participation";
 
 /* 글쓰기 · 수정 — /community/write (새 글) · /community/write?id= (수정) */
 
@@ -58,6 +59,7 @@ export default function WritePost() {
 
   const submit = async () => {
     if (!canSubmit || category === "gear") return;
+    if (!(await requireParticipationProfile(router))) return;
     if (!hasSupabase()) {
       alert("목데이터 모드에서는 저장되지 않아요");
       return router.replace(BOARD);
@@ -67,6 +69,7 @@ export default function WritePost() {
       ? await updatePost(id, title.trim(), body.trim(), topic)
       : await createPost(title.trim(), body.trim(), category, topic);
     setBusy(false);
+    if (handleParticipationError(r.error, router)) return;
     if (r.error) return alert(ERRORS[r.error] ?? `실패: ${r.error}`);
     const postId = id ?? (r as { id?: string }).id;
     router.replace(postId ? `/community/post?id=${postId}` : BOARD);

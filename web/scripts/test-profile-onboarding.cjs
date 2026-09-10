@@ -55,6 +55,8 @@ const valid={nickname:'가입 테스트',gender:'f',age:27,area:'',level:null,ho
     const form=harness('app/profile/new/page.tsx',{
       'next/navigation':{useRouter:()=>router},
       '@/components/BackButton':{default:'back'},'@/lib/defaultAvatar':load('lib/defaultAvatar.ts'),
+      '@/lib/queryId':{useQueryParam:()=>null},
+      '@/lib/participation':{safeParticipationReturn:()=>null,PROFILE_REQUIRED_MESSAGE:'프로필을 완성해주세요'},
       '@/lib/levels':levels,'@/lib/visitFrequency':frequency,'@/lib/profileGate':gate,
       '@/lib/imageResize':{downscaleImage:async file=>file},
       '@/lib/myProfile':{loadMyProfile:()=>profile,saveMyProfile:p=>{saved=p;}},
@@ -64,6 +66,9 @@ const valid={nickname:'가입 테스트',gender:'f',age:27,area:'',level:null,ho
     },{alert:message=>{alerts.push(message);}});
     form.render(); await flush();
     if(onboarding){
+      const genderField=find(form.render(),n=>n.props?.label==='성별');
+      find(genderField,n=>text(n)==='여성' && typeof n.props?.onClick==='function').props.onClick();
+      find(find(form.render(),n=>n.props?.label==='나이'),n=>n.type==='input').props.onChange({target:{value:'27'}});
       const input=find(form.render(),n=>n.type==='input'&&n.props.type==='file');
       input.props.onChange({target:{files:[{size:1000}],value:'photo'}});await flush();
     }

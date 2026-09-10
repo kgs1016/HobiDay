@@ -1,4 +1,6 @@
 "use client";
+import { useQueryParam } from "@/lib/queryId";
+import { safeParticipationReturn, PROFILE_REQUIRED_MESSAGE } from "@/lib/participation";
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -63,6 +65,7 @@ const inputCls =
 
 export default function ProfileNew() {
   const router = useRouter();
+  const returnTo = safeParticipationReturn(useQueryParam("returnTo"));
   const [editing, setEditing] = useState(false);
   const [onboarding, setOnboarding] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -182,7 +185,8 @@ export default function ProfileNew() {
     if (loading || submitting.current || photoInFlight.current) return;
     const n = Number(age);
     if (!nickname.trim()) return alert("닉네임을 입력해주세요");
-    if (age && (!n || n < 19 || n > 60)) return alert("나이를 확인해주세요");
+    if (!gender || !age) return alert(PROFILE_REQUIRED_MESSAGE);
+    if (!Number.isInteger(n) || n < 19 || n > 60) return alert("나이를 확인해주세요");
     // 동네·MBTI 는 선택 — 채우고 싶은 사람만
 
     const profile = buildProfile();
@@ -203,7 +207,8 @@ export default function ProfileNew() {
       return;
     }
     // 기본 정보를 먼저 저장한다. 다음 단계에서 나가도 입력 내용은 남는다.
-    if (onboarding) router.replace("/profile/shoe");
+    if (returnTo) router.replace(returnTo);
+    else if (onboarding) router.replace("/profile/shoe");
     else router.push(isPublic ? "/#people" : "/me");
   };
 
@@ -212,13 +217,13 @@ export default function ProfileNew() {
       <header className="flex items-center gap-2 pt-4 pb-4">
         <BackButton />
         <h1 className="text-[18px] font-bold tracking-tight">
-          {onboarding
+          {returnTo ? "프로필 완성" : onboarding
             ? "기본 정보 등록"
             : editing
               ? "내 프로필 수정"
               : "기본 정보 등록"}
         </h1>
-        {onboarding && <span className="ml-auto text-[12px] font-medium text-muted">1 / 2</span>}
+        {onboarding && !returnTo && <span className="ml-auto text-[12px] font-medium text-muted">1 / 2</span>}
       </header>
 
       <form className="flex flex-col gap-6 pb-8" onSubmit={submit}>
@@ -274,7 +279,7 @@ export default function ProfileNew() {
         {/* 성별은 처음 한 번만 고른다. 성비 매칭이 없어진 뒤로 판정에는
             안 쓰지만, signups 에 신청 시점 성별이 남아 있어 나중에 바꾸면
             기록과 어긋난다 (DB 트리거가 막는다). */}
-        <Field label="성별 (선택)">
+        <Field label="성별">
           {genderFixed ? (
             <>
               <span className="inline-block rounded-full border border-line bg-surface2 px-3.5 py-2 text-[13px] font-medium text-muted">
@@ -297,7 +302,7 @@ export default function ProfileNew() {
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="나이 (선택)">
+          <Field label="나이">
             <input
               value={age}
               onChange={(e) => setAge(e.target.value.replace(/\D/g, ""))}
@@ -433,7 +438,7 @@ export default function ProfileNew() {
           disabled={loading || busy || photoBusy}
           className="button-primary rounded-xl py-3.5 text-[15px] font-semibold"
         >
-          {loading ? "불러오는 중…" : busy ? "저장 중…" : onboarding ? "다음 · 암벽화 설정" : "저장"}
+          {loading ? "불러오는 중…" : busy ? "저장 중…" : returnTo ? "저장하고 돌아가기" : onboarding ? "다음 · 암벽화 설정" : "저장"}
         </button>
         {onboarding && <button type="button" onClick={() => router.replace("/")} className="py-2 text-[14px] text-muted">나중에 설정</button>}
       </form>

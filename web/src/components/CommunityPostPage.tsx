@@ -1,4 +1,6 @@
 "use client";
+import { useParticipationDraft } from "@/lib/useParticipationDraft";
+import { requireParticipationProfile, handleParticipationError } from "@/lib/participation";
 
 /* 글 하나 — /community/post?id=
    댓글 입력은 화면 아래에 고정하지 않고 댓글 목록 끝에 둔다. 채팅 화면이
@@ -74,6 +76,7 @@ export default function PostPage() {
   const [likeError, setLikeError] = useState("");
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [comment, setComment] = useState("");
+  const clearCommentDraft = useParticipationDraft(id ? `comment:${id}` : null, comment, setComment);
   const [busy, setBusy] = useState(false);
   // 신고 대상 — 글쓴이 또는 댓글쓴이
   const [report, setReport] = useState<{
@@ -113,12 +116,15 @@ export default function PostPage() {
   }, [id, tick, pathname, from, router]);
 
   const submitComment = async () => {
-    if (!post || post.category === "gear" || !comment.trim()) return;
+    if (!post || post.category === "gear" || !comment.trim() || busy) return;
+    if (!(await requireParticipationProfile(router))) return;
     if (!hasSupabase()) return alert("목데이터 모드에서는 저장되지 않아요");
     setBusy(true);
     const r = await createComment(post.id, comment.trim());
     setBusy(false);
+    if (handleParticipationError(r.error, router)) return;
     if (r.error) return alert(ERRORS[r.error] ?? `실패: ${r.error}`);
+    clearCommentDraft();
     setComment("");
     load();
   };

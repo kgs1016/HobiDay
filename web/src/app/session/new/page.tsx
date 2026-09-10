@@ -1,4 +1,5 @@
 "use client";
+import { requireParticipationProfile, handleParticipationError } from "@/lib/participation";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -179,6 +180,7 @@ function NewSessionForm({ now }: { now: number }) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy || !(await requireParticipationProfile(router))) return;
 
     if (!hasSupabase()) {
       alert("목데이터 단계예요 — Supabase 연결 후 실제로 등록됩니다.");
@@ -222,6 +224,7 @@ function NewSessionForm({ now }: { now: number }) {
     });
     setBusy(false);
 
+    if (handleParticipationError(r.error, router)) return;
     if (r.error === "too_soon")
       return alert("모임 시간이 너무 임박했어요. 지금부터 30분 뒤부터 열 수 있어요");
     if (r.error === "past") return alert("이미 지난 시각이에요. 시간을 다시 골라주세요");
