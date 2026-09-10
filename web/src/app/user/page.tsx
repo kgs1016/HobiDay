@@ -15,5 +15,5 @@ export default function UserPage() {
   // 첫 렌더는 주소를 아직 안 읽었다
   if (id === undefined || s === undefined || m === undefined || from === undefined || request === undefined)
     return <main className="px-4 pt-24 text-center text-[13.5px] text-faint">불러오는 중…</main>;
-  return <UserProfile userId={id} sessionId={s} matchId={m} from={from} initialRequest={request === "1"} />;
+  return <UserProfile key={`${id}:${s}:${m}:${request}`} userId={id} sessionId={s} matchId={m} from={from} initialRequest={request === "1"} />;
 }
