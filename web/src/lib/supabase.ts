@@ -479,6 +479,8 @@ export interface MatchRecord {
   capacity: number;
   i_am_host: boolean;
   members: number;
+  /** 개인정보 없이 보존한 탈퇴 참가자 수. 이전 서버는 생략한다. */
+  departed_members?: number;
   people: MatchMate[];
 }
 

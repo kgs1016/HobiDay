@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { isBasicProfileComplete } from "@/lib/profileGate";
-import SessionCard from "@/components/SessionCard";
+import HomeSessionList from "@/components/HomeSessionList";
 import SessionFilterBar from "@/components/SessionFilterBar";
 import ProfileTodo from "@/components/ProfileTodo";
 import HomeBanner from "@/components/HomeBanner";
+import LoadErrorNotice from "@/components/LoadErrorNotice";
 import { ShoeBadge } from "@/components/PublicShoe";
 import ChatRequestSheet from "@/components/ChatRequestSheet";
 import { AvatarFallback, BellIcon, MailIcon, PlusIcon, SearchIcon } from "@/components/icons";
@@ -21,11 +22,10 @@ import {
 import { findGym, matchesSearch, matchesSessionPlace } from "@/lib/homeSearch";
 import { loadMyProfile, type MyProfile } from "@/lib/myProfile";
 import { startPolling } from "@/lib/polling";
+import { fetchHomeLists } from "@/lib/homeLists";
 import {
   hasSupabase,
   currentUser,
-  fetchSessions,
-  fetchPeople,
   fetchMyProfileDb,
   fetchAppFlags,
   type AppFlags,
@@ -49,6 +49,12 @@ export default function Home() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [flags, setFlags] = useState<AppFlags | null>(null);
   const [ready, setReady] = useState(mockMode);
+  const [loading, setLoading] = useState(!mockMode);
+  const [homeError, setHomeError] = useState(false);
+  const [sessionError, setSessionError] = useState(false);
+  const [peopleError, setPeopleError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const retrying = useRef(false);
   const [sessions, setSessions] = useState<Session[]>(mockMode ? MOCK_SESSIONS : []);
   const [people, setPeople] = useState<(Person & { intro?: string })[]>(
     mockMode ? MOCK_PEOPLE : []
@@ -69,46 +75,63 @@ export default function Home() {
   const [requests, setRequests] = useState(0);
   const [reqTarget, setReqTarget] = useState<Person | null>(null);
 
+  const retry = () => {
+    if (retrying.current) return;
+    retrying.current = true;
+    setLoading(true);
+    setLoadAttempt(attempt => attempt + 1);
+  };
+
   useEffect(() => {
+    let alive = true;
     (async () => {
       // 브라우저 주소는 최초 hydration을 마친 뒤 확인한다.
       await Promise.resolve();
-      if (window.location.hash === "#people") setTab("people");
+      if (!alive) return;
+      if (loadAttempt === 0 && window.location.hash === "#people") setTab("people");
       if (!hasSupabase()) {
         setMe(loadMyProfile());
         setAuthed(null);
         return;
       }
       const user = await currentUser();
+      if (!alive) return;
       setAuthed(!!user);
 
       // 비로그인은 DB가 아무것도 안 내려준다. 목데이터가 실제 모임처럼
       // 보이는 걸 막으려고 조회 자체를 하지 않는다.
       // 플래그만 읽는다(로그인 불필요) — 오픈 전 안내 카드에 쓴다.
       if (!user) {
-        setFlags(await fetchAppFlags());
+        const f = await fetchAppFlags().catch(() => null);
+        if (alive) { setFlags(f); setHomeError(false); }
         return;
       }
 
       // 대표 사진을 포함한 기본 정보가 있으면 사람 찾기에 공개하지 않아도 둘러볼 수 있다.
       const prof = await fetchMyProfileDb();
-      if (!isBasicProfileComplete(prof)) return;
+      if (!alive) return;
+      if (!isBasicProfileComplete(prof)) throw new Error("profile_unavailable");
       setMe(prof);
 
       // 오픈 전에는 모임·사람을 잠근다 (대시보드 app_config 로 켠다)
       const f = await fetchAppFlags();
+      if (!alive) return;
+      if (!f) throw new Error("flags_unavailable");
       setFlags(f);
+      setHomeError(false);
       if (f && !f.sessions_open && !f.people_open) return;
 
+      // 사진·장소 필터·배지 실패는 모임 목록 조회와 별개로 처리한다.
+      void fetchGyms().then(gymRows => { if (alive && gymRows) setMasterGyms(gymRows); }).catch(() => {});
+      void fetchSentRequests().then(sent => { if (alive && sent) setSentTo(new Set(sent.map(s => s.to_id))); }).catch(() => {});
+      void fetchNotifications().then(notis => { if (alive && notis) setUnread(notis.unread); }).catch(() => {});
+
       // 사람 찾기는 성별로 거르지 않는다 — 내 카드만 뺀다
-      const [rows, ppl, gymRows] = await Promise.all([
-        fetchSessions(),
-        fetchPeople({ id: user.id }),
-        fetchGyms(),
-      ]);
-      if (gymRows) setMasterGyms(gymRows);
-      if (prof) setMe(prof);
-      if (rows) {
+      const { sessions: rows, people: ppl } = await fetchHomeLists(user.id);
+      if (!alive) return;
+      setSessionError(rows === null);
+      setPeopleError(ppl === null);
+      if (rows !== null) {
         setSessions(rows.map((r) => toSession(r, prof?.homeGym, user.id)));
       }
       // 비공개 버킷이라 표시용 서명 URL 을 한 번에 받아온다.
@@ -118,19 +141,18 @@ export default function Home() {
         ...(rows ?? []).map((r) => r.host_photo),
         prof?.photo, // "내 프로필 (공개 중)" 줄 — 빼먹으면 내 사진만 비어 뜬다
       ].filter(Boolean) as string[];
-      if (ppl) setPeople(ppl);
-      if (paths.length > 0) setPhotoUrls(await signedPhotoUrls(paths));
-
-      const [sent, notis] = await Promise.all([
-        fetchSentRequests(),
-        fetchNotifications(),
-      ]);
-      if (sent) setSentTo(new Set(sent.map((s) => s.to_id)));
-      if (notis) setUnread(notis.unread);
-
-      setReady(true); // 여기까지 와야 목록을 그린다
-    })();
-  }, []);
+      if (ppl !== null) setPeople(ppl);
+      if (paths.length > 0) void signedPhotoUrls(paths).then(urls => {
+        if (alive) setPhotoUrls(previous => ({ ...previous, ...urls }));
+      }).catch(() => {});
+    })().catch(() => { if (alive) setHomeError(true); }).finally(() => {
+      if (!alive) return;
+      setLoading(false);
+      setReady(true);
+      retrying.current = false;
+    });
+    return () => { alive = false; };
+  }, [loadAttempt]);
 
   // 하단 신청함에 있던 확인 필요 배지를 편지 아이콘에서도 갱신한다.
   useEffect(() => {
@@ -141,6 +163,10 @@ export default function Home() {
     }, 30_000);
     return () => poller.stop();
   }, [authed]);
+
+  if (homeError) return <main className="px-4 pt-20">
+    <LoadErrorNotice message="홈 화면을 불러오지 못했어요" loading={loading} onRetry={retry} />
+  </main>;
 
   // 오픈 전 대기 화면 — 가입·프로필은 끝냈고 기능만 잠긴 상태.
   // authed 를 함께 보는 이유: 로그인도 안 한 사람에게 "가입 완료!" 가 뜨면
@@ -390,45 +416,10 @@ export default function Home() {
           {mockMode && <p className="mt-3 rounded-lg bg-surface2 px-4 py-2.5 text-center text-[11.5px] text-faint">
             미리보기 데이터예요 · Supabase 연결 후 실제 모임이 표시됩니다
           </p>}
-          {query.trim() && <p role="status" className="pt-3 text-[12px] text-muted">검색 결과 {shown.length}개</p>}
+          {query.trim() && !sessionError && !loading && <p role="status" className="pt-3 text-[12px] text-muted">검색 결과 {shown.length}개</p>}
 
-          {/* 빈 화면이 두 가지다. 열린 모임이 없는 것과, 있는데 내가
-              건 조건에 안 걸리는 것 — 할 일이 다르니 말도 다르게 한다. */}
-          {sessions.length === 0 ? (
-            <div className="flex flex-col items-center py-16 text-center">
-              <HoldIllust size={68} />
-              <p className="mt-4 text-[15px] font-semibold">
-                아직 열린 모임이 없어요
-              </p>
-              <Link
-                href="/session/new"
-                className="button-primary mt-4 rounded-lg px-4 py-2.5 text-[13.5px] font-semibold"
-              >
-                모임 만들기
-              </Link>
-            </div>
-          ) : shown.length === 0 ? (
-            <div className="py-16 text-center">
-              <p className="text-[14px] font-medium">조건에 맞는 모임이 없어요</p>
-              <button
-                onClick={resetSearch}
-                className="mt-3 text-[13px] font-medium text-accent-strong"
-              >
-                전체 모임 보기
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col divide-y divide-line pb-6" aria-label="모임 목록">
-              {shown.map((s) => (
-                <SessionCard
-                  key={s.id}
-                  session={s}
-                  hostPhotoUrl={s.host?.photo ? photoUrls[s.host.photo] : undefined}
-                  gymPhotoUrl={s.gymThumb}
-                />
-              ))}
-            </div>
-          )}
+          <HomeSessionList sessions={sessions} shown={shown} error={sessionError} loading={loading}
+            photoUrls={photoUrls} onRetry={retry} onReset={resetSearch} />
         </>
       ) : (
         <div className="pb-6">
@@ -488,7 +479,9 @@ export default function Home() {
 
           {/* 공개 프로필이 아직 없으면 비어 보인다. 아무것도 안 그리면
               고장난 것처럼 보인다 — 왜 비었는지 말해준다. */}
-          {people.length === 0 && (
+          {peopleError && <LoadErrorNotice message="사람 목록을 불러오지 못했어요" loading={loading} onRetry={retry} hasPrevious={people.length > 0} />}
+          {loading && !peopleError && !people.length && <p role="status" className="py-14 text-center text-sm text-muted">사람 불러오는 중…</p>}
+          {!peopleError && !loading && people.length === 0 && (
             <div className="flex flex-col items-center py-14 text-center">
               <ShoeIllust size={68} />
               <p className="mt-4 text-[15px] font-semibold">
@@ -497,7 +490,7 @@ export default function Home() {
             </div>
           )}
 
-          {people.length > 0 && shownPeople.length === 0 && <div className="py-14 text-center">
+          {!peopleError && !loading && people.length > 0 && shownPeople.length === 0 && <div className="py-14 text-center">
             <p className="text-[14px] font-medium">조건에 맞는 사람이 없어요</p>
             <button type="button" onClick={resetSearch} className="mt-3 min-h-11 px-3 text-[14px] font-semibold text-accent-strong">전체 사람 보기</button>
           </div>}
