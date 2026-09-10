@@ -4,10 +4,8 @@
    한 줄 메시지를 붙이면 받는 쪽이 맥락을 보고 판단한다. */
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { notifyPush } from "@/lib/nativePush";
-import { fetchMyProfileDb, hasSupabase, sendRequest } from "@/lib/supabase";
-import { isProfileComplete } from "@/lib/profileGate";
+import { sendRequest } from "@/lib/supabase";
 
 /* already 는 두 경우뿐이다 — 답을 기다리는 중이거나, 이미 채팅이
    열려 있거나. 거절당한 상대에게는 다시 보낼 수 있다(request_send 가
@@ -15,7 +13,7 @@ import { isProfileComplete } from "@/lib/profileGate";
 const REQ_ERRORS: Record<string, string> = {
   self: "나에게는 보낼 수 없어요",
   not_public: "상대가 프로필을 내렸어요",
-  no_profile: "먼저 내 프로필을 만들어주세요",
+  no_profile: "회원 정보를 불러오지 못했어요. 다시 시도해주세요",
 };
 
 export default function ChatRequestSheet({
@@ -30,17 +28,10 @@ export default function ChatRequestSheet({
 }) {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
-  const router = useRouter();
 
   const send = async () => {
     if (busy) return;
     setBusy(true);
-    if (hasSupabase() && !isProfileComplete(await fetchMyProfileDb())) {
-      setBusy(false);
-      alert("대화를 신청하려면 대표 사진과 구력을 입력해주세요. 사람 찾기 공개는 선택입니다.");
-      router.push("/profile/new");
-      return;
-    }
     const r = await sendRequest(target.id, msg);
     setBusy(false);
 

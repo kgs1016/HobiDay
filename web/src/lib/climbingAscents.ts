@@ -66,7 +66,7 @@ export async function resetStartingShoe(stage: ShoeColorId): Promise<ClimbingPro
   }
   const { data, error } = await sb.rpc("climbing_shoe_start_reset", { p_stage: stage });
   if (error) throw new Error("재설정 결과를 확인하지 못했어요. 다시 시도해주세요");
-  const errors: Record<string, string> = { no_auth: "로그인이 필요해요", no_profile: "기본 정보를 먼저 등록해주세요",
+  const errors: Record<string, string> = { no_auth: "로그인이 필요해요", no_profile: "회원 정보를 불러오지 못했어요. 다시 시도해주세요",
     not_set: "시작 암벽화를 먼저 설정해주세요", reset_used: "시작 암벽화는 한 번만 다시 고를 수 있어요",
     expired: "시작 암벽화 적용 기간이 끝났어요", same_stage: "다른 색을 선택해주세요", bad_stage: "암벽화 색을 선택해주세요" };
   if (!data?.ok || !data.progress?.difficulty_counts) throw new Error(errors[data?.error] ?? "암벽화를 다시 설정하지 못했어요");
@@ -84,7 +84,7 @@ export async function setStartingShoe(stage: ShoeColorId): Promise<ClimbingProgr
   }
   const { data, error } = await sb.rpc("climbing_shoe_start_set", { p_stage: stage });
   if (error) throw new Error("설정 결과를 확인하지 못했어요. 같은 색으로 다시 시도해주세요");
-  const errors: Record<string, string> = { no_auth: "로그인이 필요해요", no_profile: "기본 정보를 먼저 등록해주세요",
+  const errors: Record<string, string> = { no_auth: "로그인이 필요해요", no_profile: "회원 정보를 불러오지 못했어요. 다시 시도해주세요",
     already_set: "시작 암벽화는 이미 설정했어요. 프로필을 다시 불러와주세요", bad_stage: "암벽화 색을 선택해주세요" };
   if (!data?.ok || !data.progress?.difficulty_counts) throw new Error(errors[data?.error] ?? "암벽화를 설정하지 못했어요");
   return data.progress as ClimbingProgress;
@@ -108,7 +108,7 @@ export async function saveClimbingAscent(ascent: Omit<ClimbingAscent, "created_a
   });
   if (error) throw new Error("저장 결과를 확인하지 못했어요. 다시 시도해주세요");
   const messages: Record<string, string> = {
-    no_auth: "로그인이 필요해요", no_profile: "프로필을 먼저 만들어주세요",
+    no_auth: "로그인이 필요해요", no_profile: "회원 정보를 불러오지 못했어요. 다시 시도해주세요",
     duplicate: "같은 클라이밍장의 같은 문제가 이미 기록되어 있어요",
     bad_input: "클라이밍장·문제·난이도를 확인해주세요", not_mine: "내 기록만 수정할 수 있어요",
   };
@@ -154,7 +154,7 @@ export async function saveAscentBatch(draft: AscentDraft & { recordId: string })
     p_items: items, p_legacy_id: draft.legacyId,
   });
   if (error) throw new Error("저장 결과를 확인하지 못했어요. 다시 시도해주세요");
-  const messages: Record<string, string> = { no_auth: "로그인이 필요해요", no_profile: "프로필을 먼저 만들어주세요",
+  const messages: Record<string, string> = { no_auth: "로그인이 필요해요", no_profile: "회원 정보를 불러오지 못했어요. 다시 시도해주세요",
     bad_input: "날짜·색상·개수를 확인해주세요", bad_mapping: "환산 기준을 확인할 수 없어요. V등급을 직접 선택해주세요",
     not_mine: "내 기록만 수정할 수 있어요", not_found: "기존 기록을 찾지 못했어요" };
   if (!data?.ok) throw new Error(messages[data?.error] ?? "기록을 저장하지 못했어요");

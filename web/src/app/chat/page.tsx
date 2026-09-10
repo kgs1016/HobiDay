@@ -12,7 +12,6 @@ import { level } from "@/lib/levels";
 import ReportSheet from "@/components/ReportSheet";
 import { AvatarFallback, ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 import GymPhoto from "@/components/GymPhoto";
-import { CarabinerIllust } from "@/components/illustrations";
 import { notifyPush } from "@/lib/nativePush";
 import {
   currentUser,
@@ -248,10 +247,12 @@ function ChatContent({
       ) : tab === "session" ? (
         rooms.length === 0 ? (
           <div className="mt-16 flex flex-col items-center gap-1.5 text-center">
-            <CarabinerIllust size={64} />
-            <p className="mt-3 text-[15px] font-semibold">
+            <p className="text-[15px] font-semibold">
               아직 열린 모임 채팅이 없어요
             </p>
+            <Link href="/" className="button-primary mt-4 rounded-lg px-4 py-2.5 text-[13.5px] font-semibold">
+              모임 찾으러가기
+            </Link>
           </div>
         ) : (
           <div className="flex flex-col divide-y divide-line pb-6">

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { currentUser, fetchMyProfileDb } from "@/lib/supabase";
+import { currentUser } from "@/lib/supabase";
 
 /** OAuth·이메일 인증 후 돌아오는 지점.
  *  supabase-js 가 URL의 code/토큰을 자동 처리하므로 세션만 확인하고 보낸다. */
@@ -19,8 +19,7 @@ export default function AuthCallback() {
         const user = await currentUser();
         if (!alive) return;
         if (user) {
-          const profile = await fetchMyProfileDb();
-          router.replace(profile ? "/me" : "/profile/new");
+          router.replace("/");
           return;
         }
         await new Promise((r) => setTimeout(r, 400));

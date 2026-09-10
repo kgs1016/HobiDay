@@ -103,7 +103,7 @@ function SignupForm() {
       setSentMail(true);
       return;
     }
-    router.push("/profile/new");
+    router.push("/");
   };
 
   const verifyCode = async (e: React.FormEvent) => {
@@ -125,7 +125,7 @@ function SignupForm() {
     }
     // 인증과 동시에 로그인된다
     clearOtpState();
-    router.push("/profile/new");
+    router.push("/");
   };
 
   const resendCode = async () => {

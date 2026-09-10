@@ -227,7 +227,6 @@ export default function UserProfile({
         {visitFrequencyLabel(profile.visit_frequency) && <Row label="방문 빈도" value={visitFrequencyLabel(profile.visit_frequency)!} />}
         {profile.career && <Row label="구력" value={careerLabel(profile.career) ?? "-"} />}
         <Row label="사는 동네" value={profile.area} />
-        {profile.height && <Row label="키" value={`${profile.height}cm`} />}
         {profile.mbti && <Row label="MBTI" value={profile.mbti} />}
       </section>
 

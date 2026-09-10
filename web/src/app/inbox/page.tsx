@@ -307,7 +307,7 @@ export default function Inbox() {
                             <p className="text-[15px] font-semibold">
                               {h.nickname}
                               <span className="ml-1.5 text-[12px] font-normal text-muted">
-                                {[h.age, h.height && `${h.height}cm`, h.area]
+                                {[h.age, h.area]
                                   .filter(Boolean)
                                   .join(" · ")}
                               </span>
@@ -380,7 +380,7 @@ export default function Inbox() {
                           <p className="text-[15px] font-semibold">
                             {r.nickname}
                             <span className="ml-1.5 text-[12px] font-normal text-muted">
-                              {[r.age, r.height && `${r.height}cm`, r.area]
+                              {[r.age, r.area]
                                 .filter(Boolean)
                                 .join(" · ")}
                             </span>

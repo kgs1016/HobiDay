@@ -119,7 +119,7 @@ export async function publishFeedbackVideo(draft: VideoDraft, body: string) {
   if (!sb) throw new Error("로그인이 필요해요");
   const { data, error } = await sb.rpc("video_post_create", { p_id: draft.id, p_body: body, p_video: draft.video, p_thumbnail: draft.thumbnail });
   if (error) throw new Error("등록 결과를 확인하지 못했어요. 다시 누르면 같은 영상으로 재시도해요");
-  const messages: Record<string, string> = { no_auth: "로그인이 필요해요", no_profile: "프로필을 먼저 만들어주세요", too_fast: "1분 뒤 다시 올려주세요", empty: "내용을 적어주세요", bad_media: "영상 파일을 확인할 수 없어요" };
+  const messages: Record<string, string> = { no_auth: "로그인이 필요해요", no_profile: "회원 정보를 불러오지 못했어요. 다시 시도해주세요", too_fast: "1분 뒤 다시 올려주세요", empty: "내용을 적어주세요", bad_media: "영상 파일을 확인할 수 없어요" };
   if (data?.error) throw new Error(messages[data.error] ?? "등록하지 못했어요. 다시 시도해주세요");
   return data.id as string;
 }

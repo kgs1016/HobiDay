@@ -3,7 +3,6 @@ import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import AppSplash from "@/components/AppSplash";
 import NativeAuthBridge from "@/components/NativeAuthBridge";
-import RequireProfile from "@/components/RequireProfile";
 
 export const metadata: Metadata = {
   title: "하비데이 HOBIDAY",
@@ -53,7 +52,7 @@ export default function RootLayout({
           }}
         >
           {/* 프로필이 없으면 어느 화면으로 들어와도 여기서 막힌다 */}
-          <RequireProfile>{children}</RequireProfile>
+          {children}
         </div>
         <BottomNav />
       </body>

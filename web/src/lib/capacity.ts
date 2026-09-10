@@ -10,10 +10,10 @@
      2026-09   "채워야 하는 수" 에서 "최대" 로 */
 
 /** 모임을 열 때 고를 수 있는 최대 정원. 혼자는 모임이 아니라서 2부터 */
-export const CAPACITY_CHOICES = [2, 3, 4, 5, 6, 7, 8];
+export const CAPACITY_CHOICES = [2, 3, 4, 5, 6];
 
 export const CAPACITY_MIN = 2;
-export const CAPACITY_MAX = 8;
+export const CAPACITY_MAX = 6;
 
 /** 모임이 열리는 최소 인원. 호스트를 포함해 둘이면 그 순간 확정이다 */
 export const CONFIRM_AT = 2;

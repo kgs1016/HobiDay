@@ -5,20 +5,18 @@ import type { VisitFrequencyId } from "./visitFrequency";
 
 export interface MyProfile {
   nickname: string;
-  gender: "m" | "f";
-  age: number;
+  gender: "m" | "f" | null;
+  age: number | null;
   area: string;
   /** 레벨 — 자기신고 · 선택 입력. 비우면 카드에 표시하지 않는다 */
   level: LevelId | null;
   /** 구력 — 기존 프로필엔 없어서 optional */
   careerId?: CareerId;
   visitFrequency?: VisitFrequencyId;
-  /** 키(cm) — 선택 입력. 표시만 하고 필터로는 쓰지 않는다 */
-  height?: number;
   homeGym: string;
   mbti: string;
   intro?: string;
-  /** 대표 사진 — 스토리지 경로. 기본 정보 등록 시 필수 */
+  /** 선택 사진 — 스토리지 경로 또는 앱 기본 아바타 경로 */
   photo?: string;
   /** 사람 찾기 공개는 직접 선택한다. 저장된 선택이 없으면 비공개. */
   isPublic?: boolean;

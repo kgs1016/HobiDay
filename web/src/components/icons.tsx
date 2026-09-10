@@ -174,16 +174,17 @@ export function ThumbIcon(p: IconProps) {
 export function AvatarFallback({
   size = 56,
   className = "",
+  gender,
 }: {
   size?: number;
   className?: string;
+  gender?: "m" | "f" | null;
 }) {
+  const name = gender === "m" ? "man" : gender === "f" ? "woman" : "neutral";
   return (
-    <span
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={`/images/avatars/member-${name}.svg`} alt="" width={size} height={size}
       style={{ width: size, height: size }}
-      className={`flex shrink-0 items-center justify-center rounded-full bg-surface2 text-faint ${className}`}
-    >
-      <UserIcon size={Math.round(size * 0.5)} />
-    </span>
+      className={`shrink-0 rounded-full ${className}`} />
   );
 }
