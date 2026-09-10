@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import ClimbingShoe from "@/components/ClimbingShoe";
 import { PlayIcon } from "@/components/icons";
 
@@ -28,7 +29,7 @@ const BANNERS = [
     title: ["오늘의 등반을,", "영상으로 나눠요"],
     action: "클라이밍 영상 보러가기",
     label: "클라이밍 영상 배너 보기",
-    background: "bg-[#edf4ff]",
+    background: "bg-[#eaf6d5]",
   },
 ] as const;
 
@@ -71,7 +72,7 @@ export default function HomeBanner() {
                 <br />
                 {banner.title[1]}
               </p>
-              <p className="mt-2 flex items-center gap-1 text-[12px] font-semibold text-accent-strong">
+              <p className={`mt-2 flex items-center gap-1 text-[12px] font-semibold ${banner.id === "video" ? "text-[#496b26]" : "text-accent-strong"}`}>
                 {banner.action}
                 <span aria-hidden="true">→</span>
               </p>
@@ -92,14 +93,15 @@ export default function HomeBanner() {
                 </div>
               ) : (
                 <>
-                  <div className="absolute top-1/2 right-5 h-[86px] w-[64px] -translate-y-1/2 -rotate-12 rounded-xl bg-accent/20" />
-                  <div className="absolute top-1/2 right-2 w-[76px] -translate-y-1/2 rotate-[8deg] rounded-xl bg-white p-1.5 shadow-[0_5px_16px_rgba(25,31,40,0.08)]">
-                    <div className="relative flex h-[82px] items-center justify-center overflow-hidden rounded-lg bg-[#233b55]">
-                      <div className="absolute -top-3 -right-3 h-14 w-14 rounded-full bg-accent/35" />
-                      <div className="absolute -bottom-5 -left-2 h-16 w-16 rounded-full bg-accent/20" />
-                      <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white text-accent-strong">
-                        <PlayIcon size={23} className="ml-0.5" />
+                  <div className="absolute top-1/2 right-0 h-24 w-24 -translate-y-1/2 rounded-full bg-white/45" />
+                  <div className="absolute top-1/2 right-0 w-[110px] -translate-y-1/2 rotate-[7deg] rounded-xl border border-white bg-white p-1.5 shadow-[0_6px_16px_rgba(61,82,35,0.16)] min-[380px]:w-[124px]">
+                    <div className="relative h-[78px] overflow-hidden rounded-md bg-[#56714c] min-[380px]:h-[84px]">
+                      <Image src="/images/news/summer-training-v2.webp" alt="" fill unoptimized sizes="112px" className="object-cover object-[60%_center]" />
+                      <div className="absolute inset-x-0 bottom-0 h-9 bg-gradient-to-t from-black/45 to-transparent" />
+                      <span className="absolute right-1.5 bottom-2 flex h-6 w-6 items-center justify-center rounded-full bg-white/95 text-[#496b26] shadow-sm">
+                        <PlayIcon size={17} className="ml-0.5" />
                       </span>
+                      <div className="absolute inset-x-1.5 bottom-1 h-0.5 rounded-full bg-white/45"><div className="h-full w-1/3 rounded-full bg-white" /></div>
                     </div>
                   </div>
                 </>
