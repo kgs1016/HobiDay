@@ -49,12 +49,12 @@ export default function VideoFeedbackFeed({ mine = false }: { mine?: boolean }) 
   }, [mine]);
 
   return (
-    <section className="pb-8 pt-4" aria-label="영상 피드백 목록">
+    <section className="pb-8 pt-4" aria-label="등반 영상 목록">
       <div className="flex items-center justify-between border-b border-line pb-2.5 text-[11.5px] text-faint">
         <span>{mine ? "내가 올린 영상" : "클라이머들의 영상"}</span><span>최신순</span>
       </div>
-      {rows.length > 0 && <div className="divide-y divide-line">
-        {rows.map(p => <VideoFeedRow key={p.id} video={p} thumbnail={urls[p.thumbnail_path]} mine={mine} />)}
+      {rows.length > 0 && <div className="space-y-7 pt-4">
+        {rows.map(p => <VideoFeedCard key={p.id} video={p} thumbnail={urls[p.thumbnail_path]} mine={mine} />)}
       </div>}
       {loaded && !rows.length && !error && <div className="py-16 text-center">
         <p className="text-[15px] font-semibold">{mine ? "아직 올린 영상이 없어요" : "아직 올라온 영상이 없어요"}</p>
@@ -71,23 +71,23 @@ export default function VideoFeedbackFeed({ mine = false }: { mine?: boolean }) 
   );
 }
 
-export function VideoFeedRow({ video: p, thumbnail, mine = false }: { video: VideoSummary; thumbnail?: string; mine?: boolean }) {
-  return <Link href={`/videos/post?id=${p.id}${mine ? "&from=mine" : ""}`} className="flex min-w-0 items-start gap-4 py-4 active:bg-surface2">
-          <div className="flex min-h-28 min-w-0 flex-1 flex-col">
-            <p className="line-clamp-2 break-words text-[14px] font-semibold leading-relaxed">{p.preview}</p>
-            <p className="mt-2 truncate text-[11px] text-faint">{p.nickname ?? "탈퇴한 회원"} · {ago(p.created_at)}</p>
-            <div className="mt-auto flex gap-3 pt-3 text-[11px] text-muted">
-              <span>좋아요 {p.like_count}</span><span>댓글 {p.comment_count}</span>
-            </div>
-          </div>
-          <div className="relative aspect-[3/4] w-[84px] shrink-0 overflow-hidden rounded-xl bg-surface2">
-            {thumbnail && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={thumbnail} alt="" loading="lazy" className="h-full w-full object-cover" />
-            )}
-            <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white"><PlayIcon size={16} /></span>
-            </span>
-          </div>
-        </Link>;
+export function VideoFeedCard({ video: p, thumbnail, mine = false }: { video: VideoSummary; thumbnail?: string; mine?: boolean }) {
+  return <Link href={`/videos/post?id=${p.id}${mine ? "&from=mine" : ""}`} className="block min-w-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent">
+    <div className={`relative w-full overflow-hidden rounded-2xl bg-ink ${thumbnail ? "" : "aspect-[4/5]"}`}>
+      {thumbnail && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={thumbnail} alt="" loading="lazy" className="block max-h-[520px] w-full object-contain" />
+      )}
+      <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-full border border-white/40 bg-black/35 text-white backdrop-blur-sm"><PlayIcon size={26} /></span>
+      </span>
+    </div>
+    <div className="px-0.5 pt-3">
+      <p className="line-clamp-2 break-words text-[16px] font-semibold leading-relaxed">{p.preview}</p>
+      <p className="mt-1.5 truncate text-[13px] text-muted">{p.nickname ?? "탈퇴한 회원"} · {ago(p.created_at)}</p>
+      <div className="mt-2.5 flex gap-4 text-[13px] text-muted">
+        <span>좋아요 {p.like_count}</span><span>댓글 {p.comment_count}</span>
+      </div>
+    </div>
+  </Link>;
 }

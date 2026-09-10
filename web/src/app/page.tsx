@@ -193,7 +193,7 @@ export default function Home() {
             </p>
             <p>
               <span className="font-medium">영상</span>
-              <span className="text-muted"> — 등반 영상 올리고 피드백 받기</span>
+              <span className="text-muted"> — 완등 자랑부터 등반 이야기까지</span>
             </p>
             <p>
               <span className="font-medium">채팅</span>

@@ -86,7 +86,7 @@ export default function UploadVideo() {
         <video key={preview} src={preview} controls playsInline preload="metadata" className="max-h-[420px] w-full rounded-2xl bg-black" />
       ) : (
         <div className="flex aspect-[4/3] items-center justify-center rounded-2xl border border-dashed border-line bg-surface text-sm text-muted">
-          {preparing ? "영상 확인 중…" : "피드백받고 싶은 영상"}
+          {preparing ? "영상 확인 중…" : "공유하고 싶은 등반 영상"}
         </div>
       )}
       <label className={`mt-3 flex cursor-pointer items-center justify-center rounded-xl border border-line px-4 py-3 text-sm font-semibold ${busy || draft || preparing ? "opacity-40" : ""}`}>
@@ -95,9 +95,9 @@ export default function UploadVideo() {
           disabled={busy || !!draft || preparing} onChange={(e) => { void choose(e.target.files?.[0]); e.target.value = ""; }} />
       </label>
       <p className="mt-2 text-xs text-faint">MP4 · MOV · WebM / 최대 50MB</p>
-      <label className="mt-6 block text-sm font-semibold" htmlFor="video-body">어떤 부분이 궁금한가요?</label>
+      <label className="mt-6 block text-sm font-semibold" htmlFor="video-body">영상 이야기</label>
       <textarea id="video-body" value={body} maxLength={POST_BODY_MAX} disabled={busy || !!draft}
-        onChange={(e) => setBody(e.target.value)} rows={5} placeholder="예: 마지막 홀드에서 발을 어떻게 쓰면 좋을까요?"
+        onChange={(e) => setBody(e.target.value)} rows={5} placeholder="완등 자랑, 등반 이야기, 궁금한 점을 자유롭게 남겨주세요."
         className="mt-2 w-full resize-none rounded-xl border border-line bg-surface p-3 text-[16px] leading-relaxed focus:border-accent focus:outline-none" />
       <p className="mt-1 text-right text-xs text-faint">{body.length} / {POST_BODY_MAX}</p>
       {error && <p role="alert" className="mt-4 text-sm text-danger">{error}</p>}

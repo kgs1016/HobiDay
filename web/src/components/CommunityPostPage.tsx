@@ -224,7 +224,7 @@ export default function PostPage() {
         {!post.video_path && <p className="mb-2 text-[12px] font-semibold text-accent-strong">
           {post.pinned_rank ? "공지" : boardTopicLabel(post.topic)}
         </p>}
-        <h1 className="text-[19px] font-bold leading-snug tracking-tight">{post.video_path ? "영상 피드백" : post.title}</h1>
+        <h1 className="text-[19px] font-bold leading-snug tracking-tight">{post.video_path ? "등반 영상" : post.title}</h1>
         <div className="mt-3 flex items-center gap-2.5">
           <Avatar url={post.photo ? photos[post.photo] : undefined} size={32} />
           <div className="min-w-0">
