@@ -21,6 +21,7 @@ function load(file, globals = {}) {
   assert.equal(isProfileComplete(basic), false, 'meeting/chat participation still needs a complete profile');
   const complete = { ...basic, careerId: 2 };
   assert.equal(isProfileComplete(complete), true, 'a complete private profile can participate without opting in to discovery');
+  assert.equal(isProfileComplete({ ...complete, visitFrequency: undefined }), true, 'frequency is optional');
   for (const isPublic of [false, true]) {
     for (const photo of [undefined, '', ' ']) {
       const withoutPhoto = { ...complete, photo, isPublic };
@@ -55,6 +56,17 @@ function load(file, globals = {}) {
     await api.upsertMyProfileDb({ ...reloaded, intro: 'edited' }, reloaded.isPublic);
     assert.equal(stored.is_public, visibility, 'editing other fields must preserve the saved visibility');
   }
+  const { VISIT_FREQUENCIES, visitFrequencyLabel } = load('visitFrequency.ts');
+  assert.equal(visitFrequencyLabel(undefined), null, 'old profiles do not get an invented frequency');
+  for (const option of VISIT_FREQUENCIES) {
+    await api.upsertMyProfileDb({ ...complete, visitFrequency: option.id }, false);
+    const reloaded = await api.fetchMyProfileDb();
+    assert.equal(reloaded.visitFrequency, option.id, 'frequency persists across profile reloads');
+    assert.equal(visitFrequencyLabel(reloaded.visitFrequency), option.label);
+  }
+  await api.upsertMyProfileDb({ ...complete, visitFrequency: undefined }, false);
+  assert.equal(stored.visit_frequency, null, 'clearing a choice persists null');
+  assert.equal((await api.fetchMyProfileDb()).visitFrequency, undefined);
 
   const storage = new Map();
   const local = load('myProfile.ts', { window: {}, localStorage: {
