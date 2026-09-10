@@ -3,6 +3,7 @@
 
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 import type { CareerId, LevelId } from "./levels";
+import type { VisitFrequencyId } from "./visitFrequency";
 import type { Session } from "./mock";
 import type { MyProfile } from "./myProfile";
 import { parseShoeAchievement, type PublicShoeAchievement } from "./shoeProgress";
@@ -191,6 +192,7 @@ export interface UserProfile {
   area: string;
   level: LevelId | null;
   career: CareerId | null;
+  visit_frequency?: VisitFrequencyId | null;
   /** 키(cm) — 선택 입력 */
   height: number | null;
   home_gym: string;
@@ -219,7 +221,7 @@ export async function fetchUserProfile(
 ): Promise<{ profile?: UserProfile; error?: string }> {
   const sb = getSupabase();
   if (!sb) return { error: "no_client" };
-  const { data, error } = await sb.rpc("user_profile", {
+  const { data, error } = await sb.rpc("user_profile_v2", {
     p_user: userId,
     p_session: sessionId ?? null,
   });
@@ -623,6 +625,7 @@ export async function fetchMyProfileDb(): Promise<(MyProfile & { isPublic: boole
     area: data.area ?? "",
     level: data.level,
     careerId: data.career ?? undefined,
+    visitFrequency: data.visit_frequency ?? undefined,
     height: data.height ?? undefined,
     homeGym: data.home_gym ?? "",
     mbti: data.mbti ?? "",
@@ -644,6 +647,7 @@ export async function upsertMyProfileDb(p: MyProfile, isPublic: boolean) {
     area: p.area?.trim() || null, // 선택 항목 — 빈 값은 null 로
     level: p.level,
     career: p.careerId ?? null,
+    visit_frequency: p.visitFrequency ?? null,
     height: p.height ?? null,
     home_gym: p.homeGym?.trim() || null,
     mbti: p.mbti || null,
@@ -1133,7 +1137,7 @@ export async function fetchPublicShoeAchievements(userIds: string[], sessionId?:
   if (!ids.length) return {};
   const sb = getSupabase();
   if (!sb) return null;
-  const { data, error } = await sb.rpc("public_climbing_achievements_v4", {
+  const { data, error } = await sb.rpc("public_climbing_achievements_v5", {
     p_users: ids, p_session: sessionId ?? null,
   });
   if (error || !Array.isArray(data)) return null;
@@ -1158,7 +1162,7 @@ export async function fetchPeople(me?: { id: string }) {
   let q = sb
     .from("profiles")
     .select(
-      "id, nickname, age, gender, level, career, height, home_gym, mbti, area, intro, photo"
+      "id, nickname, age, gender, level, career, visit_frequency, height, home_gym, mbti, area, intro, photo"
     )
     .eq("is_public", true)
     // 사진 없는 카드는 목록에 넣지 않는다 (DB 제약과 이중으로)
@@ -1178,6 +1182,7 @@ export async function fetchPeople(me?: { id: string }) {
     gender: d.gender as "m" | "f",
     level: d.level as LevelId,
     careerId: (d.career ?? undefined) as CareerId | undefined,
+    visitFrequency: (d.visit_frequency ?? undefined) as VisitFrequencyId | undefined,
     height: (d.height ?? undefined) as number | undefined,
     homeGym: (d.home_gym ?? "") as string,
     mbti: (d.mbti ?? "") as string,

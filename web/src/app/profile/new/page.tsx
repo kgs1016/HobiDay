@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import { CameraIcon } from "@/components/icons";
 import { CAREERS, LEVELS, type CareerId, type LevelId } from "@/lib/levels";
+import { VISIT_FREQUENCIES, type VisitFrequencyId } from "@/lib/visitFrequency";
 import { loadMyProfile, saveMyProfile, type MyProfile } from "@/lib/myProfile";
 import { isBasicProfileComplete } from "@/lib/profileGate";
 import { downscaleImage } from "@/lib/imageResize";
@@ -75,6 +76,7 @@ export default function ProfileNew() {
   const [level, setLevel] = useState<LevelId | null>(null);
   const [showLevelGuide, setShowLevelGuide] = useState(false);
   const [careerId, setCareerId] = useState<CareerId | null>(null);
+  const [visitFrequency, setVisitFrequency] = useState<VisitFrequencyId | null>(null);
   const [height, setHeight] = useState("");
   const [homeGym, setHomeGym] = useState("");
   const [mbti, setMbti] = useState("");
@@ -84,6 +86,7 @@ export default function ProfileNew() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [busy, setBusy] = useState(false);
+  const submitting = useRef(false);
   const photoInFlight = useRef(false);
   const previewUrl = useRef<string | null>(null);
 
@@ -145,6 +148,7 @@ export default function ProfileNew() {
       setArea(p.area);
       setLevel(p.level);
       setCareerId(p.careerId ?? null);
+      setVisitFrequency(p.visitFrequency ?? null);
       setHeight(p.height ? String(p.height) : "");
       setHomeGym(p.homeGym);
       setMbti(p.mbti);
@@ -165,6 +169,7 @@ export default function ProfileNew() {
     area: area.trim(),
     level,
     careerId: careerId ?? undefined,
+    visitFrequency: visitFrequency ?? undefined,
     height: Number(height) || undefined,
     homeGym: homeGym.trim(),
     mbti,
@@ -175,7 +180,7 @@ export default function ProfileNew() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading || busy || photoInFlight.current) return;
+    if (loading || submitting.current || photoInFlight.current) return;
     const n = Number(age);
     if (!photo?.trim()) return alert("대표 사진을 1장 올려주세요");
     if (!nickname.trim()) return alert("닉네임을 입력해주세요");
@@ -187,22 +192,24 @@ export default function ProfileNew() {
 
     const profile = buildProfile();
 
-    if (hasSupabase()) {
-      setBusy(true);
-      try {
+    submitting.current = true;
+    setBusy(true);
+    try {
+      if (hasSupabase()) {
         const r = await upsertMyProfileDb(profile, isPublic);
         if (r.error) throw new Error(r.error);
-      } catch (error) {
-        alert(`저장 실패: ${error instanceof Error ? error.message : "연결을 확인하고 다시 시도해주세요"}`);
-        return;
-      } finally {
-        setBusy(false);
+      } else {
+        saveMyProfile(profile);
       }
-    } else {
-      saveMyProfile(profile);
+    } catch (error) {
+      submitting.current = false;
+      setBusy(false);
+      alert(`저장 실패: ${error instanceof Error ? error.message : "연결을 확인하고 다시 시도해주세요"}`);
+      return;
     }
-    // 온보딩을 막 끝냈으면 사람 목록보다 모임 찾기로 보내는 게 자연스럽다
-    router.push(onboarding ? "/" : isPublic ? "/#people" : "/me");
+    // 기본 정보를 먼저 저장한다. 다음 단계에서 나가도 입력 내용은 남는다.
+    if (onboarding) router.replace("/profile/shoe");
+    else router.push(isPublic ? "/#people" : "/me");
   };
 
   return (
@@ -216,24 +223,10 @@ export default function ProfileNew() {
               ? "내 프로필 수정"
               : "기본 정보 등록"}
         </h1>
+        {onboarding && <span className="ml-auto text-[12px] font-medium text-muted">1 / 2</span>}
       </header>
 
       <form className="flex flex-col gap-6 pb-8" onSubmit={submit}>
-        <div className="flex items-center justify-between gap-4 rounded-xl border border-line px-4 py-3.5">
-          <div>
-            <p id="discovery-label" className="text-[14px] font-semibold">사람 찾기에 공개 <span className="text-[12px] font-normal text-muted">선택</span></p>
-            <p id="discovery-description" className="mt-1 text-[12px] text-muted">켜면 로그인한 회원의 사람 찾기 목록에 표시됩니다.</p>
-          </div>
-          <button type="button" role="switch" aria-checked={isPublic}
-            aria-labelledby="discovery-label" aria-describedby="discovery-description"
-            disabled={loading || busy} onClick={() => setIsPublic((value) => !value)}
-            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center disabled:opacity-50">
-            <span className={`flex h-6 w-11 items-center rounded-full p-0.5 transition-colors ${isPublic ? "bg-accent" : "bg-line"}`}>
-              <span className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${isPublic ? "translate-x-5" : "translate-x-0"}`} />
-            </span>
-          </button>
-        </div>
-
         <Field label="대표 사진 (필수)">
           <div className="flex items-center gap-4">
             {/* 네이티브에서도 파일 선택창을 그대로 쓴다 — iOS 가
@@ -386,6 +379,17 @@ export default function ProfileNew() {
           <p className="mt-2 text-[12px] text-muted">암벽화 성취는 완등 기록으로 별도 계산</p>
         </Field>
 
+        <Field label="방문 빈도 (선택)">
+          <div className="flex flex-wrap gap-1.5">
+            {VISIT_FREQUENCIES.map(item => <Chip key={item.id}
+              active={visitFrequency === item.id}
+              onClick={() => setVisitFrequency(visitFrequency === item.id ? null : item.id)}>
+              {item.label}
+            </Chip>)}
+          </div>
+          <p className="mt-1.5 text-[12px] text-muted">최근 한 달 기준</p>
+        </Field>
+
         <Field label={`구력 (클라이밍 시작한 지)${isPublic ? "" : " · 선택"}`}>
           <div className="flex flex-wrap gap-1.5">
             {CAREERS.map((c) => (
@@ -432,12 +436,27 @@ export default function ProfileNew() {
           />
         </Field>
 
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-line px-4 py-3.5">
+          <div>
+            <p id="discovery-label" className="text-[14px] font-semibold">사람 찾기에 공개 <span className="text-[12px] font-normal text-muted">선택</span></p>
+            <p id="discovery-description" className="mt-1 text-[12px] text-muted">켜면 로그인한 회원의 사람 찾기 목록에 표시됩니다.</p>
+          </div>
+          <button type="button" role="switch" aria-checked={isPublic}
+            aria-labelledby="discovery-label" aria-describedby="discovery-description"
+            disabled={loading || busy} onClick={() => setIsPublic((value) => !value)}
+            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center disabled:opacity-50">
+            <span className={`flex h-6 w-11 items-center rounded-full p-0.5 transition-colors ${isPublic ? "bg-accent" : "bg-line"}`}>
+              <span className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${isPublic ? "translate-x-5" : "translate-x-0"}`} />
+            </span>
+          </button>
+        </div>
+
         <button
           type="submit"
           disabled={loading || busy || photoBusy}
           className="button-primary rounded-xl py-3.5 text-[15px] font-semibold"
         >
-          {loading ? "불러오는 중…" : busy ? "저장 중…" : editing ? "저장" : "시작하기"}
+          {loading ? "불러오는 중…" : busy ? "저장 중…" : onboarding ? "다음 · 암벽화 설정" : "저장"}
         </button>
       </form>
     </main>

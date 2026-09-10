@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { careerLabel, level } from "@/lib/levels";
+import { visitFrequencyLabel } from "@/lib/visitFrequency";
 import { MOCK_PEOPLE, MOCK_SESSIONS } from "@/lib/mock";
 import BackButton from "@/components/BackButton";
 import ChatRequestSheet from "@/components/ChatRequestSheet";
@@ -46,6 +47,7 @@ function mockProfile(userId: string | null, sessionId: string | null): Profile |
     area: p.area,
     level: p.level,
     career: p.careerId ?? null,
+    visit_frequency: p.visitFrequency ?? null,
     height: p.height ?? null,
     home_gym: p.homeGym,
     mbti: p.mbti,
@@ -222,6 +224,7 @@ export default function UserProfile({
 
       <section className="mt-6 border-t border-line pt-2">
         {lv && <Row label="등반 수준" value={`${lv.name} · 직접 선택`} />}
+        {visitFrequencyLabel(profile.visit_frequency) && <Row label="방문 빈도" value={visitFrequencyLabel(profile.visit_frequency)!} />}
         {profile.career && <Row label="구력" value={careerLabel(profile.career) ?? "-"} />}
         <Row label="사는 동네" value={profile.area} />
         {profile.height && <Row label="키" value={`${profile.height}cm`} />}

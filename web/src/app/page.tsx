@@ -13,7 +13,8 @@ import ChatRequestSheet from "@/components/ChatRequestSheet";
 import { AvatarFallback, BellIcon, MailIcon, PlusIcon, SearchIcon } from "@/components/icons";
 import { HoldIllust, ShoeIllust } from "@/components/illustrations";
 import { MOCK_SESSIONS, MOCK_PEOPLE, type Session, type Person } from "@/lib/mock";
-import { careerLabel, level } from "@/lib/levels";
+import { level } from "@/lib/levels";
+import { visitFrequencyLabel } from "@/lib/visitFrequency";
 import { MOCK_GYMS } from "@/lib/meetupOptions";
 import {
   EMPTY_FILTER,
@@ -449,7 +450,7 @@ export default function Home() {
                     me.age,
                     me.area,
                     me.level && level(me.level).name,
-                    careerLabel(me.careerId) && `클라이밍 ${careerLabel(me.careerId)}`,
+                    visitFrequencyLabel(me.visitFrequency),
                   ]
                     .filter(Boolean)
                     .join(" · ")}
@@ -525,9 +526,9 @@ export default function Home() {
                         .filter(Boolean)
                         .join(" · ")}
                     </p>
-                    {(careerLabel(p.careerId) || p.achievement) && (
+                    {(visitFrequencyLabel(p.visitFrequency) || p.achievement) && (
                       <div className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-faint">
-                        {careerLabel(p.careerId) && <span>클라이밍 {careerLabel(p.careerId)}</span>}
+                        {visitFrequencyLabel(p.visitFrequency) && <span>{visitFrequencyLabel(p.visitFrequency)}</span>}
                         <ShoeBadge achievement={p.achievement} />
                       </div>
                     )}

@@ -19,6 +19,7 @@ const OPEN_PATHS = [
   "/reset",
   "/auth",
   "/profile/new",
+  "/profile/shoe",
   "/me",
   "/safety",
   "/terms",

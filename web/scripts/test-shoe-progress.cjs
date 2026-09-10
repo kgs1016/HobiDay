@@ -11,7 +11,7 @@ function load(name) {
   vm.runInNewContext(code,{exports,Date,require:id=>load(id.slice(2))});
   return exports;
 }
-const { shoeProgress, SHOE_STAGES, parseShoeAchievement, shoePeriodStart } = load('shoeProgress');
+const { shoeProgress, SHOE_STAGES, parseShoeAchievement, shoePeriodStart, shoeStartExpiresOn, displayShoeStage } = load('shoeProgress');
 const { HOBI_DIFFICULTIES, difficultyScore } = load('hobiDifficulty');
 const progress = difficulty_counts => shoeProgress({total:Object.values(difficulty_counts).reduce((a,b)=>a+b,0),grade_counts:{},difficulty_counts});
 assert.equal(progress({}).current.id,'white');
@@ -47,3 +47,24 @@ for(const stage of SHOE_STAGES) assert.ok(fs.existsSync(path.join(__dirname,'../
 const sql=fs.readFileSync(path.join(__dirname,'../../supabase/migrations/20260909220000_hobi_color_achievement.sql'),'utf8');
 for(const stage of SHOE_STAGES.slice(1)) assert.ok(sql.includes("'"+stage.id+"',"+stage.minLevel+','+stage.required+','+stage.points+ ')'),'server/client policy parity');
 console.log('PASS: nine colors, three calendar months, assets and server/client rule parity');
+
+for (const [today, expires] of [
+ ['2026-09-10','2026-12-10'], ['2026-11-30','2027-02-28'],
+ ['2023-11-30','2024-02-29'], ['2026-01-31','2026-04-30'],
+]) assert.equal(shoeStartExpiresOn(today),expires);
+const start={stage:'purple',expires_on:'2026-12-10'};
+assert.equal(displayShoeStage('white',start,'2026-12-09'),'purple');
+assert.equal(displayShoeStage('white',start,'2026-12-10'),'white','expiry begins on the specified Korean date');
+assert.equal(displayShoeStage('black',start,'2026-09-10'),'black','higher earned stage always wins');
+const starting=shoeProgress({total:0,grade_counts:{},difficulty_counts:{},starting_shoe:start,period_end:'2026-09-10'});
+assert.equal(starting.current.id,'purple');
+assert.equal(starting.earned.id,'white');
+assert.equal(starting.points,0,'choosing a color never grants points');
+assert.equal(starting.current.count,0,'choosing a color never grants hard ascents');
+assert.equal(starting.starting,true);
+const caughtUp=shoeProgress({total:50,grade_counts:{},difficulty_counts:{'8':50},starting_shoe:start,period_end:'2026-09-10'});
+assert.equal(caughtUp.current.id,'purple');
+assert.equal(caughtUp.starting,false,'actual records replace the provisional label');
+assert.equal(parseShoeAchievement({stage:'purple',total:0,stage_source:'starting'}).stage_source,'starting');
+assert.equal(parseShoeAchievement({stage:'purple',total:0,stage_source:'arbitrary'}),undefined);
+console.log('PASS: initial color expiry, earned precedence, no fabricated points/counts and public source labels');

@@ -12,6 +12,7 @@ import PlayerReviews from "@/components/PlayerReviews";
 import { AvatarFallback, ChevronRightIcon } from "@/components/icons";
 import type { MyProfile } from "@/lib/myProfile";
 import { loadMyProfile } from "@/lib/myProfile";
+import { visitFrequencyLabel } from "@/lib/visitFrequency";
 import {
   hasSupabase,
   currentUser,
@@ -97,6 +98,7 @@ export default function Me() {
             {email && (
               <p className="mt-0.5 truncate text-[11.5px] text-faint">{email}</p>
             )}
+            {visitFrequencyLabel(profile?.visitFrequency) && <p className="mt-1 text-[12px] text-muted">클라이밍 {visitFrequencyLabel(profile?.visitFrequency)}</p>}
           </div>
         </div>
         {profile && (
