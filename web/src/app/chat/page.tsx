@@ -103,7 +103,8 @@ function ChatContent({
   const [chats, setChats] = useState<Chat[] | null>(null);
   const [rooms, setRooms] = useState<SessionChat[] | null>(null);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
-  const [open, setOpen] = useState<Chat | null>(null);
+  const [openId, setOpenId] = useState(initialThreadId);
+  const open = chats?.find(chat => chat.match_id === openId);
   const [openRoomId, setOpenRoomId] = useState(initialRoomId);
   // 방 목록을 받은 순간 주소의 방을 바로 표시한다. 별도의 상태 복사 효과는 없다.
   const openRoom = rooms?.find(room => room.session_id === openRoomId);
@@ -111,18 +112,14 @@ function ChatContent({
   const load = useCallback(async (signal?: AbortSignal) => {
     const [list, group] = await Promise.all([fetchChats(), fetchSessionChats()]);
     if (signal?.aborted) return;
-    setChats(list);
-    setRooms(group);
-    // 주소로 들어온 1:1 방은 목록을 받은 첫 순간에만 연다
-    if (initialThreadId) {
-      const c = list?.find((x) => x.match_id === initialThreadId);
-      setOpen((cur) => cur ?? c ?? null);
-    }
+    // 통신 실패에는 기존 목록을 유지하고, 정상 응답에서 없어진 방은 화면에서도 닫는다.
+    if (list !== null) setChats(list);
+    if (group !== null) setRooms(group);
     if (list?.length) {
       const urls = await signedPhotoUrls(list.map(c => c.photo).filter(Boolean) as string[]);
       if (!signal?.aborted) setPhotoUrls(urls);
     }
-  }, [initialThreadId]);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -131,10 +128,14 @@ function ChatContent({
       const user = await currentUser();
       if (controller.signal.aborted) return;
       setAuthed(!!user);
-      if (user) await load(controller.signal);
     })();
     return () => controller.abort();
-  }, [load]);
+  }, []);
+
+  const refreshLists = useCallback(async (signal: AbortSignal) => {
+    if (authed) await load(signal);
+  }, [authed, load]);
+  usePolling(refreshLists, 15_000);
 
   // 모임 상세에서 돌아온 방은 초기 상태로 보관하고 주소에서는 한 번 지운다.
   useEffect(() => {
@@ -147,7 +148,7 @@ function ChatContent({
 
   /** 목록 배지는 즉시 지우고, 실제 읽음 처리는 방에서 메시지를 받은 뒤 한 번 한다. */
   const openThread = (c: Chat) => {
-    setOpen(c);
+    setOpenId(c.match_id);
     setChats((list) =>
       (list ?? []).map((x) => (x.match_id === c.match_id ? { ...x, unread: 0 } : x))
     );
@@ -189,7 +190,7 @@ function ChatContent({
         key={open.match_id}
         chat={open}
         onBack={() => {
-          setOpen(null);
+          setOpenId(null);
           load(); // 나올 때 목록·마지막 메시지 갱신
         }}
       />
@@ -295,9 +296,14 @@ function ChatContent({
           </div>
         )
       ) : chats.length === 0 ? (
-        <div className="mt-16 flex flex-col items-center gap-1.5 text-center">
-          <CarabinerIllust size={64} />
-          <p className="mt-3 text-[15px] font-semibold">아직 연결된 상대가 없어요</p>
+        <div className="mt-16 flex flex-col items-center gap-4 text-center">
+          <p className="text-[15px] font-semibold">아직 연결된 상대가 없어요</p>
+          <Link
+            href="/#people"
+            className="button-primary rounded-xl px-6 py-3 text-[14px] font-semibold"
+          >
+            대화신청 하러가기
+          </Link>
         </div>
       ) : (
         <div className="flex flex-col divide-y divide-line pb-6">

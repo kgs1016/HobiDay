@@ -23,6 +23,7 @@ export function ReviewCard({
   /** 상세 목록에서는 줄 수를 안 자른다 */
   full?: boolean;
 }) {
+  if (!r.author_id || !r.body) return null;
   return (
     <div className="rounded-xl bg-surface2 px-4 py-3.5">
       <div className="flex items-center gap-2">

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PlayIcon } from "@/components/icons";
 import { ago, VIDEO_PAGE, type VideoSummary } from "@/lib/community";
 import { feedbackMediaUrls, fetchFeedbackVideos, fetchMyFeedbackVideos } from "@/lib/feedbackVideo";
+import { createThumbnailRecovery, initialThumbnailState } from "@/lib/thumbnailRecovery";
 
 /** mine 이면 내가 올린 영상만 — 내 정보의 "내 영상" 이 같은 목록을 쓴다 */
 export default function VideoFeedbackFeed({ mine = false }: { mine?: boolean }) {
@@ -24,7 +25,7 @@ export default function VideoFeedbackFeed({ mine = false }: { mine?: boolean }) 
     setError("");
     try {
       const next = await fetchPage(before);
-      const thumbnails = await feedbackMediaUrls(next.map((r) => r.thumbnail_path));
+      const thumbnails = await feedbackMediaUrls(next.map((r) => r.thumbnail_path)).catch(() => ({}));
       setRows((prev) => before ? [...prev, ...next.filter((r) => !prev.some((p) => p.id === r.id))] : next);
       setUrls((prev) => ({ ...prev, ...thumbnails }));
       setMore(next.length === VIDEO_PAGE);
@@ -39,7 +40,7 @@ export default function VideoFeedbackFeed({ mine = false }: { mine?: boolean }) 
   useEffect(() => {
     let alive = true;
     fetchPage().then(async (next) => {
-      const thumbnails = await feedbackMediaUrls(next.map((r) => r.thumbnail_path));
+      const thumbnails = await feedbackMediaUrls(next.map((r) => r.thumbnail_path)).catch(() => ({}));
       if (!alive) return;
       setRows(next); setUrls(thumbnails); setMore(next.length === VIDEO_PAGE); setLoaded(true);
     }).catch((e) => { if (alive) setError(e instanceof Error ? e.message : "불러오지 못했어요"); })
@@ -50,10 +51,7 @@ export default function VideoFeedbackFeed({ mine = false }: { mine?: boolean }) 
 
   return (
     <section className="pb-8 pt-4" aria-label="등반 영상 목록">
-      <div className="flex items-center justify-between border-b border-line pb-2.5 text-[11.5px] text-faint">
-        <span>{mine ? "내가 올린 영상" : "클라이머들의 영상"}</span><span>최신순</span>
-      </div>
-      {rows.length > 0 && <div className="space-y-7 pt-4">
+      {rows.length > 0 && <div className="grid grid-cols-2 gap-x-3 gap-y-5">
         {rows.map(p => <VideoFeedCard key={p.id} video={p} thumbnail={urls[p.thumbnail_path]} mine={mine} />)}
       </div>}
       {loaded && !rows.length && !error && <div className="py-16 text-center">
@@ -71,23 +69,58 @@ export default function VideoFeedbackFeed({ mine = false }: { mine?: boolean }) 
   );
 }
 
-export function VideoFeedCard({ video: p, thumbnail, mine = false }: { video: VideoSummary; thumbnail?: string; mine?: boolean }) {
-  return <Link href={`/videos/post?id=${p.id}${mine ? "&from=mine" : ""}`} className="block min-w-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent">
-    <div className={`relative w-full overflow-hidden rounded-2xl bg-ink ${thumbnail ? "" : "aspect-[4/5]"}`}>
-      {thumbnail && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={thumbnail} alt="" loading="lazy" className="block max-h-[520px] w-full object-contain" />
-      )}
-      <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
-        <span className="flex h-14 w-14 items-center justify-center rounded-full border border-white/40 bg-black/35 text-white backdrop-blur-sm"><PlayIcon size={26} /></span>
-      </span>
-    </div>
-    <div className="px-0.5 pt-3">
-      <p className="line-clamp-2 break-words text-[16px] font-semibold leading-relaxed">{p.preview}</p>
-      <p className="mt-1.5 truncate text-[13px] text-muted">{p.nickname ?? "탈퇴한 회원"} · {ago(p.created_at)}</p>
-      <div className="mt-2.5 flex gap-4 text-[13px] text-muted">
-        <span>좋아요 {p.like_count}</span><span>댓글 {p.comment_count}</span>
+type VideoFeedCardProps = { video: VideoSummary; thumbnail?: string; mine?: boolean };
+
+export function VideoFeedCard(props: VideoFeedCardProps) {
+  // 경로 또는 최초 주소가 바뀌면 이전 요청·재시도 상태를 함께 정리한다.
+  return <VideoCard key={JSON.stringify([props.video.thumbnail_path, props.thumbnail])} {...props} />;
+}
+
+function VideoCard({ video: p, thumbnail, mine = false }: VideoFeedCardProps) {
+  const [image, setImage] = useState(() => initialThumbnailState(thumbnail));
+  const imageElement = useRef<HTMLImageElement>(null);
+  const recovery = useRef<ReturnType<typeof createThumbnailRecovery> | null>(null);
+  useEffect(() => {
+    const current = createThumbnailRecovery(thumbnail, async () => {
+      const urls = await feedbackMediaUrls([p.thumbnail_path]);
+      return urls[p.thumbnail_path];
+    }, setImage);
+    recovery.current = current;
+    current.start();
+    // 캐시된 이미지 오류가 effect보다 먼저 발생한 경우에도 복구한다.
+    if (thumbnail && imageElement.current?.complete) {
+      if (imageElement.current.naturalWidth) current.imageLoaded(0);
+      else current.imageFailed(0);
+    }
+    return () => { current.stop(); recovery.current = null; };
+  }, [p.thumbnail_path, thumbnail]);
+
+  return <article className="relative min-w-0">
+    <Link href={`/videos/post?id=${p.id}${mine ? "&from=mine" : ""}`} className="block rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent">
+      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-ink">
+        {image.url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img ref={imageElement} key={image.attempt} src={image.url} alt="" loading="lazy"
+            onLoad={() => recovery.current?.imageLoaded(image.attempt)}
+            onError={() => recovery.current?.imageFailed(image.attempt)}
+            className="h-full w-full object-contain" />
+        )}
+        <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/40 bg-black/35 text-white backdrop-blur-sm"><PlayIcon size={16} /></span>
+        </span>
       </div>
-    </div>
-  </Link>;
+      <div className="pt-2">
+        <p className="line-clamp-2 break-words text-[13px] font-semibold leading-snug">{p.preview}</p>
+        <p className="mt-1 truncate text-[11px] text-muted">{p.nickname ?? "탈퇴한 회원"} · {ago(p.created_at)}</p>
+        <div className="mt-1.5 flex flex-wrap gap-x-2 text-[11px] text-muted">
+          <span>좋아요 {p.like_count}</span><span>댓글 {p.comment_count}</span>
+        </div>
+      </div>
+    </Link>
+    {image.status === "failed" && <button type="button" onClick={() => recovery.current?.retry()}
+      aria-label={`${p.preview} 썸네일 다시 불러오기`}
+      className="absolute right-2 top-2 flex min-h-11 items-center rounded-lg bg-white px-3 text-[11px] font-semibold text-ink shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+      다시 불러오기
+    </button>}
+  </article>;
 }
