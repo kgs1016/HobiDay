@@ -11,7 +11,7 @@ android {
         // 넘겨주는 빌드 번호(BUILD_NUMBER)를 쓰면 빌드마다 자동으로 올라간다.
         // 로컬 빌드(변수 없음)에서는 1 로 떨어진다.
         versionCode System.getenv("BUILD_NUMBER") ? System.getenv("BUILD_NUMBER").toInteger() : 1
-        versionName "1.0"
+        versionName "1.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
