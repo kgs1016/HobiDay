@@ -1,0 +1,145 @@
+{
+  "date": "2026-09-10",
+  "images": [
+    {
+      "file": "appstore-1284x2778/01-home.png",
+      "width": 1284,
+      "height": 2778,
+      "format": "png",
+      "opaque": true
+    },
+    {
+      "file": "appstore-1284x2778/02-search.png",
+      "width": 1284,
+      "height": 2778,
+      "format": "png",
+      "opaque": true
+    },
+    {
+      "file": "appstore-1284x2778/03-session.png",
+      "width": 1284,
+      "height": 2778,
+      "format": "png",
+      "opaque": true
+    },
+    {
+      "file": "appstore-1284x2778/04-people.png",
+      "width": 1284,
+      "height": 2778,
+      "format": "png",
+      "opaque": true
+    },
+    {
+      "file": "appstore-1284x2778/05-chat.png",
+      "width": 1284,
+      "height": 2778,
+      "format": "png",
+      "opaque": true
+    },
+    {
+      "file": "appstore-1284x2778/06-board.png",
+      "width": 1284,
+      "height": 2778,
+      "format": "png",
+      "opaque": true
+    },
+    {
+      "file": "appstore-1284x2778/07-news.png",
+      "width": 1284,
+      "height": 2778,
+      "format": "png",
+      "opaque": true
+    },
+    {
+      "file": "appstore-1284x2778/08-videos.png",
+      "width": 1284,
+      "height": 2778,
+      "format": "png",
+      "opaque": true
+    },
+    {
+      "file": "appstore-1284x2778/09-records.png",
+      "width": 1284,
+      "height": 2778,
+      "format": "png",
+      "opaque": true
+    },
+    {
+      "file": "appstore-1284x2778/10-shoe.png",
+      "width": 1284,
+      "height": 2778,
+      "format": "png",
+      "opaque": true
+    },
+    {
+      "file": "playstore-1080x1920/01-home.png",
+      "width": 1080,
+      "height": 1920,
+      "format": "png",
+      "opaque": true
+    },
+    {
+      "file": "playstore-1080x1920/02-search.png",
+      "width": 1080,
+      "height": 1920,
+      "format": "png",
+      "opaque": true
+    },
+    {
+      "file": "playstore-1080x1920/03-session.png",
+      "width": 1080,
+      "height": 1920,
+      "format": "png",
+      "opaque": true
+    },
+    {
+      "file": "playstore-1080x1920/04-people.png",
+      "width": 1080,
+      "height": 1920,
+      "format": "png",
+      "opaque": true
+    },
+    {
+      "file": "playstore-1080x1920/05-chat.png",
+      "width": 1080,
+      "height": 1920,
+      "format": "png",
+      "opaque": true
+    },
+    {
+      "file": "playstore-1080x1920/06-board.png",
+      "width": 1080,
+      "height": 1920,
+      "format": "png",
+      "opaque": true
+    },
+    {
+      "file": "playstore-1080x1920/07-news.png",
+      "width": 1080,
+      "height": 1920,
+      "format": "png",
+      "opaque": true
+    },
+    {
+      "file": "playstore-1080x1920/08-videos.png",
+      "width": 1080,
+      "height": 1920,
+      "format": "png",
+      "opaque": true
+    },
+    {
+      "file": "playstore-1080x1920/09-records.png",
+      "width": 1080,
+      "height": 1920,
+      "format": "png",
+      "opaque": true
+    },
+    {
+      "file": "playstore-1080x1920/10-shoe.png",
+      "width": 1080,
+      "height": 1920,
+      "format": "png",
+      "opaque": true
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { currentUser, hasSupabase, fetchInboxCounts } from "@/lib/supabase";
 import { HomeIcon, ChatIcon, BoardIcon, PlayIcon, UserIcon } from "@/components/icons";
+import { startPolling } from "@/lib/polling";
 
 const TABS = [
   { href: "/", label: "홈", Icon: HomeIcon },
@@ -36,11 +37,10 @@ export default function BottomNav() {
 
   useEffect(() => {
     if (!authed) return;
-    let alive = true;
-    const load = async () => {
-      const c = await fetchInboxCounts();
-      if (!alive || !c) return;
-      setBadges({ "/chat": c.unread_messages });
+    const poller = startPolling(async signal => {
+      const c = await fetchInboxCounts(signal);
+      if (signal.aborted || !c) return;
+      setBadges(previous => previous["/chat"] === c.unread_messages ? previous : { "/chat": c.unread_messages });
 
       // 홈 화면에 추가한 PWA 는 앱 아이콘에도 숫자를 띄울 수 있다 (iOS 16.4+)
       const total = c.requests + c.unread_messages;
@@ -54,14 +54,8 @@ export default function BottomNav() {
       } catch {
         // 미지원 브라우저는 무시
       }
-    };
-    load();
-    // 채팅 화면에선 더 자주 확인한다
-    const t = setInterval(load, pathname === "/chat" ? 10_000 : 30_000);
-    return () => {
-      alive = false;
-      clearInterval(t);
-    };
+    }, pathname === "/chat" ? 10_000 : 30_000);
+    return () => poller.stop();
     // 화면을 옮길 때마다 갱신해 읽은 뒤에도 배지가 남지 않게
   }, [pathname, authed]);
 
