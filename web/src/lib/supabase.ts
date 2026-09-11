@@ -1026,10 +1026,11 @@ export async function respondRequest(id: string, accept: boolean) {
   };
 }
 
-export async function fetchInboxCounts() {
+export async function fetchInboxCounts(signal?: AbortSignal) {
   const sb = getSupabase();
   if (!sb) return null;
-  const { data, error } = await sb.rpc("inbox_counts");
+  const query = sb.rpc("inbox_counts");
+  const { data, error } = await (signal ? query.abortSignal(signal) : query);
   if (error) return null;
   return data as {
     /** 신청함 배지 = 내가 답해야 하는 것들의 합 (채팅 신청 + 모임 신청 + 확정 제안) */

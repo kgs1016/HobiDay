@@ -10,10 +10,13 @@ async function readList<T>(load: () => Promise<T[] | null>): Promise<T[] | null>
   }
 }
 
-export async function fetchHomeLists(userId: string) {
+export async function fetchHomeLists(userId: string, onResult: {
+  sessions?: (rows: Awaited<ReturnType<typeof fetchSessions>>) => void;
+  people?: (rows: Awaited<ReturnType<typeof fetchPeople>>) => void;
+} = {}) {
   const [sessions, people] = await Promise.all([
-    readList(fetchSessions),
-    readList(() => fetchPeople({ id: userId })),
+    readList(fetchSessions).then(rows => { onResult.sessions?.(rows); return rows; }),
+    readList(() => fetchPeople({ id: userId })).then(rows => { onResult.people?.(rows); return rows; }),
   ]);
   return { sessions, people };
 }

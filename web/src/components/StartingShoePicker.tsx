@@ -42,6 +42,12 @@ export default function StartingShoePicker({ onboarding = false, reset = false, 
         {stage ? `${stage.name} 클라이밍화` : "나의 시작 클라이밍화"}
       </p>
     </div>}
+    {!reset && <button type="button" disabled={busy} aria-pressed={selected === "white"}
+      onClick={() => setSelected("white")}
+      className="button-secondary mt-4 flex min-h-12 w-full items-center justify-between rounded-xl px-4 text-[14px] font-semibold">
+      <span>처음 시작해요</span>
+      <span className="text-[12px] text-muted">흰색으로 시작</span>
+    </button>}
     <div className="mt-4 grid grid-cols-3 gap-2" aria-label="시작 색 선택">
       {SHOE_STAGES.map(item => <button key={item.id} type="button" disabled={busy}
         aria-label={item.name} aria-pressed={selected === item.id} onClick={() => setSelected(item.id)}

@@ -48,6 +48,7 @@ export default function Home() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [ready, setReady] = useState(mockMode);
   const [loading, setLoading] = useState(!mockMode);
+  const [peopleLoading, setPeopleLoading] = useState(!mockMode);
   const [homeError, setHomeError] = useState(false);
   const [sessionError, setSessionError] = useState(false);
   const [peopleError, setPeopleError] = useState(false);
@@ -77,6 +78,7 @@ export default function Home() {
     if (retrying.current) return;
     retrying.current = true;
     setLoading(true);
+    setPeopleLoading(true);
     setLoadAttempt(attempt => attempt + 1);
   };
 
@@ -104,12 +106,25 @@ export default function Home() {
         return;
       }
 
-      // 프로필 입력 여부와 무관하게 로그인한 회원은 이용한다.
-      const prof = await fetchMyProfileDb();
-      if (!alive) return;
-      setMe(prof);
-
+      // 메뉴·필터는 먼저 표시하고 목록마다 도착하는 대로 렌더링한다.
+      setReady(true);
       setHomeError(false);
+
+      const loadPhotos = (paths: (string | null | undefined)[]) => {
+        const present = paths.filter(Boolean) as string[];
+        if (present.length) void signedPhotoUrls(present).then(urls => {
+          if (alive) setPhotoUrls(previous => ({ ...previous, ...urls }));
+        }).catch(() => {});
+      };
+      // 내 프로필·사진 응답이 모임 목록의 표시를 막지 않는다.
+      let homeGym: string | undefined;
+      void fetchMyProfileDb().then(prof => {
+        if (!alive) return;
+        setMe(prof);
+        homeGym = prof?.homeGym;
+        if (homeGym) setSessions(previous => previous.map(row => ({ ...row, isAway: row.gym !== homeGym })));
+        loadPhotos([prof?.photo]);
+      }).catch(() => {});
 
       // 사진·장소 필터·배지 실패는 모임 목록 조회와 별개로 처리한다.
       void fetchGyms().then(gymRows => { if (alive && gymRows) setMasterGyms(gymRows); }).catch(() => {});
@@ -117,27 +132,26 @@ export default function Home() {
       void fetchNotifications().then(notis => { if (alive && notis) setUnread(notis.unread); }).catch(() => {});
 
       // 사람 찾기는 성별로 거르지 않는다 — 내 카드만 뺀다
-      const { sessions: rows, people: ppl } = await fetchHomeLists(user.id);
-      if (!alive) return;
-      setSessionError(rows === null);
-      setPeopleError(ppl === null);
-      if (rows !== null) {
-        setSessions(rows.map((r) => toSession(r, prof?.homeGym, user.id)));
-      }
-      // 비공개 버킷이라 표시용 서명 URL 을 한 번에 받아온다.
-      // 사람 목록과 모임 호스트를 같이 넣어야 요청이 한 번으로 끝난다.
-      const paths = [
-        ...(ppl ?? []).map((x) => x.photo),
-        ...(rows ?? []).map((r) => r.host_photo),
-        prof?.photo, // "내 프로필 (공개 중)" 줄 — 빼먹으면 내 사진만 비어 뜬다
-      ].filter(Boolean) as string[];
-      if (ppl !== null) setPeople(ppl);
-      if (paths.length > 0) void signedPhotoUrls(paths).then(urls => {
-        if (alive) setPhotoUrls(previous => ({ ...previous, ...urls }));
-      }).catch(() => {});
+      await fetchHomeLists(user.id, {
+        sessions: rows => {
+          if (!alive) return;
+          setSessionError(rows === null);
+          if (rows !== null) setSessions(rows.map(row => toSession(row, homeGym, user.id)));
+          setLoading(false);
+          loadPhotos((rows ?? []).map(row => row.host_photo));
+        },
+        people: rows => {
+          if (!alive) return;
+          setPeopleError(rows === null);
+          if (rows !== null) setPeople(rows);
+          setPeopleLoading(false);
+          loadPhotos((rows ?? []).map(row => row.photo));
+        },
+      });
     })().catch(() => { if (alive) setHomeError(true); }).finally(() => {
       if (!alive) return;
       setLoading(false);
+      setPeopleLoading(false);
       setReady(true);
       retrying.current = false;
     });
@@ -148,7 +162,7 @@ export default function Home() {
   useEffect(() => {
     if (!authed) return;
     const poller = startPolling(async signal => {
-      const inbox = await fetchInboxCounts();
+      const inbox = await fetchInboxCounts(signal);
       if (!signal.aborted && inbox) setRequests(inbox.requests);
     }, 30_000);
     return () => poller.stop();
@@ -334,9 +348,9 @@ export default function Home() {
 
           {/* 공개 프로필이 아직 없으면 비어 보인다. 아무것도 안 그리면
               고장난 것처럼 보인다 — 왜 비었는지 말해준다. */}
-          {peopleError && <LoadErrorNotice message="사람 목록을 불러오지 못했어요" loading={loading} onRetry={retry} hasPrevious={people.length > 0} />}
-          {loading && !peopleError && !people.length && <p role="status" className="py-14 text-center text-sm text-muted">사람 불러오는 중…</p>}
-          {!peopleError && !loading && people.length === 0 && (
+          {peopleError && <LoadErrorNotice message="사람 목록을 불러오지 못했어요" loading={peopleLoading} onRetry={retry} hasPrevious={people.length > 0} />}
+          {peopleLoading && !peopleError && !people.length && <p role="status" className="py-14 text-center text-sm text-muted">사람 불러오는 중…</p>}
+          {!peopleError && !peopleLoading && people.length === 0 && (
             <div className="flex flex-col items-center py-14 text-center">
               <ShoeIllust size={68} />
               <p className="mt-4 text-[15px] font-semibold">
@@ -345,7 +359,7 @@ export default function Home() {
             </div>
           )}
 
-          {!peopleError && !loading && people.length > 0 && shownPeople.length === 0 && <div className="py-14 text-center">
+          {!peopleError && !peopleLoading && people.length > 0 && shownPeople.length === 0 && <div className="py-14 text-center">
             <p className="text-[14px] font-medium">조건에 맞는 사람이 없어요</p>
             <button type="button" onClick={resetSearch} className="mt-3 min-h-11 px-3 text-[14px] font-semibold text-accent-strong">전체 사람 보기</button>
           </div>}

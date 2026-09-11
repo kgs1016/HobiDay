@@ -45,6 +45,28 @@ const render = props => renderToStaticMarkup(React.createElement(List.default, {
   assert.ok(html.includes('아직 열린 모임이 없어요') && html.includes('모임 만들기'));
   assert.ok(!html.includes('불러오지 못했어요'));
 
+  // 느린 사람 조회가 먼저 끝난 모임 목록 표시를 막으면 안 된다.
+  let finishPeople;
+  const seen = [];
+  const staggered = load('lib/homeLists.ts', { './supabase': {
+    fetchSessions: async () => [fixture],
+    fetchPeople: () => new Promise(resolve => { finishPeople = resolve; }),
+  } });
+  let settled = false;
+  const pending = staggered.fetchHomeLists('member', {
+    sessions: rows => seen.push(['sessions', rows]),
+    people: rows => seen.push(['people', rows]),
+  }).then(() => { settled = true; });
+  for (let i = 0; i < 8; i++) await Promise.resolve();
+  assert.equal(settled, false);
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0][0], 'sessions');
+  assert.equal(seen[0][1][0], fixture, 'sessions are delivered while the other request is still pending');
+  finishPeople(null);
+  await pending;
+  assert.equal(seen[1][0], 'people');
+  assert.equal(seen[1][1], null, 'late failure stays an error rather than an empty success');
+
   people = [{ id: 'person' }];
   for (const response of [null, undefined, { error: 'denied' }]) {
     sessions = response;
