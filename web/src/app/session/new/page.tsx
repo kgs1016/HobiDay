@@ -1,7 +1,8 @@
 "use client";
 import { requireParticipationProfile, handleParticipationError } from "@/lib/participation";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useQueryId } from "@/lib/queryId";
 import { useRouter } from "next/navigation";
 import { LEVELS, levelRangeLabel, type LevelId } from "@/lib/levels";
 import { CAPACITY_CHOICES } from "@/lib/capacity";
@@ -16,6 +17,9 @@ import {
   currentUser,
   fetchGyms,
   createSession,
+  fetchEditableSession,
+  updateSession,
+  type EditableSession,
   type Gym,
 } from "@/lib/supabase";
 import Calendar, { monthOf, ymd } from "@/components/Calendar";
@@ -92,19 +96,41 @@ const inputCls = `w-full ${boxCls}`;
 
 export default function NewSession() {
   const now = useNow();
-  if (!now) return <main className="px-4 pt-24 text-center text-[13.5px] text-faint">불러오는 중…</main>;
-  return <NewSessionForm now={now} />;
+  const id = useQueryId();
+  if (!now || id === undefined) return <main className="px-4 pt-24 text-center text-sm text-muted">불러오는 중…</main>;
+  return id ? <EditSessionLoader key={id} id={id} now={now} /> : <NewSessionForm now={now} />;
 }
 
-function NewSessionForm({ now }: { now: number }) {
+function EditSessionLoader({ id, now }: { id: string; now: number }) {
+  const [session, setSession] = useState<EditableSession | null>(null);
+  const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    fetchEditableSession(id).then(s => {
+      if (!alive) return;
+      if (!s) setError("내가 만든 모임만 수정할 수 있어요");
+      else if (!["open", "confirmed"].includes(s.status) || new Date(s.starts_at).getTime() <= Date.now())
+        setError("시작되거나 종료된 모임은 수정할 수 없어요");
+      else { setError(""); setSession(s); }
+    }).catch(e => { if (alive) setError(e instanceof Error ? e.message : "모임을 불러오지 못했어요"); });
+    return () => { alive = false; };
+  }, [id, attempt]);
+  if (error) return <main className="px-4 py-5"><BackButton fallback={`/session?id=${id}`} /><p role="alert" className="mt-8 text-sm">{error}</p>
+    <button className="button-secondary mt-4 rounded-lg px-4 py-2" onClick={() => setAttempt(a => a + 1)}>다시 시도</button></main>;
+  if (!session) return <main className="px-4 pt-24 text-center text-sm text-muted">불러오는 중…</main>;
+  return <NewSessionForm key={id} now={now} existing={session} />;
+}
+
+function NewSessionForm({ now, existing }: { now: number; existing?: EditableSession }) {
   const router = useRouter();
   // 실제 브라우저 시각을 받은 뒤 한 번만 초기화해 사용자 입력을 유지한다.
-  const [initialSlot] = useState(() => defaultSlot(now));
+  const [initialSlot] = useState(() => existing ? { date: ymd(new Date(existing.starts_at)), start: hm(new Date(existing.starts_at)), end: hm(new Date(existing.ends_at)) } : defaultSlot(now));
   /* 클라이밍장 — gym master 에서 고른다. 마스터를 못 받는 환경(mock ·
      마이그레이션 전 DB)에서는 예전 자유입력 + 칩으로 동작한다. */
   const [gyms, setGyms] = useState<Gym[] | null>(null);
-  const [gym, setGym] = useState(MOCK_GYMS[0]);
-  const [gymId, setGymId] = useState<string | undefined>();
+  const [gym, setGym] = useState(existing?.gym ?? MOCK_GYMS[0]);
+  const [gymId, setGymId] = useState<string | undefined>(existing?.gym_id ?? undefined);
   const [picking, setPicking] = useState(false);
   useEffect(() => {
     if (!hasSupabase()) return;
@@ -125,6 +151,11 @@ function NewSessionForm({ now }: { now: number }) {
 
   const [startTime, setStartTime] = useState(initialSlot.start);
   const [endTime, setEndTime] = useState(initialSlot.end);
+  // Keep the original timestamp when the displayed date/time is unchanged (including seconds).
+  const startsAtValue = existing && date === initialSlot.date && startTime === initialSlot.start
+    ? existing.starts_at : `${date}T${startTime}:00`;
+  const endsAtValue = existing && date === initialSlot.date && endTime === initialSlot.end
+    ? existing.ends_at : `${date}T${endTime}:00`;
 
   /* 달력에서 지난 날짜·90일 밖을 아예 못 고르게 한다 (서버도 같은 범위를
      거부한다). now 를 따라가니 자정을 넘겨도 어제가 남지 않는다. */
@@ -136,12 +167,14 @@ function NewSessionForm({ now }: { now: number }) {
   })();
   /* 최대 정원 = 호스트를 포함해 여기까지만 받는다 (2~6명).
      채워야 하는 수가 아니다 — 둘만 모여도 모임은 열린다. */
-  const [capacity, setCapacity] = useState(4);
-  const [levelMin, setLevelMin] = useState<LevelId>(2);
-  const [levelMax, setLevelMax] = useState<LevelId>(3);
-  const [ageMin, setAgeMin] = useState<number>(27);
-  const [ageMax, setAgeMax] = useState<number>(33);
-  const [note, setNote] = useState("");
+  const [capacity, setCapacity] = useState(existing?.capacity ?? 4);
+  const [levelMin, setLevelMin] = useState<LevelId>(existing?.level_min ?? 2);
+  const [levelMax, setLevelMax] = useState<LevelId>(existing?.level_max ?? 3);
+  const [ageMin, setAgeMin] = useState<number>(existing?.age_min ?? 27);
+  const [ageMax, setAgeMax] = useState<number>(existing?.age_max ?? 33);
+  const [note, setNote] = useState(existing?.note ?? "");
+  const submitting = useRef(false);
+  const [saveError, setSaveError] = useState("");
   const [busy, setBusy] = useState(false);
 
   /* 못 만드는 이유. 있으면 등록 버튼을 잠그고 그 자리에 이유를 적는다.
@@ -152,17 +185,20 @@ function NewSessionForm({ now }: { now: number }) {
      여기서 조용히 고쳐주지는 않는다. 연도를 잘못 친 것(2025 ↔ 2026)일
      수도 있어서, 값을 바꿔치기하면 무엇이 틀렸는지 영영 모른다. */
   const blocked = (() => {
-    if (masterMode && !gymId) return "클라이밍장을 골라주세요";
+    if (masterMode && !gymId && !existing) return "클라이밍장을 골라주세요";
     if (!masterMode && !gym.trim()) return "클라이밍장을 입력해주세요";
     if (!date) return "날짜를 골라주세요";
-    if (endTime <= startTime) return "종료 시각이 시작보다 빨라요";
+    if (new Date(endsAtValue).getTime() <= new Date(startsAtValue).getTime()) return "종료 시각이 시작보다 빨라요";
     if (!now) return null; // 시각을 아직 못 읽었다 — 서버가 마지막으로 막는다
-    const startsAt = new Date(`${date}T${startTime}:00`).getTime();
+    const startsAt = new Date(startsAtValue).getTime();
     if (startsAt < now) return "이미 지난 시각이에요";
-    if (startsAt < now + 30 * 60 * 1000)
+    if (startsAt !== (existing ? new Date(existing.starts_at).getTime() : null) && startsAt < now + 30 * 60 * 1000)
       return "모임 시간이 너무 임박했어요 · 지금부터 30분 뒤부터 열 수 있어요";
     if (startsAt > now + 90 * 24 * 60 * 60 * 1000)
       return "모임은 90일 안쪽으로만 열 수 있어요";
+    if (existing && capacity < existing.confirmed) return `확정된 ${existing.confirmed}명보다 정원을 줄일 수 없어요`;
+    if (existing && new Date(existing.starts_at).getTime() <= now) return "시작된 모임은 수정할 수 없어요";
+    if (note.length > 1000) return "한마디는 1,000자 이내로 적어주세요";
     return null;
   })();
 
@@ -180,70 +216,45 @@ function NewSessionForm({ now }: { now: number }) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (busy || !(await requireParticipationProfile(router))) return;
+    if (submitting.current || blocked) return;
+    submitting.current = true;
+    setBusy(true); setSaveError("");
+    try {
+      if (!(await requireParticipationProfile(router))) return;
+      if (!hasSupabase()) { setSaveError("미리보기에서는 저장되지 않아요"); return; }
+      const user = await currentUser();
+      if (!user) { router.push("/login"); return; }
+      const values = { gym, gymId, startsAt: new Date(startsAtValue).toISOString(),
+        endsAt: new Date(endsAtValue).toISOString(), capacity, levelMin, levelMax, ageMin, ageMax, note };
+      const r = existing ? await updateSession(existing.id, existing.edit_version, values) : await createSession(values);
+      if (handleParticipationError(r.error, router)) return;
+      const messages: Record<string, string> = {
+        too_soon: "변경할 시작 시간은 지금부터 30분 이후로 골라주세요", past: "이미 지난 시각이에요",
+        too_far: "모임은 90일 안쪽으로만 열 수 있어요", bad_capacity: "최대 정원을 다시 골라주세요",
+        below_members: "참가 인원이 늘었어요. 확정 인원보다 정원을 줄일 수 없어요",
+        bad_gym: "클라이밍장을 다시 선택해주세요", bad_time: "종료 시각은 시작 시각 이후로 골라주세요",
+        bad_level: "참가 수준을 다시 골라주세요", bad_age: "나이대를 다시 골라주세요", long_note: "한마디는 1,000자 이내로 적어주세요",
+        not_host: "내가 만든 모임만 수정할 수 있어요", closed: "시작되거나 종료된 모임은 수정할 수 없어요",
+        conflict: "다른 화면에서 모임이 수정됐어요. 모임 정보로 돌아가 다시 열어주세요",
+      };
+      if (r.error) { setSaveError(messages[r.error] ?? "저장 결과를 확인하지 못했어요. 다시 시도해주세요"); return; }
+      if (!r.id) { setSaveError("저장 결과를 확인하지 못했어요. 다시 시도해주세요"); return; }
+      alert(existing ? "모임 정보를 수정했어요" : "모임을 열었어요!");
+      router.replace(existing ? `/session?id=${existing.id}` : "/");
+    } catch { setSaveError("저장하지 못했어요. 연결을 확인하고 다시 시도해주세요"); }
+    finally { submitting.current = false; setBusy(false); }
 
-    if (!hasSupabase()) {
-      alert("목데이터 단계예요 — Supabase 연결 후 실제로 등록됩니다.");
-      router.push("/");
-      return;
-    }
-    if (masterMode && !gymId) return alert("클라이밍장을 선택해주세요");
-    if (!masterMode && !gym.trim()) return alert("클라이밍장을 입력해주세요");
-    if (!date) return alert("날짜를 선택해주세요");
-    if (endTime <= startTime) return alert("종료 시각이 시작보다 빨라요");
-    // 서버도 막지만(지난 시각·30분 이내·90일 초과 거부) 여기서 먼저 알려주는
-    // 게 친절하다. 달력이 지난 날짜를 막아줘도 "오늘 + 방금 지난 시각" 은
-    // 통과되므로 필요하다.
-    // 지난 시각과 임박은 고쳐야 할 게 다르다 — 지난 건 잘못 고른 것이고,
-    // 임박은 제대로 골랐는데 규칙에 걸린 것이다. 그래서 문구를 나눈다.
-    const startsAt = new Date(`${date}T${startTime}:00`);
-    if (startsAt < new Date())
-      return alert("이미 지난 시각이에요. 시간을 다시 골라주세요");
-    if (startsAt < new Date(Date.now() + 30 * 60 * 1000))
-      return alert("모임 시간이 너무 임박했어요. 지금부터 30분 뒤부터 열 수 있어요");
-
-    setBusy(true);
-    const user = await currentUser();
-    if (!user) {
-      setBusy(false);
-      alert("모임을 만들려면 로그인이 필요해요");
-      router.push("/login");
-      return;
-    }
-    const r = await createSession({
-      gym,
-      gymId,
-      startsAt: new Date(`${date}T${startTime}:00`).toISOString(),
-      endsAt: new Date(`${date}T${endTime}:00`).toISOString(),
-      capacity,
-      levelMin,
-      levelMax,
-      ageMin,
-      ageMax,
-      note,
-    });
-    setBusy(false);
-
-    if (handleParticipationError(r.error, router)) return;
-    if (r.error === "too_soon")
-      return alert("모임 시간이 너무 임박했어요. 지금부터 30분 뒤부터 열 수 있어요");
-    if (r.error === "past") return alert("이미 지난 시각이에요. 시간을 다시 골라주세요");
-    if (r.error === "too_far") return alert("모임은 90일 안쪽으로만 열 수 있어요");
-    if (r.error === "bad_capacity") return alert("최대 정원을 다시 골라주세요");
-    if (r.error === "bad_gym") return alert("클라이밍장을 다시 선택해주세요");
-    if (r.error) return alert(`등록 실패: ${r.error}`);
-    alert("모임을 열었어요!");
-    router.push("/");
   };
 
   return (
     <main className="px-4">
       <header className="flex items-center gap-2 pt-4 pb-4">
-        <BackButton />
-        <h1 className="text-[18px] font-bold tracking-tight">모임 만들기</h1>
+        <BackButton fallback={existing ? `/session?id=${existing.id}` : "/"} />
+        <h1 className="text-[18px] font-bold tracking-tight">{existing ? "모임 수정" : "모임 만들기"}</h1>
       </header>
 
-      <form className="flex flex-col gap-6 pb-8" onSubmit={submit}>
+      <form onSubmit={submit}>
+      <fieldset disabled={busy} className="flex min-w-0 flex-col gap-6 pb-8">
         <Field label="클라이밍장">
           {masterMode ? (
             /* 서울·경기 200곳 — 칩으로 못 늘어놓는다. 검색 시트에서 고른다 */
@@ -256,7 +267,7 @@ function NewSessionForm({ now }: { now: number }) {
                 <span
                   className={`text-[16px] ${selected ? "text-ink" : "text-faint"}`}
                 >
-                  {selected ? selected.name : "클라이밍장을 검색해서 선택"}
+                  {selected ? selected.name : existing ? gym : "클라이밍장을 검색해서 선택"}
                 </span>
                 <ChevronDownIcon size={16} className="shrink-0 text-faint" />
               </button>
@@ -328,7 +339,7 @@ function NewSessionForm({ now }: { now: number }) {
         {/* 호스트를 포함한 수다 */}
         <Field label="최대 정원">
           <div className="flex flex-wrap gap-1.5">
-            {CAPACITY_CHOICES.map((c) => (
+            {(existing && existing.capacity > 6 ? [...CAPACITY_CHOICES, existing.capacity] : CAPACITY_CHOICES).map((c) => (
               <Chip key={c} active={capacity === c} onClick={() => setCapacity(c)}>
                 {c}명
               </Chip>
@@ -366,7 +377,7 @@ function NewSessionForm({ now }: { now: number }) {
               }}
               className={inputCls}
             >
-              {AGE_FROM.map(([label, v]) => (
+              {(AGE_FROM.some(([, v]) => v === ageMin) ? AGE_FROM : [[`${ageMin}세부터`, ageMin] as const, ...AGE_FROM]).map(([label, v]) => (
                 <option key={v} value={v}>
                   {label}
                 </option>
@@ -377,7 +388,7 @@ function NewSessionForm({ now }: { now: number }) {
               onChange={(e) => setAgeMax(Number(e.target.value))}
               className={inputCls}
             >
-              {ageToOptions(ageMin).map(([label, v]) => (
+              {(ageToOptions(ageMin).some(([, v]) => v === ageMax) ? ageToOptions(ageMin) : [...ageToOptions(ageMin), [`${ageMax}세까지`, ageMax] as const]).map(([label, v]) => (
                 <option key={v} value={v}>
                   {label}
                 </option>
@@ -389,6 +400,7 @@ function NewSessionForm({ now }: { now: number }) {
         <Field label="한마디 (선택)">
           <input
             value={note}
+            maxLength={1000}
             onChange={(e) => setNote(e.target.value)}
             placeholder="예: 초보도 환영해요, 같이 문제 풀어요"
             className="w-full rounded-lg border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-faint focus:border-accent focus:outline-none"
@@ -401,12 +413,15 @@ function NewSessionForm({ now }: { now: number }) {
             disabled={busy || !!blocked}
             className="button-primary w-full rounded-xl py-3.5 text-[15px] font-semibold"
           >
-            {busy ? "등록 중…" : "모임 등록하기"}
+            {busy ? "저장 중…" : existing ? "변경사항 저장" : "모임 등록하기"}
           </button>
           {blocked && (
             <p className="mt-2 text-center text-[12.5px] text-muted">{blocked}</p>
           )}
         </div>
+        {existing && <p className="text-center text-xs text-muted">변경 내용은 신청자와 참가자에게 알려드려요.</p>}
+        {saveError && <p role="alert" className="text-center text-sm text-danger">{saveError}</p>}
+      </fieldset>
       </form>
 
       {picking && gyms && (

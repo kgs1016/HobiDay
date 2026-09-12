@@ -124,3 +124,86 @@ export async function publishFeedbackVideo(draft: VideoDraft, body: string) {
   if (data?.error) throw new Error(messages[data.error] ?? "등록하지 못했어요. 다시 시도해주세요");
   return data.id as string;
 }
+
+/** Normalize a user-selected thumbnail to the private bucket's JPEG format. */
+export async function imageThumbnail(file: File): Promise<Blob> {
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) throw new Error("JPG, PNG, WebP 사진을 선택해주세요");
+  if (!file.size || file.size > 5 * 1024 * 1024) throw new Error("5MB 이하 사진을 선택해주세요");
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  try {
+    img.src = url;
+    await img.decode();
+    if (!img.naturalWidth || !img.naturalHeight) throw new Error("empty image");
+    const scale = Math.min(1, 1280 / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("canvas unavailable");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return await new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("encode failed")), "image/jpeg", 0.85));
+  } catch { throw new Error("사진을 읽지 못했어요. 다른 사진으로 시도해주세요"); }
+  finally { URL.revokeObjectURL(url); }
+}
+
+export type VideoReplacement = { video: string; thumbnail: string };
+
+/** Always upload to a fresh revision; never overwrite a currently published object. */
+export async function uploadFeedbackReplacement(
+  postId: string, previous: VideoReplacement, file: File | null, thumbnail: Blob | null,
+): Promise<VideoReplacement> {
+  if (!file && !thumbnail) return previous;
+  if (file) {
+    const invalid = videoFileError(file);
+    if (invalid) throw new Error(invalid);
+    if (!thumbnail) throw new Error("새 영상의 썸네일을 먼저 선택해주세요");
+  }
+  if (thumbnail && (thumbnail.type !== "image/jpeg" || !thumbnail.size || thumbnail.size > 5 * 1024 * 1024))
+    throw new Error("썸네일 사진을 다시 선택해주세요");
+  const sb = getSupabase();
+  const user = await currentUser();
+  if (!sb || !user) throw new Error("로그인이 필요해요");
+  const folder = `${user.id}/${postId}/revisions/${crypto.randomUUID()}`;
+  const replacement = { ...previous };
+  const uploaded: string[] = [];
+  try {
+    if (file) {
+      replacement.video = `${folder}/video.${TYPES[file.type]}`;
+      const result = await sb.storage.from(BUCKET).upload(replacement.video, file, { contentType: file.type });
+      if (result.error) throw new Error("영상 업로드에 실패했어요. 기존 영상은 유지돼요");
+      uploaded.push(replacement.video);
+    }
+    if (thumbnail) {
+      replacement.thumbnail = `${folder}/thumbnail.jpg`;
+      const result = await sb.storage.from(BUCKET).upload(replacement.thumbnail, thumbnail, { contentType: "image/jpeg" });
+      if (result.error) throw new Error("썸네일 업로드에 실패했어요. 다시 시도해주세요");
+      uploaded.push(replacement.thumbnail);
+    }
+    return replacement;
+  } catch (e) {
+    // Only pre-publication uploads are removed. Never clean up after an ambiguous RPC response.
+    if (uploaded.length) await sb.storage.from(BUCKET).remove(uploaded).catch(() => {});
+    throw e;
+  }
+}
+
+export async function updateFeedbackVideo(postId: string, expectedUpdatedAt: string, body: string, media: VideoReplacement) {
+  const sb = getSupabase();
+  if (!sb) throw new Error("로그인이 필요해요");
+  const { data, error } = await sb.rpc("video_post_update", {
+    p_post: postId, p_expected_updated_at: expectedUpdatedAt, p_body: body,
+    p_video: media.video, p_thumbnail: media.thumbnail,
+  });
+  if (error?.message.includes("profile_incomplete") || data?.error === "profile_incomplete") throw new Error("profile_incomplete");
+  if (error) throw new Error("저장 결과를 확인하지 못했어요. 다시 누르면 같은 내용으로 재시도해요");
+  const messages: Record<string, string> = {
+    not_mine: "내가 올린 영상만 수정할 수 있어요", no_auth: "로그인이 필요해요",
+    empty: "영상 이야기를 적어주세요", bad_media: "영상이나 썸네일을 확인하지 못했어요. 수정 화면을 다시 열어주세요",
+    conflict: "다른 화면에서 영상이 수정됐어요. 영상으로 돌아가 다시 열어주세요",
+  };
+  if (data?.error) throw new Error(messages[data.error] ?? "영상을 수정하지 못했어요");
+  if (!data?.ok || data.id !== postId) throw new Error("저장 결과를 확인하지 못했어요. 다시 시도해주세요");
+}

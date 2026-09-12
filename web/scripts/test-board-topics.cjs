@@ -21,6 +21,7 @@ function load(file, globals = {}) {
   const params = new URL(href, 'http://localhost').searchParams;
   assert.equal(params.get('topic'), 'question');
   assert.equal(params.get('q'), '암장 & 테이프', 'search survives round-trip navigation');
+  assert.equal(new URL(freeBoardHref(null, '', true), 'http://localhost').searchParams.get('hot'), '1');
   const all = mockBoardFeed(null, '');
   const questions = mockBoardFeed('question', '');
   assert.equal(all.pinned.length, 2);
@@ -37,12 +38,14 @@ function load(file, globals = {}) {
     require: name => name === '@supabase/supabase-js' ? { createClient: () => ({ rpc: async (name, args) => { calls.push({ name, args }); return result; } }) } : {},
     console: { error() {} },
   });
-  await api.fetchBoardFeed('gym', '  암장  ', { id: 'cursor', created_at: '2026-09-01' });
+  await api.fetchBoardFeed('gym', '  암장  ', true, { id: 'cursor', created_at: '2026-09-01' });
+  assert.equal(calls[0].name, 'board_feed_v2');
   assert.equal(calls[0].args.p_topic, 'gym');
   assert.equal(calls[0].args.p_query, '암장');
+  assert.equal(calls[0].args.p_hot, true);
   assert.equal(calls[0].args.p_before_id, 'cursor');
   result = { data: null, error: { message: 'offline' } };
-  assert.equal(await api.fetchBoardFeed(null, ''), null, 'errors are not an empty feed');
+  assert.equal(await api.fetchBoardFeed(null, '', false), null, 'errors are not an empty feed');
   result = { data: { ok: true, id: 'new' }, error: null };
   await api.createPost('제목', '내용', 'board', 'question');
   assert.equal(calls.at(-1).name, 'post_create_with_topic');
@@ -51,5 +54,10 @@ function load(file, globals = {}) {
   await api.updatePost('new', '수정', '내용', 'gym');
   assert.equal(calls.at(-1).name, 'post_update_with_topic');
   assert.equal(calls.at(-1).args.p_topic, 'gym');
-  console.log('PASS: board filters, pins, navigation queries, RPC cursor and topic persistence');
+  await api.setBoardRecommendation('post', true);
+  assert.equal(calls.at(-1).name, 'post_recommend_set');
+  assert.equal(calls.at(-1).args.p_recommended, true);
+  await api.setCommentRecommendation('comment', false);
+  assert.equal(calls.at(-1).name, 'comment_recommend_set');
+  console.log('PASS: board filters, HOT navigation, recommendations, RPC cursor and topic persistence');
 })().catch(error => { console.error(error); process.exitCode = 1; });

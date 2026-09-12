@@ -69,7 +69,11 @@ export default function Me() {
 
       {/* 프로필 — 카드가 아니라 화면의 첫 번째 섹션 */}
       <section className="px-4 pb-5">
-        <div className="flex items-center gap-4">
+        <Link
+          href={profile ? "/profile/new?edit=1&returnTo=%2Fme" : "/profile/new"}
+          aria-label={profile ? "내 프로필 수정" : "프로필 만들기"}
+          className="-mx-2 flex min-h-20 items-center gap-4 rounded-2xl px-2 transition-colors active:bg-surface2"
+        >
           {photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -86,12 +90,7 @@ export default function Me() {
             ) : (
               <>
                 <p className="text-[15px] font-semibold">프로필이 아직 없어요</p>
-                <Link
-                  href="/profile/new"
-                  className="mt-1 inline-block text-[13px] font-semibold text-accent-strong"
-                >
-                  프로필 만들기
-                </Link>
+                <p className="mt-1 text-[13px] font-semibold text-accent-strong">프로필 만들기</p>
               </>
             )}
             {email && (
@@ -99,7 +98,8 @@ export default function Me() {
             )}
             {visitFrequencyLabel(profile?.visitFrequency) && <p className="mt-1 text-[12px] text-muted">클라이밍 {visitFrequencyLabel(profile?.visitFrequency)}</p>}
           </div>
-        </div>
+          <ChevronRightIcon size={18} className="shrink-0 text-faint" />
+        </Link>
       </section>
 
       <ProfileShoe />

@@ -70,6 +70,24 @@ export async function enabledOAuthProviders(): Promise<string[]> {
   }
 }
 
+export interface AppUpdatePolicy {
+  ios_latest_version: string;
+  android_latest_version: string;
+  ios_minimum_version: string | null;
+  android_minimum_version: string | null;
+  title: string;
+  message: string;
+}
+
+/** 설치 앱의 버전 안내 정책. 로그인 전에도 읽으며 통신 실패는 앱 진입을 막지 않는다. */
+export async function fetchAppUpdatePolicy(): Promise<AppUpdatePolicy | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc("app_update_policy");
+  if (error || !data) return null;
+  return data as AppUpdatePolicy;
+}
+
 /* ── DB 행 → 화면 타입 변환 ── */
 
 const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
@@ -361,7 +379,7 @@ export async function submitReview(
   return data as { ok?: boolean; error?: string };
 }
 
-export async function createSession(p: {
+export interface SessionInput {
   gym: string;
   /* Gym Master 의 id — 선택. 넘기면 서버가 실재·운영 여부를 확인하고
      gym 문자열에도 canonical name 을 담는다. */
@@ -374,7 +392,35 @@ export async function createSession(p: {
   ageMin: number;
   ageMax: number;
   note: string;
-}): Promise<{ id?: string; error?: string }> {
+}
+
+export interface EditableSession {
+  id: string; gym: string; gym_id: string | null; starts_at: string; ends_at: string;
+  capacity: number; level_min: LevelId; level_max: LevelId; age_min: number; age_max: number;
+  note: string | null; status: string; edit_version: number; confirmed: number;
+}
+
+export async function fetchEditableSession(id: string): Promise<EditableSession | null> {
+  const sb = getSupabase();
+  if (!sb) throw new Error("로그인 후 모임을 수정할 수 있어요");
+  const { data, error } = await sb.rpc("session_edit_detail", { p_session: id });
+  if (error) throw new Error("모임을 불러오지 못했어요. 다시 시도해주세요");
+  return data as EditableSession | null;
+}
+
+export async function updateSession(id: string, version: number, p: SessionInput): Promise<{ id?: string; error?: string }> {
+  const sb = getSupabase();
+  if (!sb) return { error: "no_client" };
+  const { data, error } = await sb.rpc("session_update", {
+    p_session: id, p_version: version, p_gym: p.gym, p_gym_id: p.gymId ?? null,
+    p_starts_at: p.startsAt, p_ends_at: p.endsAt, p_capacity: p.capacity,
+    p_level_min: p.levelMin, p_level_max: p.levelMax, p_age_min: p.ageMin, p_age_max: p.ageMax, p_note: p.note,
+  });
+  if (error) return { error: error.message };
+  return data as { id?: string; error?: string };
+}
+
+export async function createSession(p: SessionInput): Promise<{ id?: string; error?: string }> {
   const sb = getSupabase();
   if (!sb) return { error: "no_client" };
   const { data, error } = await sb.rpc("session_create", {
@@ -1364,23 +1410,24 @@ export async function fetchPosts(category: PostCategory = "board", before?: Pick
   return data as PostSummary[];
 }
 
-export async function fetchBoardFeed(topic: BoardTopic | null, query: string, before?: Pick<PostSummary, "id" | "created_at">): Promise<BoardFeedPage | null> {
+export async function fetchBoardFeed(topic: BoardTopic | null, query: string, hot = false, before?: Pick<PostSummary, "id" | "created_at">): Promise<BoardFeedPage | null> {
   const sb = getSupabase();
   if (!sb) return null;
-  const { data, error } = await sb.rpc("board_feed", {
-    p_topic: topic, p_query: query.trim().slice(0, 80),
+  const { data, error } = await sb.rpc("board_feed_v2", {
+    p_topic: topic, p_query: query.trim().slice(0, 80), p_hot: hot,
     p_before: before?.created_at ?? null, p_before_id: before?.id ?? null,
   });
-  if (error) { console.error("board_feed", error); return null; }
+  if (error) { console.error("board_feed_v2", error); return null; }
   return data as BoardFeedPage;
 }
 
 /** 글 하나 + 댓글. 지워졌거나 차단 관계면 null */
-export async function fetchPost(id: string): Promise<PostDetail | null> {
+export async function fetchPost(id: string, throwOnError = false): Promise<PostDetail | null> {
   const sb = getSupabase();
   if (!sb) return null;
   const { data, error } = await sb.rpc("post_detail", { p_post: id });
   if (error) {
+    if (throwOnError) throw new Error("게시글을 불러오지 못했어요");
     console.error("post_detail", error);
     return null;
   }
@@ -1411,3 +1458,13 @@ export const createComment = (postId: string, body: string) =>
 
 export const deleteComment = (id: string) =>
   callRpc("comment_delete", { p_comment: id });
+
+export const setBoardRecommendation = (postId: string, recommended: boolean) =>
+  callRpc<{ recommended: boolean; recommend_count: number }>("post_recommend_set", {
+    p_post: postId, p_recommended: recommended,
+  });
+
+export const setCommentRecommendation = (commentId: string, recommended: boolean) =>
+  callRpc<{ recommended: boolean; recommend_count: number }>("comment_recommend_set", {
+    p_comment: commentId, p_recommended: recommended,
+  });

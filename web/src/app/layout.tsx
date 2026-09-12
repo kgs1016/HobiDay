@@ -4,6 +4,7 @@ import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import AppSplash from "@/components/AppSplash";
 import NativeAuthBridge from "@/components/NativeAuthBridge";
+import AppUpdateGate from "@/components/AppUpdateGate";
 
 export const metadata: Metadata = {
   title: "하비데이 HOBIDAY",
@@ -44,6 +45,7 @@ export default function RootLayout({
         {/* 앱에서 소셜 로그인을 마치고 돌아오는 걸 받는다 (웹에서는 무동작) */}
         <NativeAuthBridge />
         <AppSplash />
+        <AppUpdateGate />
         {/* 상단은 노치, 하단은 홈바 + 네비 높이만큼 비운다 */}
         <div
           className="mx-auto max-w-md min-h-dvh"

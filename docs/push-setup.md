@@ -1,87 +1,40 @@
-# 푸시 알림 — 남은 설정 (계정 주인만 할 수 있는 것)
+# 휴대폰 푸시 알림 — 2026-09-12
 
-코드·DB·발송 서버는 다 되어 있다. 아래 설정이 끝나야 실제 기기로 알림이 간다.
-**설정 전에도 앱은 정상 동작한다** — 발송 서버가 미설정이면 조용히 건너뛴다.
+## 운영 배포 상태
 
-## 어떻게 도는지 (그림)
+- 프로젝트 `loigwslmwvltdurjttpe`, 앱 ID `kr.hobiday.app`.
+- `push` Edge Function version 9 ACTIVE, JWT 검증 사용.
+- `APNS_KEY`, `APNS_KEY_ID`, `APPLE_TEAM_ID`, `FIREBASE_SERVICE_ACCOUNT` 이름이 등록되어 있다. 키 유효성이나 발송 성공까지 확인한 것은 아니다.
+- 배포 전 점검 당시 등록 기기는 iOS 2대, Android 0대였다. Android 앱의 Firebase 설정 파일은 로컬에 있다.
+- `20260912100000_push_delivery_retry.sql`, `pg_net`, Vault의 `service_role_key`, 1분 주기 `notifications-push` 작업을 운영에 적용했다.
+- 예약 작업의 Edge Function HTTP 200 응답을 확인했다. 최종 APNs/FCM 수신과 다음 네이티브 빌드의 기기 등록은 실기기 점검이 필요하다.
 
-```
-[상대 앱]  관심·수락·메시지  →  Edge Function(push)
-                                   ├─ can_notify() 관계 검사 (차단이면 거부)
-                                   ├─ push_tokens 에서 기기 토큰 조회
-                                   ├─ android → FCM (Firebase)
-                                   └─ ios     → APNs 직접 (Firebase 안 거침)
-```
+## 반영된 동작
 
-iOS 는 Firebase 를 거치지 않는다 — 거치려면 iOS 앱에 Firebase SDK 와
-네이티브 초기화 코드를 심어야 해서, 서버가 애플(APNs)에 직접 보낸다.
-그래서 **Firebase 는 안드로이드용으로만** 쓴다.
+- 모든 로그인 방식(이메일 포함), 앱 재진입, 휴대폰 설정에서 알림 허용 후 복귀, 네트워크 복구 시 기기 등록을 확인한다.
+- 이미 허용한 사용자에게 권한을 다시 요청하지 않는다. 기기 저장 실패는 제한적으로 재시도한다. 토큰·비밀키는 로그에 남기지 않는다.
+- iOS는 APNs, Android는 FCM. Android 채팅·모임 알림 채널을 만들고 앱 실행 중 표시 옵션도 설정했다.
+- Edge Function에 OPTIONS/CORS 응답을 추가해 웹뷰의 발송 요청을 처리한다.
+- 새 앱의 알림함 소식은 `notify_send_pending`에 먼저 저장하고 즉시 발송한다. 실패하면 예약 작업이 다시 처리한다. 구버전 `notify_send`는 호환성을 위해 유지한다.
+- 채팅처럼 알림함에 남기지 않는 즉시 푸시는 서버에서 최대 3회 시도한다. 이 경로는 앱의 발송 요청에 의존하며 장기 보관 대기열은 아니다.
+- 서버에서 이미 생성한 취소·거절 안내는 앱에서 또 발송하지 않는다.
+- 예약 대기열은 한 번에 20건, 발송 작업 임대 2분, 최대 8회 재시도하며 24시간 지난 소식은 보내지 않는다. 조회 실패를 기기 없음으로 처리하지 않는다.
+- 한 사람의 여러 기기 중 일부만 실패하면 성공한 기기의 영수증을 보존하고 실패한 기기만 재시도한다. 발송 성공 직후 서버가 중단되어 영수증 저장 자체가 실패한 경우까지 정확히 한 번을 보장하지는 않는다.
+- FCM의 일반 400/404 응답으로 기기 토큰을 삭제하지 않는다. 명확한 UNREGISTERED 오류만 삭제한다.
 
-## 1. Firebase — 안드로이드만 (5분)
+## 재배포·운영 순서
 
-[console.firebase.google.com](https://console.firebase.google.com) → 프로젝트 (hobiday)
-→ ⚙️ 프로젝트 설정 → 일반 탭 → 내 앱 → 앱 추가 → **Android**
+1. `20260912100000_push_delivery_retry.sql`을 적용한다. 기존 마이그레이션은 재실행하지 않는다.
+2. `supabase/functions/push`를 배포한다. `delivery.ts`도 포함한다. 기존 발송 키를 유지한다.
+3. 운영의 실제 service role 키를 Supabase Vault에 `service_role_key` 이름으로 안전하게 저장한다. 저장소·터미널 출력·채팅에 값을 남기지 않는다.
+4. `pg_net` 확장을 확인한 뒤 `supabase/ops/enable-push-scheduler.sql`을 실행한다. 대상 프로젝트 URL을 확인한다. 1분 주기이며 동일 이름으로 재실행하면 작업을 갱신한다.
+5. 예약 작업의 HTTP 응답을 확인한다. cron 실행 성공만으로 실제 APNs/FCM 발송 성공을 판단하지 않는다. `retry_pending`, `sent`, 오류 상태와 최근 기기 등록 수를 함께 확인한다.
+6. 웹 배포 및 네이티브 동기화 후 Codemagic에서 앱을 다시 빌드한다. 설치된 앱은 내장 파일을 사용하므로 웹 배포만으로 등록 코드·알림 채널이 갱신되지 않는다.
 
-- 패키지 이름: `kr.hobiday.app`
-- `google-services.json` 다운로드 → **`web/android/app/` 에 넣는다** (커밋해도 됨)
-- 이후 SDK 안내는 전부 건너뛴다 (gradle 은 이미 준비돼 있다)
+구버전 앱을 포함한 최종 시험: iPhone 및 Android에서 각각 로그인 → OS 알림 허용 → 앱을 배경으로 보내거나 화면 잠금 → 테스트 계정 간 채팅·신청·승인 → 수신 알림 탭 후 화면 이동. 거부 후 설정에서 허용하고 복귀, 로그아웃·계정 전환, 네트워크 끊김·복구도 확인한다. 실제 사용자에게 시험 알림을 보내지 않는다.
 
-**iOS 앱은 Firebase 에 등록하지 않는다.** 이미 등록했어도 해는 없다 — 안 쓸 뿐.
+## 로컬 검사
 
-## 2. 애플 APNs 키 (5분)
-
-[developer.apple.com](https://developer.apple.com) → Certificates, Identifiers & Profiles
-
-먼저 App ID:
-1. **Identifiers** → `kr.hobiday.app` 없으면 생성 (App IDs → App → Explicit)
-2. 열어서 **Push Notifications** capability 켜기 → Save
-
-그다음 키:
-3. **Keys** → + → 이름 `hobiday-push` → **APNs** 체크 → 등록
-4. `.p8` 파일 다운로드 — **한 번만 받을 수 있다. 잘 보관할 것**
-5. **Key ID** (10자리) 와 **Team ID** (Membership 페이지) 를 적어둔다
-
-## 3. 비밀키를 Supabase 에 등록 (3분)
-
-터미널에서 (경로·값만 실제 것으로):
-
-```bash
-# 안드로이드 발송용 — Firebase > 프로젝트 설정 > 서비스 계정 > 새 비공개 키
-npx supabase secrets set FIREBASE_SERVICE_ACCOUNT="$(cat 서비스계정.json)"
-
-# iOS 발송용
-npx supabase secrets set APNS_KEY="$(cat AuthKey_XXXXXXXXXX.p8)"
-npx supabase secrets set APNS_KEY_ID=XXXXXXXXXX
-npx supabase secrets set APPLE_TEAM_ID=XXXXXXXXXX
-```
-
-⚠️ 서비스 계정 JSON 과 .p8 은 **레포에 넣지 않는다.** 발송 권한 그 자체다.
-등록 후 다운로드 폴더에서 지운다. (google-services.json 은 공개 설정이라 커밋 OK)
-
-## 키 보관 현황 (2026-08-18 등록 완료)
-
-- 네 개 모두 Supabase secrets 에 들어가 있다 — **파일 원본이 없어도 발송은 돈다**
-- `.p8` 원본 + Key ID + Team ID: 비밀번호 관리자에 보관 (다른 서비스에 등록할 때만 필요)
-- 서비스 계정 JSON: 보관 안 함 — 필요하면 Firebase 에서 새로 발급
-- 잃어버렸을 때: .p8 은 애플에서 새 키 발급 → `supabase secrets set` 으로 교체.
-  JSON 도 마찬가지. 둘 다 10분 작업이라 애태울 일이 아니다
-
-## 4. 확인
-
-앱을 빌드해 두 대(또는 계정 2개)로:
-1. both 로그인 → 권한 허용 팝업에서 허용
-2. A 가 B 에게 관심 → B 폰에 "💌 새 관심이 도착했어요"
-3. 알림 탭 → 신청함으로 이동
-
-대시보드 확인: `select * from push_tokens;` 에 기기가 쌓였는지.
-
-## 지금 알림이 가는 순간들
-
-| 언제 | 받는 사람 | 탭하면 |
-|---|---|---|
-| 관심 도착 | 상대 | 신청함 |
-| 관심 수락 | 보낸 사람 | 채팅 |
-| 1:1 새 메시지 | 상대 | 채팅 |
-| 모임 신청 수락 | 신청자 | 모임 상세 |
-
-모임 단체채팅 알림은 다음 단계 (멤버 목록 조회가 필요해서 서버 쪽 작업).
+- `cd web && node scripts/test-push.cjs`
+- `NODE_PATH=/path/to/pglite/node_modules node supabase/tests/run-push-retry-test.cjs`
+- 변경된 웹 코드 타입·린트 검사. 운영 키나 실제 푸시 없이 모의 기기·발송 서버 및 격리 PostgreSQL에서 검사한다.

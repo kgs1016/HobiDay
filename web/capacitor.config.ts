@@ -13,6 +13,7 @@ const config: CapacitorConfig = {
   appId: "kr.hobiday.app",
   appName: "HOBIDAY", // 화면에 보이는 한글 이름은 네이티브 설정에서 따로 준다
   webDir: "out",
+  plugins: { PushNotifications: { presentationOptions: ["sound", "banner", "list"] } },
 };
 
 export default config;

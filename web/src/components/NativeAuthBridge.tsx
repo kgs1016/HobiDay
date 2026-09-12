@@ -8,8 +8,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { onNativeAuthReturn } from "@/lib/nativeAuth";
-import { isNativePush, onPushTap, registerPush } from "@/lib/nativePush";
-import { currentUser } from "@/lib/supabase";
+import { isNativePush, onPushTap, watchPushRegistration } from "@/lib/nativePush";
 
 export default function NativeAuthBridge() {
   const router = useRouter();
@@ -23,7 +22,6 @@ export default function NativeAuthBridge() {
           return;
         }
         // 로그인이 막 성립한 순간 — 푸시 권한을 묻기 제일 자연스러운 때다
-        registerPush();
         // 주소를 직접 바꾸지 않고 라우터로 옮긴다 — 앱에는 서버가 없어서
         // 주소로 이동하면 파일을 찾는 단계를 다시 타게 된다.
         router.replace("/");
@@ -34,10 +32,9 @@ export default function NativeAuthBridge() {
   // 이미 로그인된 채로 앱을 연 경우 — 토큰이 바뀌었을 수 있어 매번 갱신한다
   useEffect(() => {
     if (!isNativePush()) return;
-    currentUser().then((u) => {
-      if (u) registerPush();
-    });
-    return onPushTap((url) => router.push(url));
+    const stopRegistration = watchPushRegistration();
+    const stopTap = onPushTap((url) => router.push(url));
+    return () => { stopRegistration(); stopTap(); };
   }, [router]);
 
   // 네이티브 웹뷰의 파일 서버는 /login 같은 확장자 없는 주소를 만나면

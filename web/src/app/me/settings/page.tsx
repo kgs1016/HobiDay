@@ -86,7 +86,7 @@ export default function Settings() {
       </header>
 
       <section className="px-4">
-        <MenuRow href="/profile/new" label="프로필 수정" />
+        <MenuRow href="/profile/new?edit=1&returnTo=%2Fme" label="프로필 수정" />
         {/* 영상 탭에 올린 내 영상 */}
         <MenuRow href="/me/videos" label="내 영상" count={videoCount} />
         <MenuRow href="/session/mine" label="내가 만든 모임" />

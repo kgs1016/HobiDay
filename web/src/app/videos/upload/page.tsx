@@ -3,6 +3,8 @@ import { requireParticipationProfile, handleParticipationError } from "@/lib/par
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryId } from "@/lib/queryId";
+import EditVideo from "@/components/EditVideo";
 import BackButton from "@/components/BackButton";
 import { POST_BODY_MAX } from "@/lib/community";
 import { hasSupabase } from "@/lib/supabase";
@@ -11,6 +13,12 @@ import { publishFeedbackVideo, uploadFeedbackMedia, videoThumbnail, type VideoDr
 const FEED = "/videos";
 
 export default function UploadVideo() {
+  const id = useQueryId();
+  if (id === undefined) return <main className="pt-24 text-center text-sm text-muted">불러오는 중…</main>;
+  return id ? <EditVideo key={id} id={id} /> : <NewVideo />;
+}
+
+function NewVideo() {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [thumbnail, setThumbnail] = useState<Blob | null>(null);
