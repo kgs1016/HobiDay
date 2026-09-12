@@ -1,15 +1,15 @@
 # 휴대폰 푸시 알림 — 2026-09-12
 
-## 확인된 운영 상태 (읽기 전용 점검)
+## 운영 배포 상태
 
 - 프로젝트 `loigwslmwvltdurjttpe`, 앱 ID `kr.hobiday.app`.
-- `push` Edge Function version 7 ACTIVE, JWT 검증 사용.
+- `push` Edge Function version 9 ACTIVE, JWT 검증 사용.
 - `APNS_KEY`, `APNS_KEY_ID`, `APPLE_TEAM_ID`, `FIREBASE_SERVICE_ACCOUNT` 이름이 등록되어 있다. 키 유효성이나 발송 성공까지 확인한 것은 아니다.
-- 등록 기기: iOS 2대, Android 0대. Android 앱의 Firebase 설정 파일은 로컬에 있다.
-- `notifications-push` 예약 작업과 예약 발송용 Vault 항목이 없다. notifications 테이블에 별도 발송 트리거도 없다.
-- 따라서 DB에서 생성한 댓글·리뷰·모임 안내가 앱 알림함에만 남을 수 있다. 최종 수신은 실기기 점검이 필요하다.
+- 배포 전 점검 당시 등록 기기는 iOS 2대, Android 0대였다. Android 앱의 Firebase 설정 파일은 로컬에 있다.
+- `20260912100000_push_delivery_retry.sql`, `pg_net`, Vault의 `service_role_key`, 1분 주기 `notifications-push` 작업을 운영에 적용했다.
+- 예약 작업의 Edge Function HTTP 200 응답을 확인했다. 최종 APNs/FCM 수신과 다음 네이티브 빌드의 기기 등록은 실기기 점검이 필요하다.
 
-## 로컬 변경 (아직 운영 미적용)
+## 반영된 동작
 
 - 모든 로그인 방식(이메일 포함), 앱 재진입, 휴대폰 설정에서 알림 허용 후 복귀, 네트워크 복구 시 기기 등록을 확인한다.
 - 이미 허용한 사용자에게 권한을 다시 요청하지 않는다. 기기 저장 실패는 제한적으로 재시도한다. 토큰·비밀키는 로그에 남기지 않는다.
@@ -22,7 +22,7 @@
 - 한 사람의 여러 기기 중 일부만 실패하면 성공한 기기의 영수증을 보존하고 실패한 기기만 재시도한다. 발송 성공 직후 서버가 중단되어 영수증 저장 자체가 실패한 경우까지 정확히 한 번을 보장하지는 않는다.
 - FCM의 일반 400/404 응답으로 기기 토큰을 삭제하지 않는다. 명확한 UNREGISTERED 오류만 삭제한다.
 
-## 일괄 배포 순서
+## 재배포·운영 순서
 
 1. `20260912100000_push_delivery_retry.sql`을 적용한다. 기존 마이그레이션은 재실행하지 않는다.
 2. `supabase/functions/push`를 배포한다. `delivery.ts`도 포함한다. 기존 발송 키를 유지한다.

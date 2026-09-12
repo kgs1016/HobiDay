@@ -35,7 +35,7 @@ const flush=async()=>{for(let i=0;i<35;i++)await Promise.resolve();};
  },from:()=>({select:()=>({in:async()=>({data:null,error:tokenLookupError?{message:'offline'}:null})})})};
  load('../../supabase/functions/push/index.ts',{
   Deno:{serve:fn=>{handler=fn},env:{get:name=>({SUPABASE_SERVICE_ROLE_KEY:'test-service',APNS_KEY:'test-key',APNS_KEY_ID:'test-id',APPLE_TEAM_ID:'test-team'})[name]}},
-  Response,Request,URLSearchParams,AbortSignal,
+  Response,Request,URLSearchParams,AbortSignal,atob,
   require:name=>name==='./delivery.ts'?server:name.includes('supabase')?{createClient:()=>admin}:{},
  });
  let response=await handler(new Request('https://local.test',{method:'OPTIONS'}));
@@ -47,6 +47,9 @@ const flush=async()=>{for(let i=0;i<35;i++)await Promise.resolve();};
  tokenLookupError=true;
  response=await handler(new Request('https://local.test',{method:'POST',headers:{Authorization:'Bearer test-service'},body:'{}'}));
  assert.equal(response.status,503);
+ const serviceJwt=`x.${Buffer.from(JSON.stringify({role:'service_role'})).toString('base64url')}.y`;
+ response=await handler(new Request('https://local.test',{method:'POST',headers:{Authorization:`Bearer ${serviceJwt}`},body:'{}'}));
+ assert.equal(response.status,503,'gateway-verified service_role JWT can drain after key rotation');
  assert.ok(!rpcCalls.some(x=>x[0]==='notifications_push_finish'),'failed token lookup never completes notifications');
  const listeners={},timers=new Map(),saved=[],store=new Map();let native=true,user=null,permission='granted',registrations=0,failSave=false,authCallback,resume,online;
  let timerId=0,requests=0;

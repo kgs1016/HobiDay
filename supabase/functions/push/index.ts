@@ -50,6 +50,23 @@ type Body = {
   url?: string; // 탭하면 열 앱 내 경로 (예: /chat)
 };
 
+// Edge Functions gateway verifies the bearer token before this handler runs.
+// New Supabase key configurations can expose a different service key string to
+// the runtime, so also accept a verified legacy JWT whose role is service_role.
+function bearerRole(authHeader: string): string | null {
+  const token = authHeader.match(/^Bearer\s+(.+)$/i)?.[1];
+  const encoded = token?.split(".")[1];
+  if (!encoded) return null;
+  try {
+    const normalized = encoded.replaceAll("-", "+").replaceAll("_", "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const payload = JSON.parse(atob(padded));
+    return typeof payload?.role === "string" ? payload.role : null;
+  } catch {
+    return null;
+  }
+}
+
 /* ── FCM (android) ── */
 
 let fcmCached: { value: string; exp: number } | null = null;
@@ -243,7 +260,9 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   /* 대기열을 비우러 온 것인가. service role 키로만 들어올 수 있다 —
      이 모드는 관계 검사를 건너뛰므로 유저가 흉내낼 수 있으면 안 된다. */
-  const draining = !!serviceKey && authHeader === `Bearer ${serviceKey}`;
+  const draining = !!serviceKey && (
+    authHeader === `Bearer ${serviceKey}` || bearerRole(authHeader) === "service_role"
+  );
 
   let me: string | undefined;
   if (!draining) {
