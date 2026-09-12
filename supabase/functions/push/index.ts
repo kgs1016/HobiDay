@@ -35,12 +35,18 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { SignJWT, importPKCS8 } from "npm:jose@5";
 
+import { deliverPending, fcmTokenIsDead, safePushUrl, sendWithRetry, type PendingNotification, type DeliveryResult } from "./delivery.ts";
+
+const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
+const json = (body: unknown, init: ResponseInit = {}) => Response.json(body, { ...init, headers: { ...cors, ...init.headers } });
+
 const APNS_TOPIC = "kr.hobiday.app"; // 번들 ID 와 같아야 한다
 
 type Body = {
   to: string[]; // 받는 사람 user id (최대 8명 — 모임 채팅용)
   title: string;
   body: string;
+  queue_ids?: string[];
   url?: string; // 탭하면 열 앱 내 경로 (예: /chat)
 };
 
@@ -63,6 +69,7 @@ async function fcmAccessToken(sa: { client_email: string; private_key: string })
 
   const r = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
+    signal: AbortSignal.timeout(10000),
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
@@ -88,19 +95,20 @@ async function sendFcm(
     `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`,
     {
       method: "POST",
+      signal: AbortSignal.timeout(10000),
       headers: { Authorization: `Bearer ${access}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         message: {
           token,
           notification: { title, body },
           data: { url },
-          android: { priority: "high" },
+          android: { priority: "high", notification: { channel_id: "hobiday_activity", sound: "default" } },
         },
       }),
     }
   );
   if (r.ok) return true;
-  if (r.status === 404 || r.status === 400) return "dead";
+  if (fcmTokenIsDead(await r.json().catch(() => ({})))) return "dead";
   return false;
 }
 
@@ -126,6 +134,7 @@ async function apnsJwt(p8: string, keyId: string, teamId: string) {
 async function apnsPost(host: string, jwt: string, token: string, payload: unknown) {
   return fetch(`${host}/3/device/${token}`, {
     method: "POST",
+    signal: AbortSignal.timeout(10000),
     headers: {
       authorization: `bearer ${jwt}`,
       "apns-topic": APNS_TOPIC,
@@ -179,7 +188,7 @@ async function deliver(
   title: string,
   text: string,
   url: string
-): Promise<boolean> {
+): Promise<DeliveryResult> {
   let result: true | false | "dead" = false;
   try {
     if (tok.platform === "android" && s.sa) {
@@ -194,21 +203,47 @@ async function deliver(
   }
   if (result === "dead") {
     await admin.from("push_tokens").delete().eq("token", tok.token);
-    return false;
+    return "dead";
   }
-  return result === true;
+  return result;
+}
+
+// Only service callers can drain globally; signed-in callers are restricted to permitted recipients.
+// deno-lint-ignore no-explicit-any
+async function drainQueue(admin: any, sender: Sender, ids?: string[], usersAllowed?: string[]) {
+    const { data: rows, error: claimError } = await admin.rpc("notifications_push_claim", { p_limit: 20, p_ids: ids ?? null, p_users: usersAllowed ?? null });
+    if (claimError) return json({ error: "queue_unavailable" }, { status: 503 });
+    const list = (rows ?? []) as PendingNotification[];
+    if (!list.length) return json({ ok: true, sent: 0, drained: 0 });
+    const users = [...new Set(list.map(r => r.user_id))];
+    const { data: tokens, error: tokenError } = await admin.from("push_tokens")
+      .select("token, platform, user_id").in("user_id", users);
+    // A failed token lookup must not be mistaken for a user with no devices.
+    if (tokenError) return json({ error: "tokens_unavailable" }, { status: 503 });
+    let sent = 0, completed = 0, failed = 0;
+    await Promise.all(list.map(async row => {
+      const outcome = await deliverPending(row, (tokens ?? []).filter((t: { token: string; platform: string; user_id: string }) => t.user_id === row.user_id),
+        tok => deliver(admin, sender, tok, row.title.slice(0, 80), (row.body ?? "").slice(0, 200), safePushUrl(row.url)));
+      sent += outcome.sent;
+      const { data: saved, error } = await admin.rpc("notifications_push_finish", {
+        p_id: row.id, p_lease: row.lease, p_delivered: outcome.delivered, p_complete: outcome.complete,
+      });
+      if (error || !saved || !outcome.complete) failed++; else completed++;
+    }));
+    return json({ ok: failed === 0, sent, drained: completed, retry_pending: failed });
 }
 
 /* ── 본체 ── */
 
 Deno.serve(async (req) => {
-  if (req.method !== "POST") return new Response("method", { status: 405 });
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+  if (req.method !== "POST") return new Response("method", { status: 405, headers: cors });
 
   const authHeader = req.headers.get("Authorization") ?? "";
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   /* 대기열을 비우러 온 것인가. service role 키로만 들어올 수 있다 —
      이 모드는 관계 검사를 건너뛰므로 유저가 흉내낼 수 있으면 안 된다. */
-  const draining = authHeader === `Bearer ${serviceKey}`;
+  const draining = !!serviceKey && authHeader === `Bearer ${serviceKey}`;
 
   let me: string | undefined;
   if (!draining) {
@@ -220,7 +255,7 @@ Deno.serve(async (req) => {
     );
     const { data: userData } = await supa.auth.getUser();
     me = userData?.user?.id;
-    if (!me) return Response.json({ error: "no_auth" }, { status: 401 });
+    if (!me) return json({ error: "no_auth" }, { status: 401 });
   }
 
   let body: Body = {} as Body;
@@ -228,7 +263,7 @@ Deno.serve(async (req) => {
     body = await req.json();
   } catch {
     // 대기열 비우기는 본문이 없어도 된다 — 보낼 것은 DB 가 안다
-    if (!draining) return Response.json({ error: "bad_json" }, { status: 400 });
+    if (!draining) return json({ error: "bad_json" }, { status: 400 });
   }
 
   let to: string[] = [];
@@ -236,24 +271,27 @@ Deno.serve(async (req) => {
   let text = "";
   let url = "/";
   if (!draining) {
-    to = [...new Set(body.to ?? [])].filter((x) => x && x !== me).slice(0, 8);
+    if (!body || typeof body !== "object" || typeof body.title !== "string" || (body.body != null && typeof body.body !== "string"))
+      return json({ error: "bad_input" }, { status: 400 });
+    to = [...new Set(Array.isArray(body?.to) ? body.to : [])].filter((x) => typeof x === "string" && x && x !== me).slice(0, 8);
     title = (body.title ?? "").slice(0, 80);
     text = (body.body ?? "").slice(0, 200);
-    url = body.url && body.url.startsWith("/") ? body.url : "/";
+    url = safePushUrl(body.url);
     if (!to.length || !title) {
-      return Response.json({ error: "bad_input" }, { status: 400 });
+      return json({ error: "bad_input" }, { status: 400 });
     }
   }
 
   const saRaw = Deno.env.get("FIREBASE_SERVICE_ACCOUNT");
-  const sa = saRaw ? JSON.parse(saRaw) : null;
+  let sa = null;
+  try { sa = saRaw ? JSON.parse(saRaw) : null; } catch { console.error("Invalid Firebase sender configuration"); }
   const apnsKey = Deno.env.get("APNS_KEY");
   const apnsKeyId = Deno.env.get("APNS_KEY_ID");
   const teamId = Deno.env.get("APPLE_TEAM_ID");
   const apnsReady = !!(apnsKey && apnsKeyId && teamId);
   if (!sa && !apnsReady) {
     // 아무 발송 경로도 설정 전 — 알림은 부가 기능이라 앱을 막지 않는다
-    return Response.json({ ok: true, sent: 0, reason: "not_configured" });
+    return json({ ok: true, sent: 0, reason: "not_configured" });
   }
 
   // 관계 검사·토큰 조회는 service role 로 (RLS 밖 — 남의 토큰을 읽어야 한다)
@@ -263,42 +301,7 @@ Deno.serve(async (req) => {
   /* ── ② 대기열 비우기 ──
      DB 가 남긴 알림 중 아직 폰에 안 간 것을 집어 보낸다. */
   if (draining) {
-    const { data: rows } = await admin.rpc("notifications_pending", { p_limit: 200 });
-    const list = (rows ?? []) as {
-      id: string; user_id: string; title: string; body: string | null; url: string | null;
-    }[];
-    if (!list.length) return Response.json({ ok: true, sent: 0, drained: 0 });
-
-    const users = [...new Set(list.map((r) => r.user_id))];
-    const { data: tokens } = await admin
-      .from("push_tokens")
-      .select("token, platform, user_id")
-      .in("user_id", users);
-
-    const byUser = new Map<string, { token: string; platform: string }[]>();
-    for (const t of tokens ?? []) {
-      const arr = byUser.get(t.user_id) ?? [];
-      arr.push({ token: t.token, platform: t.platform });
-      byUser.set(t.user_id, arr);
-    }
-
-    let sent = 0;
-    for (const r of list) {
-      for (const tok of byUser.get(r.user_id) ?? []) {
-        if (
-          await deliver(admin, sender, tok, (r.title ?? "").slice(0, 80),
-            (r.body ?? "").slice(0, 200),
-            r.url && r.url.startsWith("/") ? r.url : "/")
-        ) sent++;
-      }
-    }
-
-    /* 기기가 없는 사람 것까지 전부 보낸 것으로 찍는다. 폰을 안 쓰는
-       사람(웹만 쓰는 사람)의 알림을 대기열에 남겨두면 영원히 안 빠지고,
-       매번 다시 시도하다가 대기열이 그 줄로만 채워진다. 알림함에는
-       이미 남아 있어서 그 사람이 잃는 것은 없다. */
-    await admin.rpc("notifications_mark_pushed", { p_ids: list.map((r) => r.id) });
-    return Response.json({ ok: true, sent, drained: list.length });
+    return drainQueue(admin, sender);
   }
 
   /* ── ① 앱이 부른 길 ── */
@@ -307,18 +310,19 @@ Deno.serve(async (req) => {
     const { data: ok } = await admin.rpc("can_notify", { p_from: me, p_to: target });
     if (ok === true) allowed.push(target);
   }
-  if (!allowed.length) return Response.json({ ok: true, sent: 0 });
+  if (!allowed.length) return json({ ok: true, sent: 0 });
+  if (Array.isArray(body.queue_ids)) return drainQueue(admin, sender, body.queue_ids.slice(0,8), allowed);
 
   const { data: tokens } = await admin
     .from("push_tokens")
     .select("token, platform")
     .in("user_id", allowed);
-  if (!tokens?.length) return Response.json({ ok: true, sent: 0 });
+  if (!tokens?.length) return json({ ok: true, sent: 0 });
 
   let sent = 0;
-  for (const tok of tokens) {
-    if (await deliver(admin, sender, tok, title, text, url)) sent++;
-  }
+  await Promise.all(tokens.map(async (tok: { token: string; platform: string }) => {
+    if (await sendWithRetry(() => deliver(admin, sender, tok, title, text, url)) === true) sent++;
+  }));
 
-  return Response.json({ ok: true, sent });
+  return json({ ok: true, sent });
 });

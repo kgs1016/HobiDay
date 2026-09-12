@@ -143,7 +143,7 @@ export default function Inbox() {
         "채팅 신청이 거절됐어요",
         `${r.by ?? "상대"}님이 거절했어요.`,
         "/inbox",
-        { pushOnly: true }
+        { pushOnly: true, queuedOnServer: true }
       );
     }
   };

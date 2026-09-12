@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { AvatarFallback } from "@/components/icons";
+import { AvatarFallback, ThumbIcon } from "@/components/icons";
 import { ago, boardTopicLabel, mockPostSummaries, POST_PAGE, type PostCategory, type PostSummary } from "@/lib/community";
 import { fetchPosts, hasSupabase, signedPhotoUrls } from "@/lib/supabase";
 
@@ -15,11 +15,10 @@ export function PostRow({ p, photo }: { p: PostSummary; photo?: string }) {
       {p.category !== "gear" && <p className="mb-1.5 text-[11.5px] font-medium text-muted">{boardTopicLabel(p.topic)}</p>}
       <div className="flex items-start justify-between gap-3">
         <p className="min-w-0 flex-1 line-clamp-2 text-[15px] font-semibold leading-relaxed">{p.title}</p>
-        {p.comment_count > 0 && (
-          <span className="shrink-0 text-[12px] font-medium text-accent-strong">
-            💬 {p.comment_count}
-          </span>
-        )}
+        <span className="flex shrink-0 items-center gap-2.5 text-[12px] font-medium text-muted">
+          {(p.recommend_count ?? 0) > 0 && <span className="flex items-center gap-1 text-accent-strong"><ThumbIcon size={13} />{p.recommend_count}</span>}
+          {p.comment_count > 0 && <span>댓글 {p.comment_count}</span>}
+        </span>
       </div>
       <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-muted">
         {p.preview.replace(/(^|\s)##\s/g, "$1")}

@@ -1,0 +1,42 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const {PGlite}=require('@electric-sql/pglite');
+(async()=>{
+ const db=new PGlite();
+ const value=async(sql,args=[])=>Object.values((await db.query(sql,args)).rows[0])[0];
+ try{
+  await db.exec(`create role anon;create role authenticated;create role service_role;
+   create schema auth;create function auth.uid() returns uuid language sql as $$select '00000000-0000-4000-8000-000000000001'::uuid$$;
+   create function can_notify(uuid,uuid) returns boolean language sql as $$select $2 is not null and $1<>$2$$;
+   create table notifications(id uuid primary key default gen_random_uuid(),user_id uuid,title text,body text,url text,created_at timestamptz default now(),pushed_at timestamptz);`);
+  await db.exec(fs.readFileSync(path.join(__dirname,'../migrations/20260912100000_push_delivery_retry.sql'),'utf8'));
+  const id=await value("insert into notifications(title) values('test') returning id");
+  await db.exec('set role service_role');
+  const claim=await value('select notifications_push_claim(20)');assert.equal(claim.length,1);
+  assert.equal((await value('select notifications_push_claim(20)')).length,0,'lease prevents concurrent worker duplicate');
+  const lease=claim[0].lease;
+  assert.equal(await value('select notifications_push_finish($1,$2,$3,false)',[id,lease,['device-a']]),true);
+  assert.equal(await value('select notifications_push_finish($1,$2,$3,true)',[id,lease,['device-a']]),false,'stale worker rejected');
+  assert.equal((await value('select notifications_push_claim(20)')).length,0,'backoff respected');
+  await db.exec('reset role');
+  assert.equal(await value('select pushed_at from notifications where id=$1',[id]),null,'failure not marked delivered');
+  await db.query("update notifications set push_retry_at=now()-interval '1 second' where id=$1",[id]);
+  await db.exec('set role service_role');
+  const retry=await value('select notifications_push_claim(20)');assert.deepEqual(retry[0].delivered_tokens,['device-a']);
+  assert.equal(await value('select notifications_push_finish($1,$2,$3,true)',[id,retry[0].lease,['device-b']]),true);
+  assert.equal((await value('select notifications_push_claim(20)')).length,0);
+  await db.exec('reset role');assert.notEqual(await value('select pushed_at from notifications where id=$1',[id]),null);
+  await db.exec("insert into notifications(title,created_at) values('old',now()-interval '2 days');insert into notifications(title,push_attempts) values('exhausted',8)");
+  await db.exec('set role service_role');assert.equal((await value('select notifications_push_claim(20)')).length,0);
+  await db.exec('reset role;set role authenticated');await assert.rejects(value('select notifications_push_claim(20)'),/permission denied/);
+  await assert.rejects(value('select count(*) from notification_push_receipts'),/permission denied/);
+  const recipient='00000000-0000-4000-8000-000000000002';
+  const queued=await value("select notify_send_pending($1,'Title','Body','/inbox')",[[recipient,recipient,'00000000-0000-4000-8000-000000000001']]);
+  assert.equal(queued.length,1,'deduplicate recipients and enforce can_notify');
+  await db.exec('reset role;set role service_role');
+  assert.equal((await value('select notifications_push_claim(20,$1,$2)',[queued,['00000000-0000-4000-8000-000000000003']])).length,0,'immediate worker must respect allowed recipients');
+  assert.equal((await value('select notifications_push_claim(20,$1,$2)',[queued,[recipient]])).length,1,'enqueued event remains available for immediate/cron delivery');
+  console.log('PASS push SQL: leases, stale acknowledgements, backoff, partial receipts, expiry, retry bound and service-only access');
+ }finally{await db.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

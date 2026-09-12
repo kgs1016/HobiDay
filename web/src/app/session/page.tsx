@@ -166,7 +166,7 @@ function SessionContent({ id, from }: { id: string | null; from: string | null |
     if (r.error) return alert(`삭제 실패: ${r.error}`);
     if (r.notify?.length)
       // 알림함에는 session_collapse 가 이미 남겼다 — 푸시만 쏜다
-      notifyPush(r.notify, "😢 모임이 취소됐어요", `${s.gym} 모임이 취소됐어요.`, "/inbox", { pushOnly: true });
+      notifyPush(r.notify, "😢 모임이 취소됐어요", `${s.gym} 모임이 취소됐어요.`, "/inbox", { pushOnly: true, queuedOnServer: true });
     alert("모임을 삭제했어요.");
     router.push("/");
   };
@@ -197,7 +197,7 @@ function SessionContent({ id, from }: { id: string | null; from: string | null |
           "😢 모임이 취소됐어요",
           `${s.gym} 모임에 남은 사람이 없어 취소됐어요.`,
           "/inbox",
-          { pushOnly: true }
+          { pushOnly: true, queuedOnServer: true }
         );
       alert("모임에서 나왔어요.\n남은 사람이 없어 모임은 취소됐어요.");
     } else {
@@ -256,6 +256,8 @@ function SessionContent({ id, from }: { id: string | null; from: string | null |
           <ChevronLeftIcon size={22} />
         </button>
         <h1 className="text-[18px] font-bold tracking-tight">모임 정보</h1>
+        {s.iAmHost && !started && !dead && <Link href={`/session/new?id=${s.id}`}
+          className="ml-auto px-2 py-2 text-[14px] font-semibold text-ink">수정</Link>}
       </header>
 
       {/* 끝났는지 취소됐는지부터 말한다. 이게 없으면 아래 문구들이

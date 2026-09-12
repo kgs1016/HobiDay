@@ -106,8 +106,13 @@ export default function Community() {
   const q = useQueryParam("tab");
   const topicQuery = useQueryParam("topic");
   const searchQuery = useQueryParam("q");
-  const [pickedFilters, setPickedFilters] = useState<{ topic: BoardTopic | null; query: string } | null>(null);
-  const boardFilters = pickedFilters ?? { topic: isBoardTopic(topicQuery) ? topicQuery : null, query: (searchQuery ?? "").trim().slice(0, 80) };
+  const hotQuery = useQueryParam("hot");
+  const [pickedFilters, setPickedFilters] = useState<{ topic: BoardTopic | null; query: string; hot: boolean } | null>(null);
+  const boardFilters = pickedFilters ?? {
+    topic: isBoardTopic(topicQuery) ? topicQuery : null,
+    query: (searchQuery ?? "").trim().slice(0, 80),
+    hot: hotQuery === "1",
+  };
   const router = useRouter();
   // 주소의 ?tab= 이 먼저다 (없으면 자유게시판). 탭을 누르면 그게 이긴다.
   const [picked, setPicked] = useState<CommunityTab | null>(null);
@@ -155,12 +160,12 @@ export default function Community() {
     setPicked(t);
     setArticleError(false);
     // 주소에 남긴다 — 글에서 뒤로 오면 같은 칸이 열린다. 히스토리는 안 쌓인다.
-    window.history.replaceState(window.history.state, "", t === "board" ? freeBoardHref(boardFilters.topic, boardFilters.query) : `/community?tab=${t}`);
+    window.history.replaceState(window.history.state, "", t === "board" ? freeBoardHref(boardFilters.topic, boardFilters.query, boardFilters.hot) : `/community?tab=${t}`);
   };
 
-  const selectBoardFilters = (filters: { topic: BoardTopic | null; query: string }) => {
+  const selectBoardFilters = (filters: { topic: BoardTopic | null; query: string; hot: boolean }) => {
     setPickedFilters(filters);
-    window.history.replaceState(window.history.state, "", freeBoardHref(filters.topic, filters.query));
+    window.history.replaceState(window.history.state, "", freeBoardHref(filters.topic, filters.query, filters.hot));
   };
 
   const list = tab === "news" || tab === "competition" ? articles[tab] : undefined;
@@ -210,7 +215,7 @@ export default function Community() {
           </Link>
         </div>
       ) : !tab || authed === null ? null : tab === "board" ? (
-        topicQuery === undefined || searchQuery === undefined ? null : <FreeBoardFeed {...boardFilters} onChange={selectBoardFilters} />
+        topicQuery === undefined || searchQuery === undefined || hotQuery === undefined ? null : <FreeBoardFeed {...boardFilters} onChange={selectBoardFilters} />
       ) : tab === "news" ? <NewsFeed /> : articleError ? (
         <div role="alert" className="py-12 text-center text-sm">
           <p>소식을 불러오지 못했어요</p>

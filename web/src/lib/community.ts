@@ -17,8 +17,9 @@ export type BoardTopic = (typeof BOARD_TOPICS)[number]["id"];
 export const isBoardTopic = (value: unknown): value is BoardTopic => BOARD_TOPICS.some(t => t.id === value);
 export const boardTopicLabel = (topic?: BoardTopic) => BOARD_TOPICS.find(t => t.id === topic)?.label ?? "일상";
 
-export function freeBoardHref(topic: BoardTopic | null = null, query = "") {
+export function freeBoardHref(topic: BoardTopic | null = null, query = "", hot = false) {
   const params = new URLSearchParams();
+  if (hot) params.set("hot", "1");
   if (topic) params.set("topic", topic);
   if (query.trim()) params.set("q", query.trim().slice(0, 80));
   const search = params.toString();
@@ -59,6 +60,8 @@ export interface PostSummary {
   created_at: string;
   mine: boolean;
   comment_count: number;
+  recommend_count?: number;
+  hot_score?: number;
 }
 
 export interface PostComment {
@@ -69,6 +72,8 @@ export interface PostComment {
   body: string;
   created_at: string;
   mine: boolean;
+  recommended?: boolean;
+  recommend_count?: number;
 }
 
 export interface PostDetail {
@@ -315,16 +320,19 @@ export function mockPostSummaries(category: PostCategory = "board"): PostSummary
     created_at: p.created_at,
     mine: p.mine,
     comment_count: p.comments.length,
+    recommend_count: p.pinned_rank ? 0 : p.topic === "question" ? 4 : 2,
   }));
 }
 
-export function mockBoardFeed(topic: BoardTopic | null, query: string): BoardFeedPage {
+export function mockBoardFeed(topic: BoardTopic | null, query: string, hot = false): BoardFeedPage {
   const normalized = query.trim().slice(0, 80).toLowerCase();
   const rows = mockPostSummaries("board");
   return {
     pinned: rows.filter(p => p.pinned_rank != null).map(p => ({ id: p.id, title: p.title, pinned_rank: p.pinned_rank! }))
       .sort((a, b) => a.pinned_rank - b.pinned_rank),
     items: rows.filter(p => p.pinned_rank == null && (!topic || p.topic === topic) &&
-      `${p.title}\n${MOCK_POSTS.find(post => post.id === p.id)?.body ?? ""}`.toLowerCase().includes(normalized)),
+      `${p.title}\n${MOCK_POSTS.find(post => post.id === p.id)?.body ?? ""}`.toLowerCase().includes(normalized))
+      .filter(p => !hot || (p.recommend_count ?? 0) >= 2)
+      .sort((a, b) => hot ? (b.recommend_count ?? 0) - (a.recommend_count ?? 0) : 0),
   };
 }

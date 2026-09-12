@@ -67,6 +67,7 @@ const inputCls =
 export default function ProfileNew() {
   const router = useRouter();
   const returnTo = safeParticipationReturn(useQueryParam("returnTo"));
+  const editMode = useQueryParam("edit") === "1";
   const [editing, setEditing] = useState(false);
   const [onboarding, setOnboarding] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -221,13 +222,13 @@ export default function ProfileNew() {
       <header className="flex items-center gap-2 pt-4 pb-4">
         <BackButton />
         <h1 className="text-[18px] font-bold tracking-tight">
-          {returnTo ? "프로필 완성" : onboarding
+          {editMode ? "내 프로필 수정" : returnTo ? "프로필 완성" : onboarding
             ? "기본 정보 등록"
             : editing
               ? "내 프로필 수정"
               : "기본 정보 등록"}
         </h1>
-        {onboarding && <span className="ml-auto text-[12px] font-medium text-muted">1 / 2</span>}
+        {onboarding && !editMode && <span className="ml-auto text-[12px] font-medium text-muted">1 / 2</span>}
       </header>
 
       <form className="flex flex-col gap-6 pb-8" onSubmit={submit}>

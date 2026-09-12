@@ -16,7 +16,7 @@ import BackButton from "@/components/BackButton";
 import GearPreparing from "@/components/GearPreparing";
 import PostBody from "@/components/PostBody";
 import ReportSheet from "@/components/ReportSheet";
-import { AvatarFallback } from "@/components/icons";
+import { AvatarFallback, ThumbIcon } from "@/components/icons";
 import {
   COMMENT_MAX,
   boardHref,
@@ -32,6 +32,8 @@ import {
   deletePost,
   fetchPost,
   hasSupabase,
+  setBoardRecommendation,
+  setCommentRecommendation,
   signedPhotoUrls,
 } from "@/lib/supabase";
 
@@ -48,6 +50,7 @@ const ERRORS: Record<string, string> = {
   not_found: "글이 지워졌어요",
   blocked: "댓글을 남길 수 없는 글이에요",
   not_mine: "내가 쓴 것만 지울 수 있어요",
+  self: "내 글과 댓글은 추천할 수 없어요",
 };
 
 function Avatar({ url, size }: { url?: string; size: number }) {
@@ -74,6 +77,7 @@ export default function PostPage() {
   const BOARD = video ? (from === "mine" ? "/me/videos" : "/videos") : boardHref(post?.category);
   const [likeBusy, setLikeBusy] = useState(false);
   const [likeError, setLikeError] = useState("");
+  const [commentRecommendBusy, setCommentRecommendBusy] = useState<string | null>(null);
   const [photos, setPhotos] = useState<Record<string, string>>({});
   const [comment, setComment] = useState("");
   const clearCommentDraft = useParticipationDraft(id ? `comment:${id}` : null, comment, setComment);
@@ -141,6 +145,46 @@ export default function PostPage() {
     finally { setLikeBusy(false); }
   };
 
+  const recommendPost = async () => {
+    if (!post || likeBusy || post.video_path || post.mine) return;
+    if (!(await requireParticipationProfile(router))) return;
+    if (!hasSupabase()) return alert("목데이터 모드에서는 저장되지 않아요");
+    setLikeBusy(true);
+    setLikeError("");
+    try {
+      const r = await setBoardRecommendation(post.id, !post.liked);
+      if (handleParticipationError(r.error, router)) return;
+      if (r.error) throw new Error(ERRORS[r.error] ?? "추천을 저장하지 못했어요");
+      setPost(p => p ? { ...p, liked: r.recommended, like_count: r.recommend_count } : p);
+    } catch (e) {
+      setLikeError(e instanceof Error ? e.message : "다시 시도해주세요");
+    } finally {
+      setLikeBusy(false);
+    }
+  };
+
+  const recommendComment = async (c: PostComment) => {
+    if (commentRecommendBusy || c.mine) return;
+    if (!(await requireParticipationProfile(router))) return;
+    if (!hasSupabase()) return alert("목데이터 모드에서는 저장되지 않아요");
+    setCommentRecommendBusy(c.id);
+    try {
+      const r = await setCommentRecommendation(c.id, !c.recommended);
+      if (handleParticipationError(r.error, router)) return;
+      if (r.error) throw new Error(ERRORS[r.error] ?? "추천을 저장하지 못했어요");
+      setPost(p => p ? {
+        ...p,
+        comments: p.comments.map(row => row.id === c.id
+          ? { ...row, recommended: r.recommended, recommend_count: r.recommend_count }
+          : row),
+      } : p);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "다시 시도해주세요");
+    } finally {
+      setCommentRecommendBusy(null);
+    }
+  };
+
   const removeComment = async (c: PostComment) => {
     if (!confirm("댓글을 지울까요?")) return;
     const r = await deleteComment(c.id);
@@ -193,12 +237,12 @@ export default function PostPage() {
         <div className="flex-1" />
         {post.mine ? (
           <>
-            {!post.video_path && <Link
-              href={`/community/write?id=${post.id}&category=${post.category ?? "board"}`}
+            <Link
+              href={post.video_path ? `/videos/upload?id=${post.id}` : `/community/write?id=${post.id}&category=${post.category ?? "board"}`}
               className="px-2 py-1 text-[13.5px] font-medium text-muted"
             >
               수정
-            </Link>}
+            </Link>
             <button
               onClick={removePost}
               disabled={busy}
@@ -250,6 +294,19 @@ export default function PostPage() {
           </button>
           {likeError && <p role="alert" className="mt-2 text-sm text-danger">{likeError}</p>}
         </div>}
+        {!post.video_path && !post.pinned_rank && post.author_id && <div className="mt-5 flex flex-col items-start gap-2">
+          {post.mine ? (
+            <span className="flex items-center gap-1.5 rounded-full border border-line px-4 py-2 text-sm font-semibold text-muted">
+              <ThumbIcon size={16} /> 추천 {post.like_count ?? 0}
+            </span>
+          ) : (
+            <button onClick={recommendPost} disabled={likeBusy} aria-pressed={!!post.liked}
+              className={`flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-semibold disabled:opacity-50 ${post.liked ? "border-accent bg-accent-soft text-accent-strong" : "border-line text-muted"}`}>
+              <ThumbIcon size={16} /> 추천 {post.like_count ?? 0}
+            </button>
+          )}
+          {likeError && <p role="alert" className="text-sm text-danger">{likeError}</p>}
+        </div>}
       </article>
 
       <section className="mt-8 border-t border-line pt-5">
@@ -298,6 +355,19 @@ export default function PostPage() {
                     <p className="mt-1 whitespace-pre-wrap break-words text-[14px] leading-relaxed">
                       {c.body}
                     </p>
+                    {!post.video_path && c.author_id && <div className="mt-2">
+                      {c.mine ? (
+                        (c.recommend_count ?? 0) > 0 && <span className="flex items-center gap-1 text-[12px] font-medium text-muted">
+                          <ThumbIcon size={13} /> 추천 {c.recommend_count}
+                        </span>
+                      ) : (
+                        <button type="button" onClick={() => recommendComment(c)} disabled={commentRecommendBusy === c.id}
+                          aria-pressed={!!c.recommended}
+                          className={`flex items-center gap-1 rounded-full px-2 py-1 text-[12px] font-medium disabled:opacity-50 ${c.recommended ? "bg-accent-soft text-accent-strong" : "bg-surface2 text-muted"}`}>
+                          <ThumbIcon size={13} /> 추천 {c.recommend_count ?? 0}
+                        </button>
+                      )}
+                    </div>}
                   </div>
                 </div>
               );
