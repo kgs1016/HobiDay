@@ -1,4 +1,6 @@
 "use client";
+import LoadErrorNotice from "@/components/LoadErrorNotice";
+import { fetchChatLists } from "@/lib/chatLists";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -17,9 +19,7 @@ import {
   currentUser,
   fetchSessionMembers,
   fetchChatMessages,
-  fetchChats,
   fetchSessionChatMessages,
-  fetchSessionChats,
   hasSupabase,
   leaveChat,
   markChatRead,
@@ -108,33 +108,38 @@ function ChatContent({
   // 방 목록을 받은 순간 주소의 방을 바로 표시한다. 별도의 상태 복사 효과는 없다.
   const openRoom = rooms?.find(room => room.session_id === openRoomId);
 
-  const load = useCallback(async (signal?: AbortSignal) => {
-    const [list, group] = await Promise.all([fetchChats(), fetchSessionChats()]);
-    if (signal?.aborted) return;
-    // 통신 실패에는 기존 목록을 유지하고, 정상 응답에서 없어진 방은 화면에서도 닫는다.
-    if (list !== null) setChats(list);
-    if (group !== null) setRooms(group);
-    if (list?.length) {
-      const urls = await signedPhotoUrls(list.map(c => c.photo).filter(Boolean) as string[]);
-      if (!signal?.aborted) setPhotoUrls(urls);
-    }
-  }, []);
+  const [listErrors, setListErrors] = useState({ request: false, session: false });
+  const [authError, setAuthError] = useState(false);
+  const [authAttempt, setAuthAttempt] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshLists = useCallback(async (signal: AbortSignal) => {
+    if (!authed) return;
+    setRefreshing(true);
+    try {
+      await fetchChatLists(signal, list => {
+        setListErrors(previous => ({ ...previous, request: list === null }));
+        if (list !== null) setChats(list);
+        if (list?.length) void signedPhotoUrls(list.map(c => c.photo).filter(Boolean) as string[])
+          .then(urls => { if (!signal.aborted) setPhotoUrls(urls); }).catch(() => {});
+      }, group => {
+        setListErrors(previous => ({ ...previous, session: group === null }));
+        if (group !== null) setRooms(group);
+      });
+    } finally { if (!signal.aborted) setRefreshing(false); }
+  }, [authed]);
+  const load = usePolling(refreshLists, 15_000);
 
   useEffect(() => {
-    const controller = new AbortController();
+    let alive = true;
     (async () => {
       if (!hasSupabase()) return setAuthed(false);
-      const user = await currentUser();
-      if (controller.signal.aborted) return;
-      setAuthed(!!user);
+      try {
+        const user = await currentUser({ throwOnError: true });
+        if (alive) { setAuthed(!!user); setAuthError(false); }
+      } catch { if (alive) setAuthError(true); }
     })();
-    return () => controller.abort();
-  }, []);
-
-  const refreshLists = useCallback(async (signal: AbortSignal) => {
-    if (authed) await load(signal);
-  }, [authed, load]);
-  usePolling(refreshLists, 15_000);
+    return () => { alive = false; };
+  }, [authAttempt]);
 
   // 모임 상세에서 돌아온 방은 초기 상태로 보관하고 주소에서는 한 번 지운다.
   useEffect(() => {
@@ -207,7 +212,9 @@ function ChatContent({
       />
     );
 
-  const loading = chats === null || rooms === null;
+  const selectedRows = tab === "session" ? rooms : chats;
+  const failed = listErrors[tab];
+  const loading = !authError && selectedRows === null && !failed;
 
   return (
     <main className="px-4">
@@ -242,10 +249,14 @@ function ChatContent({
         ))}
       </div>
 
-      {loading ? (
+      {authError && <LoadErrorNotice message="로그인 상태를 확인하지 못했어요" loading={false}
+        onRetry={() => { setAuthError(false); setAuthAttempt(n => n + 1); }} />}
+      {failed && !authError && <LoadErrorNotice message="대화 목록을 불러오지 못했어요" loading={refreshing}
+        hasPrevious={selectedRows !== null} onRetry={load} />}
+      {authError || (failed && selectedRows === null) ? null : loading ? (
         <p className="pt-16 text-center text-[13.5px] text-faint">불러오는 중…</p>
       ) : tab === "session" ? (
-        rooms.length === 0 ? (
+        (rooms ?? []).length === 0 ? (
           <div className="mt-16 flex flex-col items-center gap-1.5 text-center">
             <p className="text-[15px] font-semibold">
               아직 열린 모임 채팅이 없어요
@@ -256,7 +267,7 @@ function ChatContent({
           </div>
         ) : (
           <div className="flex flex-col divide-y divide-line pb-6">
-            {rooms.map((c) => (
+            {(rooms ?? []).map((c) => (
               <button
                 key={c.session_id}
                 onClick={() => openSession(c)}
@@ -296,7 +307,7 @@ function ChatContent({
             ))}
           </div>
         )
-      ) : chats.length === 0 ? (
+      ) : (chats ?? []).length === 0 ? (
         <div className="mt-16 flex flex-col items-center gap-4 text-center">
           <p className="text-[15px] font-semibold">아직 연결된 상대가 없어요</p>
           <Link
@@ -308,7 +319,7 @@ function ChatContent({
         </div>
       ) : (
         <div className="flex flex-col divide-y divide-line pb-6">
-          {chats.map((c) => (
+          {(chats ?? []).map((c) => (
             <button
               key={c.match_id}
               onClick={() => openThread(c)}
@@ -413,15 +424,25 @@ function ChatFrame({
   const { vv, keyboardOpen } = useKeyboardViewport();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const sending = useRef(false);
+  const [sendError, setSendError] = useState("");
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const body = text.trim();
-    if (!body) return;
+    if (!body || sending.current) return;
+    sending.current = true;
     setBusy(true);
-    await onSend(body);
-    setBusy(false);
-    setText("");
+    setSendError("");
+    try {
+      await onSend(body);
+      setText("");
+    } catch (error) {
+      setSendError(error instanceof Error ? error.message : "전송하지 못했어요. 다시 시도해주세요");
+    } finally {
+      sending.current = false;
+      setBusy(false);
+    }
   };
 
   return (
@@ -480,6 +501,7 @@ function ChatFrame({
       {/* min-h-0 이 없으면 flex 아이템이 내용만큼 커져서 스크롤이 안 걸린다 */}
       <div className="min-h-0 flex-1 overflow-y-auto py-3">{children}</div>
 
+      {sendError && <p role="alert" className="shrink-0 px-1 py-2 text-sm text-danger">{sendError}</p>}
       {closedNote ? (
         <p className="shrink-0 bg-bg py-4 text-center text-[12.5px] leading-relaxed text-muted">
           {closedNote}
@@ -487,6 +509,7 @@ function ChatFrame({
       ) : (
       <form onSubmit={submit} className="flex shrink-0 gap-2 bg-bg py-3">
         <input
+          disabled={busy}
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="메시지 보내기"
@@ -593,6 +616,7 @@ function Bubble({
 
 function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
   const [msgs, setMsgs] = useState<ChatMessage[] | null>(null);
+  const [messageError, setMessageError] = useState(false);
   const [reporting, setReporting] = useState(false);
   const router = useRouter();
   /* 상대 프로필은 어디서 열든 한 화면 — 아바타를 누르면 열린다.
@@ -616,8 +640,10 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
 
   const poll = useCallback(async (signal: AbortSignal) => {
     // 실패(상대가 나감 등)해도 보고 있던 대화를 지우지 않는다
-    const list = await fetchChatMessages(chat.match_id, signal);
-    if (!list || signal.aborted) return;
+    const list = await fetchChatMessages(chat.match_id, signal).catch(() => null);
+    if (signal.aborted) return;
+    setMessageError(list === null);
+    if (!list) return;
     setMsgs(previous => sameRows(previous, list) ? previous : list);
     // 작성 시각이 같은 메시지의 순서가 달라도 새 메시지를 놓치지 않는다.
     const latest = list.map(message => message.id).join(",");
@@ -637,8 +663,8 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
     if (r.error) {
       // closed = 내가 나간 방 · left = 상대가 나간 방 (차단당한 경우 포함)
       if (r.error === "closed" || r.error === "left")
-        return alert("상대가 대화방을 나갔어요.");
-      return alert(`전송 실패: ${r.error}`);
+        throw new Error("상대가 대화방을 나갔어요.");
+      throw new Error("전송 결과를 확인하지 못했어요. 대화를 확인한 뒤 다시 시도해주세요");
     }
     // 실패해도 조용히 — 알림이 전송을 막으면 안 된다
     // 메시지는 푸시로만 — 알림함에 한 줄씩 쌓이면 알림함이 채팅 사본이 된다
@@ -696,7 +722,8 @@ function Thread({ chat, onBack }: { chat: Chat; onBack: () => void }) {
         }
         onSend={send}
       >
-        {msgs === null ? (
+        {messageError && <LoadErrorNotice message="대화를 불러오지 못했어요" loading={false} onRetry={load} hasPrevious={msgs !== null} />}
+      {messageError && msgs === null ? null : msgs === null ? (
           <p className="pt-10 text-center text-[13.5px] text-faint">불러오는 중…</p>
         ) : msgs.length === 0 ? (
           <p className="px-6 pt-10 text-center text-[13px] leading-relaxed text-muted">
@@ -741,6 +768,7 @@ function SessionThread({
 }) {
   const now = useNow();
   const [msgs, setMsgs] = useState<SessionChatMessage[] | null>(null);
+  const [messageError, setMessageError] = useState(false);
   const [photos, setPhotos] = useState<Record<string, string>>({});
   // 신고 — 단체방이라 누구를 신고할지 먼저 고른다
   const [picking, setPicking] = useState(false);
@@ -751,8 +779,10 @@ function SessionThread({
 
   const poll = useCallback(async (signal: AbortSignal) => {
     // 실패(차단·모임 취소로 not_allowed 등)해도 보던 화면을 지우지 않는다
-    const list = await fetchSessionChatMessages(room.session_id, signal);
-    if (!list || signal.aborted) return;
+    const list = await fetchSessionChatMessages(room.session_id, signal).catch(() => null);
+    if (signal.aborted) return;
+    setMessageError(list === null);
+    if (!list) return;
     setMsgs(previous => sameRows(previous, list) ? previous : list);
     const latest = list.map(message => message.id).join(",");
     if (lastRead.current !== latest && await markSessionChatRead(room.session_id, signal)) {
@@ -777,7 +807,7 @@ function SessionThread({
 
   const send = async (body: string) => {
     const r = await sendSessionChat(room.session_id, body);
-    if (r.error) return alert(`전송 실패: ${r.error}`);
+    if (r.error) throw new Error("전송 결과를 확인하지 못했어요. 대화를 확인한 뒤 다시 시도해주세요");
     // 시간·장소를 맞추는 방이라 알림이 없으면 반쪽이다. 실패해도 조용히.
     if (r.notify?.length)
       // 메시지는 푸시로만 (알림함 제외)
@@ -822,7 +852,8 @@ function SessionThread({
       }
       onSend={send}
     >
-      {msgs === null ? (
+      {messageError && <LoadErrorNotice message="대화를 불러오지 못했어요" loading={false} onRetry={load} hasPrevious={msgs !== null} />}
+      {messageError && msgs === null ? null : msgs === null ? (
         <p className="pt-10 text-center text-[13.5px] text-faint">불러오는 중…</p>
       ) : msgs.length === 0 && !ended ? (
         <p className="px-6 pt-10 text-center text-[13px] leading-relaxed text-muted">

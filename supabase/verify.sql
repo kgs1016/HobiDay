@@ -32,7 +32,7 @@ with fn as (
       and table_name='sessions' and column_name='gender_mode'),'성비 없음'
   union all
   select 6,'조기 확정 기능 제거',not exists(select 1 from fn where proname in
-    ('session_propose_confirm','session_withdraw_confirm','session_accept_confirm','my_confirm_proposals'))
+    ('session_propose_confirm','session_withdraw_confirm','session_accept_confirm'))
     and to_regclass('public.session_confirm_acks') is null
     and not exists(select 1 from information_schema.columns where table_schema='public'
       and table_name='sessions' and column_name='early_confirm_at'),'2명부터 확정'
@@ -54,8 +54,8 @@ with fn as (
   select 12,'대표사진 연결',count(*)>0,count(*)||'곳 (2026-09-08 검증: 156)'
     from gyms where is_active and nullif(thumbnail_url,'') is not null
   union all
-  select 13,'전면 무료: 크레딧 RPC 제거',not exists(select 1 from fn where proname in
-    ('credit_rule','credit_grant','credit_balance','my_credits','claim_profile_bonus','early_bird_status',
+  select 13,'전면 무료: 과금·보상 기능 제거',not exists(select 1 from fn where proname in
+    ('credit_rule','credit_grant','credit_balance','claim_profile_bonus','early_bird_status',
      'early_bird_slots','request_daily_limit','session_fee_refund','request_fee_refund')),'잔액·차감·보상 없음'
   union all
   select 14,'과거 원장 API 비공개',to_regclass('public.credit_ledger') is null

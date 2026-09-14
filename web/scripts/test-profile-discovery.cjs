@@ -10,7 +10,8 @@ function load(file, globals = {}) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
   }).outputText;
   const exports = {};
-  vm.runInNewContext(code, { exports, console, ...globals });
+  vm.runInNewContext(code, { exports, console, setTimeout, clearTimeout, AbortController, DOMException, ...globals,
+    require: name => name === "./network" ? load("network.ts", globals) : globals.require?.(name) });
   return exports;
 }
 

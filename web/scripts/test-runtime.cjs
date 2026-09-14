@@ -62,7 +62,8 @@ function load(file, globals = {}) {
   const source = fs.readFileSync(path.join(__dirname, '../src/lib', file), 'utf8');
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
   const exports = {};
-  vm.runInNewContext(code, { exports, console, ...globals });
+  vm.runInNewContext(code, { exports, console, setTimeout, clearTimeout, AbortController, DOMException, ...globals,
+    require: name => name === "./network" ? load("network.ts", globals) : globals.require?.(name) });
   return exports;
 }
 
@@ -73,7 +74,7 @@ async function checkPolling() {
   const poller = startPolling(signal => new Promise(resolve => requests.push({ signal, resolve })), 5000);
   await env.advance(0);
   assert.equal(requests.length, 1);
-  await env.advance(20_000);
+  await env.advance(10_000);
   assert.equal(requests.length, 1, 'a slow request must not overlap periodic requests');
   poller.refresh();
   poller.refresh();
@@ -94,6 +95,7 @@ async function checkPolling() {
   await env.advance(30_000);
   assert.equal(requests.length, 3, 'hidden screens do not poll');
   env.visibility('visible');
+  await flush();
   assert.equal(requests.length, 4, 'returning to the screen refreshes immediately');
   poller.stop();
   assert.equal(requests[3].signal.aborted, true);
@@ -121,6 +123,24 @@ async function checkPolling() {
   assert.equal(attempts, 2, 'a failed request does not stop future polling');
   assert.equal(failures.length, 1);
   retry.stop();
+}
+
+async function checkHungPolling() {
+  const env = environment();
+  let calls = 0;
+  let first;
+  const { startPolling } = load('polling.ts', { ...env.globals, console: { error() {} } });
+  const poller = startPolling(signal => { calls++; if (calls === 1) first = signal; return new Promise(() => {}); }, 5000);
+  await env.advance(0);
+  await env.advance(18000);
+  assert.equal(first.aborted, true, 'unresponsive requests are aborted at the deadline');
+  await env.advance(5000);
+  assert.equal(calls, 2, 'polling recovers even when the first transport never settles');
+  env.visibility('hidden'); await flush();
+  env.visibility('visible'); await flush(); await env.advance(0);
+  assert.equal(calls, 3, 'resuming does not wait for an abort-ignoring request');
+  poller.stop(); await flush();
+  assert.equal(env.timers.size, 0);
 }
 
 async function checkClock() {
@@ -200,6 +220,7 @@ async function checkNewsReader() {
   assert.equal(matchesSessionPlace('서연',session,gyms),false,'host is not a place');
   assert.equal(matchesSessionPlace('맛집',session,gyms),false,'note is not a place');
   await checkPolling();
+  await checkHungPolling();
   await checkClock();
   await checkNewsReader();
   console.log('PASS: gym alias search, combined search terms, serialized polling, queued refresh, cancellation, background/resume, failure recovery, unchanged rows, shared clock and cleanup');

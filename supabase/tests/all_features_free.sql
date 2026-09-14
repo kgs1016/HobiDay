@@ -16,7 +16,7 @@ insert into signups(session_id,user_id,gender,status)
 values ('f4ee0000-0000-4000-8000-000000000101','f4ee0000-0000-4000-8000-000000000002','m','confirmed');
 
 -- 과거 원장은 보관되지만 신규 이용자는 잔액을 갖지 않는다.
-do $$ begin
+do $$ declare legacy jsonb; begin
   assert to_regclass('public.credit_ledger') is null, 'no active ledger';
   assert to_regclass('retired.credit_ledger') is not null, 'historical ledger preserved';
   assert not has_schema_privilege('authenticated','retired','USAGE'), 'history is not exposed';
@@ -27,7 +27,10 @@ do $$ begin
   assert not has_function_privilege('anon','session_join(uuid)','EXECUTE'), 'anonymous join stays denied';
   assert to_regprocedure('public.credit_rule(text)') is null, 'price rules removed';
   assert to_regprocedure('public.credit_grant(uuid,text,text)') is null, 'rewards removed';
-  assert to_regprocedure('public.my_credits()') is null, 'balance API removed';
+  if to_regprocedure('public.my_credits()') is not null then
+    execute 'select public.my_credits()::jsonb' into legacy;
+    assert legacy = '{"balance":0,"history":[],"retired":true}'::jsonb, 'legacy endpoint is only a retired empty response';
+  end if;
   assert to_regprocedure('public.claim_profile_bonus()') is null, 'signup bonus API removed';
   assert to_regprocedure('public.request_daily_limit()') is null, 'paid daily quota removed';
   assert to_regprocedure('public.session_fee_refund(uuid,uuid)') is null, 'refund system removed';

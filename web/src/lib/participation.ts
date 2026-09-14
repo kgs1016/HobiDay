@@ -27,7 +27,7 @@ export async function requireParticipationProfile(router: ParticipationRouter, r
   try {
     await Promise.resolve();
     if (signal?.aborted) return false;
-    if (hasSupabase() && !(await currentUser())) {
+    if (hasSupabase() && !(await currentUser({ throwOnError: true }))) {
       if (signal?.aborted) return false;
       alert('로그인이 필요해요'); router.push('/login'); return false;
     }

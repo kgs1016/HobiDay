@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import BackButton from "./BackButton";
+import UploadStatus from "./UploadStatus";
 import FeedbackVideoPlayer from "./FeedbackVideoPlayer";
 import { fetchPost } from "@/lib/supabase";
 import { POST_BODY_MAX, type PostDetail } from "@/lib/community";
@@ -43,6 +44,9 @@ function EditVideoForm({ post }: { post: PostDetail }) {
   const [pending, setPending] = useState<{ media: VideoReplacement; body: string } | null>(null);
   const selecting = useRef(0);
   const saving = useRef(false);
+  const uploadController = useRef<AbortController | null>(null);
+  const [stage, setStage] = useState("");
+  const [progress, setProgress] = useState(0);
   const locked = busy || preparing || !!pending;
   const dirty = body.trim() !== post.body || !!file || !!thumbnail;
 
@@ -59,7 +63,7 @@ function EditVideoForm({ post }: { post: PostDetail }) {
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty, pending]);
-  useEffect(() => () => { selecting.current++; }, []);
+  useEffect(() => () => { selecting.current++; uploadController.current?.abort(); }, []);
 
   const choose = async (next: File | undefined, kind: "video" | "thumbnail") => {
     if (!next || locked) return;
@@ -76,18 +80,22 @@ function EditVideoForm({ post }: { post: PostDetail }) {
 
   const save = async () => {
     if (saving.current || preparing || !body.trim() || !dirty) return;
-    saving.current = true; setBusy(true); setError("");
+    saving.current = true; setBusy(true); setError(""); setStage("회원 정보 확인 중");
+    const controller = new AbortController(); uploadController.current = controller;
     try {
-      if (!(await requireParticipationProfile(router))) return;
+      if (!(await requireParticipationProfile(router, undefined, controller.signal))) return;
+      if (controller.signal.aborted) throw new DOMException("취소됐어요", "AbortError");
       const request = pending ?? { body: body.trim(), media: await uploadFeedbackReplacement(post.id,
-        { video: post.video_path!, thumbnail: post.thumbnail_path! }, file, thumbnail) };
+        { video: post.video_path!, thumbnail: post.thumbnail_path! }, file, thumbnail, { signal: controller.signal, onProgress: setProgress, onStage: setStage }) };
       setPending(request);
+      if (controller.signal.aborted) throw new DOMException("취소됐어요", "AbortError");
+      setStage("저장하는 중");
       await updateFeedbackVideo(post.id, post.updated_at, request.body, request.media);
       router.replace(`/videos/post?id=${post.id}`);
     } catch (e) {
-      const message = e instanceof Error ? e.message : "저장하지 못했어요";
+      const message = controller.signal.aborted ? "업로드를 멈췄어요. 다시 누르면 이어서 올려요" : e instanceof Error ? e.message : "저장하지 못했어요";
       if (!handleParticipationError(message, router)) setError(message);
-    } finally { saving.current = false; setBusy(false); }
+    } finally { saving.current = false; setBusy(false); uploadController.current = null; }
   };
 
   return <main className="px-4 pb-10">
@@ -124,6 +132,7 @@ function EditVideoForm({ post }: { post: PostDetail }) {
           className="mt-2 w-full resize-none rounded-xl border border-line bg-surface p-3 text-base leading-relaxed" />
         <p className="mt-1 text-right text-xs text-muted">{body.length} / {POST_BODY_MAX}</p></div>
     </fieldset>
+    {busy && <UploadStatus stage={stage} progress={progress} onPause={stage !== "저장하는 중" ? () => uploadController.current?.abort() : undefined} />}
     {preparing && <p role="status" className="mt-4 text-sm text-muted">파일 확인 중…</p>}
     {error && <div role="alert" className="mt-4 text-sm text-danger"><p>{error}</p>
       {pending && <Link href={`/videos/post?id=${post.id}`} className="mt-3 inline-block font-semibold underline">영상으로 돌아가기</Link>}</div>}
