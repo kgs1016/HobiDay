@@ -8,7 +8,8 @@ function load(file, globals) {
   const source = fs.readFileSync(path.join(__dirname, '../src/lib', file), 'utf8');
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
   const exports = {};
-  vm.runInNewContext(code, { exports, console, ...globals });
+  vm.runInNewContext(code, { exports, console, setTimeout, clearTimeout, AbortController, DOMException, ...globals,
+    require: name => name === "./network" ? load("network.ts", globals) : globals.require?.(name) });
   return exports;
 }
 

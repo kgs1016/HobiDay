@@ -27,9 +27,9 @@ export default function BottomNav() {
   useEffect(() => {
     if (!hasSupabase()) return;
     let alive = true;
-    currentUser().then((u) => {
+    currentUser({ throwOnError: true }).then((u) => {
       if (alive) setAuthed(!!u);
-    });
+    }).catch(() => { /* 일시적인 인증 통신 실패로 표시 중인 메뉴를 숨기지 않는다. */ });
     return () => {
       alive = false;
     };

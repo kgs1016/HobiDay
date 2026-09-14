@@ -12,10 +12,10 @@ const storage = {
   upload: async (name) => { calls.push(['upload', name]); return { error: name.endsWith(failUpload) && failUpload ? new Error('offline') : null }; },
   remove: async (names) => { calls.push(['remove', ...names]); return { error: null }; },
 };
-const sb = { storage: { from: () => storage }, rpc: async (name, values) => { calls.push(['rpc', name, values]); return result; } };
+const sb = { storage: { from: () => storage }, rpc: (name, values) => { calls.push(['rpc', name, values]); const pending = Promise.resolve(result); pending.abortSignal = () => pending; return pending; } };
 const api = {};
-vm.runInNewContext(code, { exports: api, crypto: { randomUUID: () => 'revision' },
-  require: name => name === './community' ? { FEEDBACK_VIDEO_MAX_BYTES: 50 * 1024 * 1024 }
+vm.runInNewContext(code, { exports: api, AbortController, crypto: { randomUUID: () => 'revision' },
+  require: name => name === './network' ? { withDeadline: fn => fn(new AbortController().signal) } : name === './resumableUpload' ? { resumableUpload: async (name) => { const result = await storage.upload(name); if (result.error) throw Error('썸네일 업로드 중단'); } } : name === './community' ? { FEEDBACK_VIDEO_MAX_BYTES: 50 * 1024 * 1024 }
     : { getSupabase: () => sb, currentUser: async () => ({ id: 'owner' }) } });
 
 (async () => {
@@ -28,15 +28,17 @@ vm.runInNewContext(code, { exports: api, crypto: { randomUUID: () => 'revision' 
   assert.equal(calls.length, 0, 'invalid files never reach storage');
   failUpload = 'thumbnail.jpg';
   await assert.rejects(api.uploadFeedbackReplacement('post', previous, file, thumb), /썸네일 업로드/);
-  assert.equal(calls.at(-1)[0], 'remove');
-  assert.deepEqual(calls.at(-1).slice(1), ['owner/post/revisions/revision/video.mp4']);
+  assert.ok(!calls.some(c => c[0] === 'remove'), 'completed video is retained for retry');
   assert.ok(!calls.flat().includes(previous.video), 'failure cleanup never touches the published video');
   calls.length = 0; failUpload = '';
-  const thumbnailOnly = await api.uploadFeedbackReplacement('post', previous, null, thumb);
+  await api.uploadFeedbackReplacement('post', previous, file, thumb);
+  assert.equal(calls.length, 1, 'retry uploads only the failed thumbnail');
+  calls.length = 0;
+  const thumbnailOnly = await api.uploadFeedbackReplacement('post', previous, null, { ...thumb });
   assert.equal(thumbnailOnly.video, previous.video);
   assert.equal(calls.length, 1);
   calls.length = 0;
-  const replacement = await api.uploadFeedbackReplacement('post', previous, file, thumb);
+  const replacement = await api.uploadFeedbackReplacement('post', previous, file, { ...thumb });
   assert.equal(calls.length, 2);
   assert.equal(previous.video, 'old/video.mp4');
   result = { data: null, error: { message: 'network response lost' } };

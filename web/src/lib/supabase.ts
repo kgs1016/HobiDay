@@ -1,3 +1,4 @@
+import { requestFetch, withDeadline } from "./network";
 /* Supabase 클라이언트 + 데이터 액세스.
    .env.local 에 키가 없으면 null → 화면은 목데이터로 동작(개발 폴백). */
 
@@ -34,21 +35,25 @@ export function getSupabase(): SupabaseClient | null {
   if (_client !== undefined) return _client;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = anonKey();
-  _client = url && key ? createClient(url, key) : null;
+  _client = url && key ? createClient(url, key, { global: { fetch: requestFetch } }) : null;
   return _client;
 }
 
 export const hasSupabase = () => getSupabase() !== null;
 
-export async function currentUser(): Promise<User | null> {
+export async function currentUser(options: { throwOnError?: boolean } = {}): Promise<User | null> {
   const sb = getSupabase();
   if (!sb) return null;
-  // getUser() 는 부를 때마다 서버에 왕복한다 — 거의 모든 화면이 데이터를
-  // 받기 전에 이걸 기다려서, 폰(LTE)에서 화면 전환이 눈에 띄게 느렸다.
-  // getSession() 은 기기에 저장된 세션을 읽는다(왕복 없음). 진짜 검증은
-  // 어차피 모든 데이터 요청에서 RLS 가 토큰으로 한다.
-  const { data } = await sb.auth.getSession();
-  return data.session?.user ?? null;
+  try {
+    // 유효한 세션은 기기에서 읽고, 만료 시 갱신 요청에도 대기 상한을 둔다.
+    const { data, error } = await withDeadline(() => sb.auth.getSession(), 18_000);
+    if (error && error.name !== "AuthSessionMissingError" && !["refresh_token_not_found", "refresh_token_already_used", "session_not_found", "bad_jwt"].includes(error.code ?? "")) throw error;
+    return data.session?.user ?? null;
+  } catch (error) {
+    // Existing nullable callers retain their contract; recovery UIs distinguish failures.
+    if (options.throwOnError) throw error;
+    return null;
+  }
 }
 
 /** 대시보드에서 켜둔 소셜 로그인만 화면에 노출하기 위한 조회 */
@@ -59,7 +64,7 @@ export async function enabledOAuthProviders(): Promise<string[]> {
   const key = anonKey();
   if (!url || !key) return [];
   try {
-    const r = await fetch(`${url}/auth/v1/settings`, { headers: { apikey: key } });
+    const r = await requestFetch(`${url}/auth/v1/settings`, { headers: { apikey: key } });
     const j = await r.json();
     _providers = Object.entries(j.external ?? {})
       .filter(([k, v]) => v === true && k !== "email" && k !== "phone")
@@ -761,11 +766,11 @@ export interface ChatMessage {
   mine: boolean;
 }
 
-export async function fetchChats() {
+export async function fetchChats(signal?: AbortSignal) {
   const sb = getSupabase();
   if (!sb) return null;
-  const { data, error } = await sb.rpc("my_chats");
-  if (error) return null;
+  const { data, error } = await withDeadline(s => sb.rpc("my_chats").abortSignal(s), 15_000, signal);
+  if (error || !Array.isArray(data)) return null;
   return data as Chat[];
 }
 
@@ -773,7 +778,7 @@ export async function fetchChatMessages(matchId: string, signal?: AbortSignal) {
   const sb = getSupabase();
   if (!sb) return null;
   const query = sb.rpc("chat_messages", { p_match: matchId });
-  const { data, error } = await (signal ? query.abortSignal(signal) : query);
+  const { data, error } = await withDeadline(s => query.abortSignal(s), 15_000, signal);
   if (error) return null;
   const d = data as ChatMessage[] | { error: string };
   if (!Array.isArray(d)) return null;
@@ -783,10 +788,11 @@ export async function fetchChatMessages(matchId: string, signal?: AbortSignal) {
 export async function sendChat(matchId: string, body: string) {
   const sb = getSupabase();
   if (!sb) return { error: "no_client" };
-  const { data, error } = await sb.rpc("chat_send", {
+  const query = sb.rpc("chat_send", {
     p_match: matchId,
     p_body: body,
   });
+  const { data, error } = await withDeadline(s => query.abortSignal(s));
   if (error) return { error: error.message };
   return data as { ok?: boolean; error?: string };
 }
@@ -1072,20 +1078,24 @@ export async function respondRequest(id: string, accept: boolean) {
   };
 }
 
-export async function fetchInboxCounts(signal?: AbortSignal) {
+type InboxCounts = { requests: number; likes: number; hosted: number; unread_messages: number; unread_rooms: number };
+let inboxCache: { owner: string; until: number; pending: Promise<InboxCounts | null> } | undefined;
+export async function fetchInboxCounts(signal?: AbortSignal): Promise<InboxCounts | null> {
   const sb = getSupabase();
   if (!sb) return null;
-  const query = sb.rpc("inbox_counts");
-  const { data, error } = await (signal ? query.abortSignal(signal) : query);
-  if (error) return null;
-  return data as {
-    /** 신청함 배지 = 내가 답해야 하는 것들의 합 (채팅 신청 + 모임 신청 + 확정 제안) */
-    requests: number;
-    likes: number;
-    hosted: number;
-    unread_messages: number;
-    unread_rooms: number;
-  };
+  const user = await currentUser({ throwOnError: true });
+  if (!user) { inboxCache = undefined; return null; }
+  if (!inboxCache || inboxCache.owner !== user.id || inboxCache.until <= Date.now()) {
+    const entry = { owner: user.id, until: Infinity, pending: Promise.resolve<InboxCounts | null>(null) };
+    entry.pending = withDeadline(s => sb.rpc("inbox_counts").abortSignal(s), 15_000).then(({ data, error }) => {
+      entry.until = error ? 0 : Date.now() + 2000;
+      return error ? null : data as InboxCounts;
+    }, () => { entry.until = 0; return null; });
+    inboxCache = entry;
+  }
+  // One view leaving must not cancel the other view's shared badge request.
+  const pending = inboxCache.pending;
+  return withDeadline(() => pending, 18_000, signal);
 }
 
 /** 방을 열면 호출 — 이 시점 이후 메시지만 안 읽음으로 센다 */
@@ -1124,11 +1134,11 @@ export interface SessionChatMessage extends ChatMessage {
   sender_is_host: boolean;
 }
 
-export async function fetchSessionChats() {
+export async function fetchSessionChats(signal?: AbortSignal) {
   const sb = getSupabase();
   if (!sb) return null;
-  const { data, error } = await sb.rpc("my_session_chats");
-  if (error) return null;
+  const { data, error } = await withDeadline(s => sb.rpc("my_session_chats").abortSignal(s), 15_000, signal);
+  if (error || !Array.isArray(data)) return null;
   return data as SessionChat[];
 }
 
@@ -1138,7 +1148,7 @@ export async function fetchSessionChatMessages(sessionId: string, signal?: Abort
   const query = sb.rpc("session_chat_messages", {
     p_session: sessionId,
   });
-  const { data, error } = await (signal ? query.abortSignal(signal) : query);
+  const { data, error } = await withDeadline(s => query.abortSignal(s), 15_000, signal);
   if (error) return null;
   const d = data as SessionChatMessage[] | { error: string };
   if (!Array.isArray(d)) return null;
@@ -1148,10 +1158,11 @@ export async function fetchSessionChatMessages(sessionId: string, signal?: Abort
 export async function sendSessionChat(sessionId: string, body: string) {
   const sb = getSupabase();
   if (!sb) return { error: "no_client" };
-  const { data, error } = await sb.rpc("session_chat_send", {
+  const query = sb.rpc("session_chat_send", {
     p_session: sessionId,
     p_body: body,
   });
+  const { data, error } = await withDeadline(s => query.abortSignal(s));
   if (error) return { error: error.message };
   // notify — 나 빼고 확정자 전원. 클라이언트가 push 를 부탁한다
   return data as { ok?: boolean; notify?: string[]; error?: string };

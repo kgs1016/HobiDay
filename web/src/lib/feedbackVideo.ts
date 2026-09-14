@@ -1,3 +1,5 @@
+import { withDeadline } from "./network";
+import { resumableUpload, type UploadOptions } from "./resumableUpload";
 import { FEEDBACK_VIDEO_MAX_BYTES } from "./community";
 import { currentUser, getSupabase } from "./supabase";
 import type { VideoSummary } from "./community";
@@ -95,29 +97,47 @@ export async function setVideoLike(id: string, liked: boolean): Promise<{ error?
 
 export type VideoDraft = { id: string; video: string; thumbnail: string };
 
-export async function uploadFeedbackMedia(file: File, thumbnail: Blob): Promise<VideoDraft> {
+export type VideoUploadPlan = VideoDraft & { videoUploaded?: boolean; thumbnailUploaded?: boolean };
+export type MediaUploadOptions = UploadOptions & {
+  plan?: VideoUploadPlan;
+  onCheckpoint?: (plan: VideoUploadPlan) => Promise<void>;
+  onStage?: (stage: string) => void;
+};
+const uploadPlans = new WeakMap<Blob, VideoUploadPlan>();
+
+export async function uploadFeedbackMedia(file: File, thumbnail: Blob, options: MediaUploadOptions = {}): Promise<VideoDraft> {
   const error = videoFileError(file);
   if (error) throw new Error(error);
-  const sb = getSupabase();
-  const user = await currentUser();
-  if (!sb || !user) throw new Error("로그인이 필요해요");
-  const id = crypto.randomUUID();
-  const folder = `${user.id}/${id}`;
-  const draft = { id, video: `${folder}/video.${TYPES[file.type]}`, thumbnail: `${folder}/thumbnail.jpg` };
-  const upload = await sb.storage.from(BUCKET).upload(draft.video, file, { contentType: file.type });
-  if (upload.error) throw new Error("영상 업로드에 실패했어요. 연결을 확인하고 다시 시도해주세요");
-  const thumb = await sb.storage.from(BUCKET).upload(draft.thumbnail, thumbnail, { contentType: "image/jpeg" });
-  if (thumb.error) {
-    await sb.storage.from(BUCKET).remove([draft.video]);
-    throw new Error("썸네일 업로드에 실패했어요. 다시 시도해주세요");
+  const user = await currentUser({ throwOnError: true });
+  if (!getSupabase() || !user) throw new Error("로그인이 필요해요");
+  let plan = options.plan ?? uploadPlans.get(file);
+  if (!plan) {
+    const id = crypto.randomUUID();
+    plan = { id, video: `${user.id}/${id}/video.${TYPES[file.type]}`, thumbnail: `${user.id}/${id}/thumbnail.jpg` };
   }
-  return draft;
+  if (!plan.video.startsWith(user.id + "/")) throw new Error("계정이 변경됐어요. 영상을 다시 선택해주세요");
+  uploadPlans.set(file, plan);
+  await options.onCheckpoint?.(plan);
+  if (!plan.videoUploaded) {
+    options.onStage?.("영상 올리는 중");
+    await resumableUpload(plan.video, file, options);
+    plan.videoUploaded = true;
+    await options.onCheckpoint?.(plan);
+  }
+  if (!plan.thumbnailUploaded) {
+    options.onStage?.("썸네일 올리는 중");
+    await resumableUpload(plan.thumbnail, thumbnail, { ...options, onProgress: undefined });
+    plan.thumbnailUploaded = true;
+    await options.onCheckpoint?.(plan);
+  }
+  return { id: plan.id, video: plan.video, thumbnail: plan.thumbnail };
 }
 
 export async function publishFeedbackVideo(draft: VideoDraft, body: string) {
   const sb = getSupabase();
   if (!sb) throw new Error("로그인이 필요해요");
-  const { data, error } = await sb.rpc("video_post_create", { p_id: draft.id, p_body: body, p_video: draft.video, p_thumbnail: draft.thumbnail });
+  const query = sb.rpc("video_post_create", { p_id: draft.id, p_body: body, p_video: draft.video, p_thumbnail: draft.thumbnail });
+  const { data, error } = await withDeadline(s => query.abortSignal(s));
   if (error?.message.includes("profile_incomplete")) throw new Error("profile_incomplete");
   if (error) throw new Error("등록 결과를 확인하지 못했어요. 다시 누르면 같은 영상으로 재시도해요");
   const messages: Record<string, string> = { no_auth: "로그인이 필요해요", no_profile: "회원 정보를 불러오지 못했어요. 다시 시도해주세요", too_fast: "1분 뒤 다시 올려주세요", empty: "내용을 적어주세요", bad_media: "영상 파일을 확인할 수 없어요" };
@@ -153,7 +173,7 @@ export type VideoReplacement = { video: string; thumbnail: string };
 
 /** Always upload to a fresh revision; never overwrite a currently published object. */
 export async function uploadFeedbackReplacement(
-  postId: string, previous: VideoReplacement, file: File | null, thumbnail: Blob | null,
+  postId: string, previous: VideoReplacement, file: File | null, thumbnail: Blob | null, options: MediaUploadOptions = {},
 ): Promise<VideoReplacement> {
   if (!file && !thumbnail) return previous;
   if (file) {
@@ -164,39 +184,37 @@ export async function uploadFeedbackReplacement(
   if (thumbnail && (thumbnail.type !== "image/jpeg" || !thumbnail.size || thumbnail.size > 5 * 1024 * 1024))
     throw new Error("썸네일 사진을 다시 선택해주세요");
   const sb = getSupabase();
-  const user = await currentUser();
+  const user = await currentUser({ throwOnError: true });
   if (!sb || !user) throw new Error("로그인이 필요해요");
-  const folder = `${user.id}/${postId}/revisions/${crypto.randomUUID()}`;
-  const replacement = { ...previous };
-  const uploaded: string[] = [];
-  try {
-    if (file) {
-      replacement.video = `${folder}/video.${TYPES[file.type]}`;
-      const result = await sb.storage.from(BUCKET).upload(replacement.video, file, { contentType: file.type });
-      if (result.error) throw new Error("영상 업로드에 실패했어요. 기존 영상은 유지돼요");
-      uploaded.push(replacement.video);
-    }
-    if (thumbnail) {
-      replacement.thumbnail = `${folder}/thumbnail.jpg`;
-      const result = await sb.storage.from(BUCKET).upload(replacement.thumbnail, thumbnail, { contentType: "image/jpeg" });
-      if (result.error) throw new Error("썸네일 업로드에 실패했어요. 다시 시도해주세요");
-      uploaded.push(replacement.thumbnail);
-    }
-    return replacement;
-  } catch (e) {
-    // Only pre-publication uploads are removed. Never clean up after an ambiguous RPC response.
-    if (uploaded.length) await sb.storage.from(BUCKET).remove(uploaded).catch(() => {});
-    throw e;
+  const source = thumbnail!;
+  let plan = uploadPlans.get(source);
+  if (!plan || !plan.video.includes(`/${postId}/revisions/`)) {
+    const folder = `${user.id}/${postId}/revisions/${crypto.randomUUID()}`;
+    plan = { id: postId, video: file ? `${folder}/video.${TYPES[file.type]}` : previous.video,
+      thumbnail: `${folder}/thumbnail.jpg`, videoUploaded: !file };
+    uploadPlans.set(source, plan);
   }
+  if (file && !plan.videoUploaded) {
+    options.onStage?.("영상 올리는 중");
+    await resumableUpload(plan.video, file, options);
+    plan.videoUploaded = true;
+  }
+  if (thumbnail && !plan.thumbnailUploaded) {
+    options.onStage?.("썸네일 올리는 중");
+    await resumableUpload(plan.thumbnail, thumbnail, { ...options, onProgress: undefined });
+    plan.thumbnailUploaded = true;
+  }
+  return { video: plan.video, thumbnail: thumbnail ? plan.thumbnail : previous.thumbnail };
 }
 
 export async function updateFeedbackVideo(postId: string, expectedUpdatedAt: string, body: string, media: VideoReplacement) {
   const sb = getSupabase();
   if (!sb) throw new Error("로그인이 필요해요");
-  const { data, error } = await sb.rpc("video_post_update", {
+  const query = sb.rpc("video_post_update", {
     p_post: postId, p_expected_updated_at: expectedUpdatedAt, p_body: body,
     p_video: media.video, p_thumbnail: media.thumbnail,
   });
+  const { data, error } = await withDeadline(s => query.abortSignal(s));
   if (error?.message.includes("profile_incomplete") || data?.error === "profile_incomplete") throw new Error("profile_incomplete");
   if (error) throw new Error("저장 결과를 확인하지 못했어요. 다시 누르면 같은 내용으로 재시도해요");
   const messages: Record<string, string> = {

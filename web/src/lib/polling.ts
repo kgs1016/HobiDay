@@ -1,4 +1,6 @@
-/** 느린 요청이 겹치지 않도록 완료 뒤에 다음 조회를 예약한다. */
+import { withDeadline } from "./network";
+
+/** 조회 완료 뒤 재예약하되 미응답·앱 복귀에서도 다시 연결한다. */
 export function startPolling(task: (signal: AbortSignal) => Promise<void>, intervalMs: number) {
   let stopped = false;
   let running = false;
@@ -22,7 +24,7 @@ export function startPolling(task: (signal: AbortSignal) => Promise<void>, inter
     refreshQueued = false;
     controller = new AbortController();
     try {
-      await task(controller.signal);
+      await withDeadline(task, 18_000, controller.signal);
     } catch (error) {
       if (!controller.signal.aborted) console.error("채팅 조회 실패", error);
     } finally {
@@ -44,6 +46,7 @@ export function startPolling(task: (signal: AbortSignal) => Promise<void>, inter
   };
 
   document.addEventListener("visibilitychange", visibilityChanged);
+  if (typeof window !== "undefined") window.addEventListener("online", refresh);
   schedule(0);
   return {
     refresh,
@@ -52,6 +55,7 @@ export function startPolling(task: (signal: AbortSignal) => Promise<void>, inter
       clearTimeout(timer);
       controller?.abort();
       document.removeEventListener("visibilitychange", visibilityChanged);
+      if (typeof window !== "undefined") window.removeEventListener("online", refresh);
     },
   };
 }

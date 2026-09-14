@@ -94,7 +94,7 @@ export default function Home() {
         setAuthed(null);
         return;
       }
-      const user = await currentUser();
+      const user = await currentUser({ throwOnError: true });
       if (!alive) return;
       setAuthed(!!user);
 

@@ -12,7 +12,8 @@ function load(file, imports) {
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX,
   } }).outputText;
   const exports = {};
-  vm.runInNewContext(code, { exports, require: name => Object.hasOwn(imports, name) ? imports[name] : require(name) });
+  vm.runInNewContext(code, { exports, setTimeout, clearTimeout, AbortController, DOMException,
+    require: name => name === "./network" ? load("lib/network.ts", {}) : Object.hasOwn(imports, name) ? imports[name] : require(name) });
   return exports;
 }
 
