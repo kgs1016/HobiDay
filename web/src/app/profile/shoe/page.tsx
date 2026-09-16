@@ -6,10 +6,12 @@ import { fetchClimbingProgress, isAscentPreview } from "@/lib/climbingAscents";
 import { currentUser, fetchMyProfileDb, hasSupabase, setMyProfileVisibility } from "@/lib/supabase";
 import { loadMyProfile, saveMyProfile } from "@/lib/myProfile";
 import { isBasicProfileComplete } from "@/lib/profileGate";
+import { trackProfileUsage, profileUsageError, useProfileUsageView } from "@/lib/profileUsage";
 import { useQueryParam } from "@/lib/queryId";
 import { PROFILE_REQUIRED_MESSAGE, participationProfileHref, safeParticipationReturn } from "@/lib/participation";
 
 export default function ProfileShoeSetup() {
+  useProfileUsageView("shoe_opened");
   const router = useRouter();
   const returnParam = useQueryParam('returnTo');
   const publishParam = useQueryParam('publish');
@@ -21,7 +23,7 @@ export default function ProfileShoeSetup() {
     if (publishParam === '1') {
       if (hasSupabase()) {
         const r = await setMyProfileVisibility(true);
-        if (r.error) throw new Error('공개 설정을 저장하지 못했어요. 다시 시도해주세요');
+        if (r.error) { trackProfileUsage("profile_publish_failed", "server"); throw new Error('공개 설정을 저장하지 못했어요. 다시 시도해주세요'); }
       } else {
         const profile = loadMyProfile();
         if (profile) saveMyProfile({...profile, isPublic: true});
@@ -54,6 +56,7 @@ export default function ProfileShoeSetup() {
         if (progress.can_set_start !== true) throw new Error("설정 정보를 불러오지 못했어요");
         setReady(true);
       } catch (e) {
+        trackProfileUsage("shoe_load_failed", profileUsageError(e));
         if (active) setError(e instanceof Error ? e.message : "설정 정보를 불러오지 못했어요");
       }
     })();
@@ -71,7 +74,7 @@ export default function ProfileShoeSetup() {
       <h1 className="mt-2 text-[22px] font-bold tracking-tight">시작 클라이밍화를 골라주세요</h1>
       <p className="mt-2 text-[12px] leading-relaxed text-muted">최근 완등 기록에 따라 바뀌어요</p>
     </header>
-    {ready ? <StartingShoePicker onboarding skipLabel="홈으로" onSkip={leave} onSaved={saved} /> : error ? <div role="alert" className="py-10 text-center">
+    {ready ? <StartingShoePicker onboarding trackSetup skipLabel="홈으로" onSkip={leave} onSaved={saved} /> : error ? <div role="alert" className="py-10 text-center">
       <p className="text-[13px] text-muted">{error}</p>
       <button type="button" onClick={() => { setError(""); setAttempt(value => value + 1); }}
         className="button-secondary mt-4 min-h-12 w-full rounded-xl text-[14px] font-semibold">다시 불러오기</button>
