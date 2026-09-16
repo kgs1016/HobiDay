@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import StartingShoePicker from "@/components/StartingShoePicker";
 import { type ClimbingProgress } from "@/lib/shoeProgress";
+import { useProfileUsageView } from "@/lib/profileUsage";
 
 export default function StartingShoeDialog({ reset = false, onClose, onSaved }: {
   reset?: boolean;
   onClose: () => void;
   onSaved: (progress: ClimbingProgress) => void;
 }) {
+  useProfileUsageView("shoe_opened", !reset);
   const dialog = useRef<HTMLDialogElement>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => {

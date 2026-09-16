@@ -1,20 +1,23 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { trackProfileUsage, profileUsageError, useProfileUsageView } from "@/lib/profileUsage";
 import Link from "next/link";
 import ClimbingShoe from "@/components/ClimbingShoe";
 import { resetStartingShoe, setStartingShoe } from "@/lib/climbingAscents";
 import { SHOE_STAGES, type ClimbingProgress, type ShoeColorId } from "@/lib/shoeProgress";
 
 /** 가입 마지막 단계와 기존 회원의 설정 창이 같은 선택·저장 규칙을 쓴다. */
-export default function StartingShoePicker({ onboarding = false, reset = false, skipLabel, onSkip, onSaved, onBusyChange }: {
+export default function StartingShoePicker({ onboarding = false, reset = false, trackSetup = !reset, skipLabel, onSkip, onSaved, onBusyChange }: {
   onboarding?: boolean;
+  trackSetup?: boolean;
   reset?: boolean;
   skipLabel?: string;
   onSkip: () => void;
   onSaved: (progress: ClimbingProgress) => void;
   onBusyChange?: (busy: boolean) => void;
 }) {
+  useProfileUsageView("shoe_ready", trackSetup);
   const submitting = useRef(false);
   const [selected, setSelected] = useState<ShoeColorId | null>(null);
   const [busy, setBusy] = useState(false);
@@ -23,12 +26,15 @@ export default function StartingShoePicker({ onboarding = false, reset = false, 
 
   const save = async () => {
     if (!selected || submitting.current) return;
+    if (trackSetup) trackProfileUsage("shoe_save_attempt");
     submitting.current = true;
     setBusy(true); onBusyChange?.(true); setError("");
     try {
       const progress = await (reset ? resetStartingShoe(selected) : setStartingShoe(selected));
+      if (trackSetup) trackProfileUsage("shoe_saved");
       onSaved(progress);
     } catch (e) {
+      if (trackSetup) trackProfileUsage("shoe_save_failed", profileUsageError(e));
       setError(e instanceof Error ? e.message : "설정하지 못했어요");
       submitting.current = false;
       setBusy(false); onBusyChange?.(false);

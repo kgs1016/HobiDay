@@ -5,6 +5,7 @@ const vm = require('node:vm');
 const ts = require('typescript');
 const root = path.join(__dirname, '../src');
 const jsx = (type, props) => ({ type, props });
+const usage = [];
 function load(file, imports = {}, globals = {}) {
   const exports = {};
   const code = ts.transpileModule(fs.readFileSync(path.join(root,file),'utf8'), {compilerOptions:{
@@ -12,6 +13,7 @@ function load(file, imports = {}, globals = {}) {
   }}).outputText;
   vm.runInNewContext(code, {exports, ...globals, require: name => {
     if (Object.hasOwn(imports,name)) return imports[name];
+    if (name === '@/lib/profileUsage') return {trackProfileUsage: (event)=>{usage.push(event);},profileUsageError:()=> 'network',useProfileUsageView:()=>{}};
     throw Error('unexpected import: '+name);
   }});
   return exports;
@@ -49,6 +51,7 @@ const valid={nickname:'가입 테스트',gender:'f',age:27,area:'',level:null,ho
 (async()=>{
   // Basic information must commit before navigation, including private profiles and partial legacy profiles.
   for(const onboarding of [true,false])for(const isPublic of [false,true])for(const failsFirst of [false,true]){
+    usage.length=0;
     let saved,settle,destination,calls=0;
     const alerts=[];
     const profile={...valid,isPublic,...(onboarding?{photo:undefined,gender:null,age:null}:{})};
@@ -88,6 +91,8 @@ const valid={nickname:'가입 테스트',gender:'f',age:27,area:'',level:null,ho
     }else assert.equal(alerts.length,0);
     assert.equal(destination,onboarding?'/profile/shoe?returnTo='+encodeURIComponent(isPublic?'/#people':'/me')+(isPublic?'&publish=1':''):isPublic?'/#people':'/me');
     assert.equal(saved.photo,'fixture.webp');
+    assert.equal(usage.filter(e=>e==='profile_saved').length,1);
+    assert.equal(usage.includes('profile_save_failed'),failsFirst);
   }
 
   // Shoe entry checks: skip/save return to profile, existing choice cannot be selected again, load failure can retry.
@@ -129,7 +134,8 @@ const valid={nickname:'가입 테스트',gender:'f',age:27,area:'',level:null,ho
       return new Promise((resolve,reject)=>{settle={resolve,reject};});},resetStartingShoe:async stage=>{resetCalls++;assert.equal(stage,'blue');
       return {total:0,difficulty_counts:{},starting_shoe:{stage:'blue',expires_on:'2026-12-10'},can_reset_start:false};}},
   });
-  const props={onboarding:true,onSkip:()=>{skips++;},onSaved:p=>{saved=p;}};
+  usage.length=0;
+  const props={onboarding:true,trackSetup:true,onSkip:()=>{skips++;},onSaved:p=>{saved=p;}};
   let tree=picker.render(props);
   assert.equal(button(tree,'색을 선택해주세요').props.disabled,true);
   button(tree,'나중에 설정').props.onClick();assert.equal(skips,1);assert.equal(calls,0);
@@ -144,6 +150,7 @@ const valid={nickname:'가입 테스트',gender:'f',age:27,area:'',level:null,ho
   const retry=button(tree,'이 색으로 시작하기').props.onClick();
   settle.resolve({total:0,difficulty_counts:{}});await retry;
   assert.equal(saved.total,0);assert.equal(calls,2);
+  assert.deepEqual(usage,['shoe_save_attempt','shoe_save_failed','shoe_save_attempt','shoe_saved']);
   const resetPicker=harness('components/StartingShoePicker.tsx',{
     'next/link':{default:'a'},'@/components/ClimbingShoe':{default:'shoe'},'@/lib/shoeProgress':shoe,
     '@/lib/climbingAscents':{setStartingShoe:async()=>{throw Error('wrong action');},resetStartingShoe:async stage=>{resetCalls++;assert.equal(stage,'blue');

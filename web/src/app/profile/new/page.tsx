@@ -11,6 +11,7 @@ import { CAREERS, LEVELS, type CareerId, type LevelId } from "@/lib/levels";
 import { VISIT_FREQUENCIES, type VisitFrequencyId } from "@/lib/visitFrequency";
 import { loadMyProfile, saveMyProfile, type MyProfile } from "@/lib/myProfile";
 import { isBasicProfileComplete } from "@/lib/profileGate";
+import { trackProfileUsage, profileUsageError, useProfileUsageView } from "@/lib/profileUsage";
 import { downscaleImage } from "@/lib/imageResize";
 import {
   PHOTO_MAX_BYTES,
@@ -65,6 +66,7 @@ const inputCls =
   "w-full rounded-lg border border-line bg-surface px-3.5 py-3 text-[16px] text-ink placeholder:text-faint focus:border-accent focus:outline-none";
 
 export default function ProfileNew() {
+  useProfileUsageView("profile_opened");
   const router = useRouter();
   const returnTo = safeParticipationReturn(useQueryParam("returnTo"));
   const editMode = useQueryParam("edit") === "1";
@@ -107,6 +109,7 @@ export default function ProfileNew() {
     try {
       const file = await downscaleImage(raw);
       if (file.size > PHOTO_MAX_BYTES) {
+        trackProfileUsage("profile_photo_failed", "photo_too_large");
         return alert(`사진이 너무 커요 (${(file.size / 1024 / 1024).toFixed(1)}MB). 5MB 이하로 올려주세요.`);
       }
       if (!hasSupabase()) {
@@ -121,6 +124,7 @@ export default function ProfileNew() {
       setPhoto(r.path);
       setPhotoUrl((await signedPhotoUrls([r.path]))[r.path] ?? null);
     } catch (error) {
+      trackProfileUsage("profile_photo_failed", profileUsageError(error));
       alert(`사진 업로드 실패: ${error instanceof Error ? error.message : "연결을 확인하고 다시 시도해주세요"}`);
     } finally {
       photoInFlight.current = false;
@@ -142,6 +146,8 @@ export default function ProfileNew() {
       } else {
         p = loadMyProfile();
       }
+      if (hasSupabase() && !p) trackProfileUsage("profile_load_failed", "server");
+      else trackProfileUsage("profile_ready");
       setOnboarding(!isBasicProfileComplete(p));
       setLoading(false);
       if (!p) return;
@@ -162,7 +168,7 @@ export default function ProfileNew() {
         setPhoto(p.photo);
         setPhotoUrl((await signedPhotoUrls([p.photo]))[p.photo] ?? null);
       }
-    })();
+    })().catch(error => { trackProfileUsage("profile_load_failed", profileUsageError(error)); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -185,10 +191,11 @@ export default function ProfileNew() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading || submitting.current || photoInFlight.current) return;
+    trackProfileUsage("profile_save_attempt");
     const n = Number(age);
-    if (!nickname.trim()) return alert("닉네임을 입력해주세요");
-    if (!gender || !careerId) return alert(PROFILE_REQUIRED_MESSAGE);
-    if (age && (!Number.isInteger(n) || n < 19 || n > 60)) return alert("나이를 확인해주세요");
+    if (!nickname.trim()) { trackProfileUsage("profile_validation_failed", "nickname_required"); return alert("닉네임을 입력해주세요"); }
+    if (!gender || !careerId) { trackProfileUsage("profile_validation_failed", "basic_required"); return alert(PROFILE_REQUIRED_MESSAGE); }
+    if (age && (!Number.isInteger(n) || n < 19 || n > 60)) { trackProfileUsage("profile_validation_failed", "invalid_age"); return alert("나이를 확인해주세요"); }
     // 동네·MBTI 는 선택 — 채우고 싶은 사람만
 
     const profile = buildProfile();
@@ -206,11 +213,13 @@ export default function ProfileNew() {
         saveMyProfile(profile);
       }
     } catch (error) {
+      trackProfileUsage("profile_save_failed", profileUsageError(error));
       submitting.current = false;
       setBusy(false);
       alert(`저장 실패: ${error instanceof Error ? error.message : "연결을 확인하고 다시 시도해주세요"}`);
       return;
     }
+    trackProfileUsage("profile_saved");
     // 기본 정보를 먼저 저장한다. 다음 단계에서 나가도 입력 내용은 남는다.
     const destination = returnTo ?? (isPublic ? "/#people" : "/me");
     if (needsShoe) router.replace('/profile/shoe?returnTo=' + encodeURIComponent(destination) + (isPublic ? '&publish=1' : ''));
