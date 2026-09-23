@@ -1,0 +1,177 @@
+-- Domestic bouldering: 3 competition notices and 7 original Korean briefings.
+-- Sources and review: docs/domestic-bouldering-update-2026-09-23.md
+-- Content source: supabase/content/20260923_domestic_bouldering.json
+-- Content published via one REST batch on 2026-09-23; SQL retained for reproducibility.
+-- Recheck sources and existing content before any later execution.
+-- No schema, migration history, app bundle or storage changes.
+-- IDs, hidden status, existing images and first HobiDay publication dates are preserved.
+begin;
+lock table public.community_articles in share row exclusive mode;
+create temporary table hobiday_bouldering_payload on commit drop as
+select * from jsonb_to_recordset($articles$
+[
+  {
+    "kind": "competition",
+    "external_id": "curated:competition:cl-youth-6-20260927",
+    "title": "제6회 전국 유소년 CL 볼더링 챔피언십",
+    "summary": "9월 27일 CL클라이밍 동탄점에서 열리는 유소년 볼더링 대회. 유치부부터 중학생까지 U8·U10·U12·U15로 나눠 진행한다. 초등 4학년 이하는 오전, 초등 5학년~중학생은 오후 경기다. 참가비는 오전 5만 원·오후 7만 원. 접수 마감일과 잔여 인원은 공지에 명시되지 않아 주최 측 확인이 필요하다.",
+    "url": "https://www.clclimbing.com/product/cl%ED%81%B4%EB%9D%BC%EC%9D%B4%EB%B0%8D-%EC%A0%9C6%ED%9A%8C-%EC%A0%84%EA%B5%AD-cl%EB%B3%BC%EB%8D%94%EB%A7%81%EB%8C%80%ED%9A%8C-9%EC%9B%94-27%EC%9D%BC/40709/category/1/display/2/",
+    "source": "CL클라이밍",
+    "location": "경기 화성 · CL클라이밍 동탄점 (그란비아스타 6층)",
+    "starts_at": "2026-09-27",
+    "ends_at": "2026-09-27",
+    "published_at": "2026-09-23T00:00:00+09:00"
+  },
+  {
+    "kind": "competition",
+    "external_id": "curated:competition:busan-geumjeong-37-boulder-20261025",
+    "title": "제37회 부산광역시장배 금정대회 · 일반부 볼더",
+    "summary": "볼더 경기는 10월 25일 부산 국제클라이밍경기장에서 진행된다. 남녀 일반부 대상은 중학생 이상 또는 2013년 12월 31일 이전 출생자. 신청 기한은 10월 13일 낮 12시이며 부산광역시산악연맹 홈페이지에서 접수한다. 일반부 1종목 참가비는 3만 원. 전체 대회는 10월 24~25일이며, 이 항목의 날짜는 볼더 경기일이다.",
+    "url": "https://kafbusan.or.kr/board/forum_01/view/5940",
+    "source": "부산광역시산악연맹",
+    "location": "부산 연제구 거제동 1456-1 · 국제클라이밍경기장",
+    "starts_at": "2026-10-25",
+    "ends_at": "2026-10-25",
+    "published_at": "2026-09-23T00:00:00+09:00"
+  },
+  {
+    "kind": "competition",
+    "external_id": "curated:worldclimbing:asia-gunsan-2026",
+    "title": "2026 군산 월드 클라이밍 아시아 시리즈 · 볼더 포함",
+    "summary": "10월 31일~11월 1일 군산에서 개최 예정인 국제대회로, 공식 종목은 볼더·스피드다. 현재 공식 페이지에는 볼더의 세부 경기일·시간과 일반인 접수 안내가 게시되지 않았다. 표시 날짜는 전체 대회 기간이며 관전 일정 참고용이다. 참가 자격과 등록 절차는 소속 연맹 및 대회 공식 안내를 확인해야 한다.",
+    "url": "https://www.worldclimbing.com/events/world-climbing-asia-series-gunsan-2026",
+    "source": "World Climbing",
+    "location": "전북 군산 · 세부 경기장 안내 확인 필요",
+    "starts_at": "2026-10-31",
+    "ends_at": "2026-11-01",
+    "published_at": "2026-09-23T00:00:00+09:00"
+  },
+  {
+    "kind": "news",
+    "external_id": "curated:news:cl-youth-6-preview-20260923",
+    "title": "동탄에서 9월 27일 유소년 볼더링 대회 열린다",
+    "summary": "제6회 전국 유소년 CL 볼더링 챔피언십이 9월 27일 CL클라이밍 동탄점에서 열린다. 클라임라이트가 주최하고 CL클라이밍이 주관한다.\n\n유치부부터 중학생까지 연령에 따라 네 부문으로 나뉜다. 초등 4학년 이하의 오전 경기와 초등 5학년~중학생의 오후 경기를 따로 운영하며, 참가비도 오전 5만 원과 오후 7만 원으로 구분된다.\n\n참가자는 자신의 연령 부문과 경기 시간을 공식 안내에서 확인해야 한다. 9월 23일 확인한 공지에는 접수 마감일과 잔여 인원이 명시돼 있지 않아, 현재 신청 가능한지는 주최 측에 확인할 필요가 있다.",
+    "url": "https://www.clclimbing.com/product/cl%ED%81%B4%EB%9D%BC%EC%9D%B4%EB%B0%8D-%EC%A0%9C6%ED%9A%8C-%EC%A0%84%EA%B5%AD-cl%EB%B3%BC%EB%8D%94%EB%A7%81%EB%8C%80%ED%9A%8C-9%EC%9B%94-27%EC%9D%BC/40709/category/1/display/2/",
+    "source": "하비데이 브리핑 · CL클라이밍 공지",
+    "location": null,
+    "starts_at": null,
+    "ends_at": null,
+    "published_at": "2026-09-23T00:00:00+09:00"
+  },
+  {
+    "kind": "news",
+    "external_id": "curated:news:busan-geumjeong-37-preview-20260923",
+    "title": "부산 금정대회, 10월 25일 일반부 볼더 경기",
+    "summary": "제37회 부산광역시장배 전국 금정스포츠클라이밍대회가 10월 24~25일 부산 연제구 국제클라이밍경기장에서 열린다. 볼더를 준비하는 참가자가 확인할 날짜는 일요일인 10월 25일이다.\n\n일반부 볼더는 남녀 각각 진행하며 중학생 이상 또는 2013년 12월 31일 이전 출생자가 대상이다. 신청은 부산광역시산악연맹 홈페이지로 받고, 마감은 10월 13일 낮 12시다. 일반부 1종목 참가비는 3만 원이다.\n\n토요일 학생부 리드·일반부 스피드와 일요일 일반부 볼더의 일정이 다르므로 종목을 구분해 신청해야 한다. 참가 조건과 변경 공지는 주최 측 안내에서 확인할 수 있다.",
+    "url": "https://kafbusan.or.kr/board/forum_01/view/5940",
+    "source": "하비데이 브리핑 · 부산광역시산악연맹 공지",
+    "location": null,
+    "starts_at": null,
+    "ends_at": null,
+    "published_at": "2026-09-23T00:00:00+09:00"
+  },
+  {
+    "kind": "news",
+    "external_id": "curated:news:world-climbing-asia-gunsan-preview-20260923",
+    "title": "군산 아시아 시리즈, 10월 말 볼더·스피드 개최 예정",
+    "summary": "World Climbing 공식 일정에 따르면 2026 군산 월드 클라이밍 아시아 시리즈는 10월 31일부터 11월 1일까지 국내에서 열린다. 등록된 경기 종목은 볼더와 스피드다.\n\n9월 23일 확인한 대회 페이지에는 볼더 종목의 세부 시간표와 경기장 상세 정보가 아직 표시되지 않았다. 현재 확인된 날짜는 두 종목을 포함한 전체 대회 기간이다.\n\n이 대회는 국제대회 일정으로 소개한다. 일반 동호인의 현장 참가나 공개 접수를 안내하는 내용은 확인되지 않았으며, 출전 자격·등록 절차와 관람 정보는 소속 연맹 또는 공식 대회 공지를 통해 추가 확인해야 한다.",
+    "url": "https://www.worldclimbing.com/events/world-climbing-asia-series-gunsan-2026",
+    "source": "하비데이 브리핑 · World Climbing 일정",
+    "location": null,
+    "starts_at": null,
+    "ends_at": null,
+    "published_at": "2026-09-23T00:00:00+09:00"
+  },
+  {
+    "kind": "news",
+    "external_id": "curated:news:climblife:19daa1cf-0a15-4d33-b9a4-c7ea42e51200:results",
+    "title": "우정대회 청소년 볼더링, 클라임라이프에 결과 등록",
+    "summary": "9월 19일 울산 영남알프스 복합웰컴센터 국제클라이밍경기장에서 열린 제38회 클라임코리아배 전국 우정스포츠클라이밍대회의 결과가 클라임라이프에 등록됐다.\n\n초등 고학년·중학생·고등학생을 대상으로 한 볼더링 대회다. 종료된 대회이므로 참가 신청 안내가 아닌 결과 확인 소식으로 전한다. 부문별 기록과 순위는 연결된 클라임라이프 대회 페이지에서 확인할 수 있다.",
+    "url": "https://climblife.co.kr/competitions/19daa1cf-0a15-4d33-b9a4-c7ea42e51200",
+    "source": "하비데이 브리핑 · 클라임라이프",
+    "location": null,
+    "starts_at": null,
+    "ends_at": null,
+    "published_at": "2026-09-23T00:00:00+09:00"
+  },
+  {
+    "kind": "news",
+    "external_id": "curated:news:climblife:b56c7374-51cc-4fa4-aa4f-b81d1dcceceb:results",
+    "title": "서울시 교육감배 볼더 대회, 학생부 결과 확인 안내",
+    "summary": "9월 13일 강서클라이밍센터에서 진행된 서울특별시 교육감배 산악대회 볼더 종목의 결과가 클라임라이프에 등록됐다. 서울특별시교육청 소속 학교 재학생을 대상으로 열린 대회다.\n\n초등 저학년·고학년, 중학부, 고등부로 나눠 진행된 볼더 경기의 기록을 대회 페이지에서 확인할 수 있다. 이미 종료된 대회이며 신규 참가 접수 소식이 아니다.",
+    "url": "https://climblife.co.kr/competitions/b56c7374-51cc-4fa4-aa4f-b81d1dcceceb",
+    "source": "하비데이 브리핑 · 클라임라이프",
+    "location": null,
+    "starts_at": null,
+    "ends_at": null,
+    "published_at": "2026-09-23T00:00:00+09:00"
+  },
+  {
+    "kind": "news",
+    "external_id": "curated:news:climblife:af2cb874-6b49-42a6-bba2-0a7ed20cf7e6:results",
+    "title": "경기도 유스 볼더리그 5차, 대회 결과 등록",
+    "summary": "9월 13일 경기 양주 더바이브클라이밍에서 열린 2026 경기도 유스 볼더리그 5차의 결과가 클라임라이프에 등록됐다. U11·U13·중학부 청소년이 참가하는 볼더 대회다.\n\n5차 대회의 부문별 기록은 연결된 대회 페이지에서 확인할 수 있다. 리그 합산 순위와 다음 회차 진출 여부는 별도 기준이 적용되므로 경기도산악연맹의 후속 공지를 확인해야 한다.",
+    "url": "https://climblife.co.kr/competitions/af2cb874-6b49-42a6-bba2-0a7ed20cf7e6",
+    "source": "하비데이 브리핑 · 클라임라이프",
+    "location": null,
+    "starts_at": null,
+    "ends_at": null,
+    "published_at": "2026-09-23T00:00:00+09:00"
+  },
+  {
+    "kind": "news",
+    "external_id": "curated:news:climblife:1a403df0-2156-459f-9ee5-c3064ac0bb54:results",
+    "title": "청주시연맹 회장배, 리드·볼더 대회 결과 확인 안내",
+    "summary": "9월 13일 내수생활체육공원 내 청주국제스포츠클라이밍센터에서 열린 제4회 청주시연맹 회장배 생활체육 클라이밍 대회의 결과가 클라임라이프에 등록됐다.\n\n리드와 볼더를 함께 진행한 대회로, 안내된 일정에서는 오후에 볼더 경기가 배정됐다. 결과를 볼 때 종목과 참가 부문을 구분해 확인하면 된다. 종료된 대회의 기록 안내이며 참가 접수는 마감됐다.",
+    "url": "https://climblife.co.kr/competitions/1a403df0-2156-459f-9ee5-c3064ac0bb54",
+    "source": "하비데이 브리핑 · 클라임라이프",
+    "location": null,
+    "starts_at": null,
+    "ends_at": null,
+    "published_at": "2026-09-23T00:00:00+09:00"
+  }
+]
+$articles$::jsonb) as n(
+  kind text, external_id text, title text, summary text, url text, source text,
+  location text, starts_at date, ends_at date, published_at timestamptz
+);
+
+do $$
+begin
+  if (select count(*) from hobiday_bouldering_payload) <> 10 then
+    raise exception 'Expected ten reviewed articles';
+  end if;
+  -- Reconcile existing entries before publishing rather than create duplicate notices.
+  if exists (
+    select 1 from public.community_articles a join hobiday_bouldering_payload n
+      on a.kind = n.kind and a.external_id <> n.external_id
+     and regexp_replace(replace(a.url, 'www.ifsc-climbing.org', 'www.worldclimbing.com'), '[/?]+$', '')
+       = regexp_replace(n.url, '[/?]+$', '')
+  ) then
+    raise exception 'An existing article uses a reviewed source URL; reconcile its external_id before applying';
+  end if;
+  if exists (
+    select 1 from public.community_articles a join hobiday_bouldering_payload n
+      on a.external_id = n.external_id
+     where a.kind <> n.kind or a.url is distinct from n.url
+  ) then
+    raise exception 'A reviewed external_id has a different kind or source URL; no content changed';
+  end if;
+end $$;
+
+insert into public.community_articles as existing
+  (kind, external_id, title, summary, url, source, location, starts_at, ends_at, published_at)
+select kind, external_id, title, summary, url, source, location, starts_at, ends_at, published_at
+  from hobiday_bouldering_payload
+on conflict (external_id) do update set
+  title = excluded.title, summary = excluded.summary, source = excluded.source,
+  location = excluded.location, starts_at = excluded.starts_at, ends_at = excluded.ends_at,
+  updated_at = now()
+where (existing.title, existing.summary, existing.source, existing.location, existing.starts_at, existing.ends_at)
+  is distinct from
+  (excluded.title, excluded.summary, excluded.source, excluded.location, excluded.starts_at, excluded.ends_at);
+
+select a.id, a.kind, a.title, a.starts_at, a.ends_at, a.hidden
+  from public.community_articles a join hobiday_bouldering_payload n using (external_id)
+ order by a.kind, a.starts_at nulls last, a.title;
+commit;
