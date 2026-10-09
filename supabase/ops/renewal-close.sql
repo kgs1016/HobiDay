@@ -29,5 +29,5 @@ begin
 end
 $$;
 update public.app_maintenance set enabled=true,title='리뉴얼 준비 중',
-  message='새로운 하비데이를 준비하고 있어요. 잠시만 기다려주세요.',updated_at=now() where id=1;
+  message='조금만 기다려주세요.',updated_at=now() where id=1;
 commit;

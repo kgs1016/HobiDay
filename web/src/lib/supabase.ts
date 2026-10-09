@@ -1,4 +1,5 @@
 import { requestFetch, withDeadline } from "./network";
+import { parseAppUpdatePolicy } from "./appUpdate";
 /* Supabase 클라이언트 + 데이터 액세스.
    .env.local 에 키가 없으면 null → 화면은 목데이터로 동작(개발 폴백). */
 
@@ -85,12 +86,12 @@ export interface AppUpdatePolicy {
 }
 
 /** 설치 앱의 버전 안내 정책. 로그인 전에도 읽으며 통신 실패는 앱 진입을 막지 않는다. */
-export async function fetchAppUpdatePolicy(): Promise<AppUpdatePolicy | null> {
+export async function fetchAppUpdatePolicy(signal?: AbortSignal): Promise<AppUpdatePolicy | null> {
   const sb = getSupabase();
   if (!sb) return null;
-  const { data, error } = await sb.rpc("app_update_policy");
-  if (error || !data) return null;
-  return data as AppUpdatePolicy;
+  const { data, error } = await withDeadline(s => sb.rpc("app_update_policy").abortSignal(s), 12_000, signal);
+  if (error) throw error;
+  return parseAppUpdatePolicy(data);
 }
 
 /* ── DB 행 → 화면 타입 변환 ── */

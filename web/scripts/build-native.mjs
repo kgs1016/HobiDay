@@ -15,7 +15,7 @@ const env = { ...process.env, BUILD_TARGET: "native" };
 
 // 인자를 배열로 넘기면서 shell: true 를 쓰면 Node 가 경고한다 (이스케이프가
 // 안 된 채 이어붙는다). 고정 문자열이라 통째로 넘긴다.
-for (const cmd of ["next build", "cap sync"]) {
+for (const cmd of ["node scripts/test-app-update.cjs", "next build", "cap sync", "node scripts/verify-native-controls.mjs"]) {
   const r = spawnSync(cmd, { stdio: "inherit", env, shell: true });
   if (r.status !== 0) process.exit(r.status ?? 1);
 }

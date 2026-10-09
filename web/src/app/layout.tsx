@@ -46,20 +46,21 @@ export default function RootLayout({
         {/* 앱에서 소셜 로그인을 마치고 돌아오는 걸 받는다 (웹에서는 무동작) */}
         <NativeAuthBridge />
         <AppSplash />
-        <MaintenanceGate navigation={<BottomNav />}>
-          <AppUpdateGate />
-          {/* 상단은 노치, 하단은 홈바 + 네비 높이만큼 비운다 */}
-          <div
-            className="mx-auto max-w-md min-h-dvh"
-            style={{
-              paddingTop: "env(safe-area-inset-top)",
-              paddingBottom: "calc(5rem + env(safe-area-inset-bottom))",
-            }}
-          >
-            {/* 작성 화면만 참여 조건을 확인하며 둘러보기는 그대로 열어둔다. */}
-            <ParticipationRouteGate>{children}</ParticipationRouteGate>
-          </div>
-        </MaintenanceGate>
+        <AppUpdateGate>
+          <MaintenanceGate navigation={<BottomNav />}>
+            {/* 상단은 노치, 하단은 홈바 + 네비 높이만큼 비운다 */}
+            <div
+              className="mx-auto max-w-md min-h-dvh"
+              style={{
+                paddingTop: "env(safe-area-inset-top)",
+                paddingBottom: "calc(5rem + env(safe-area-inset-bottom))",
+              }}
+            >
+              {/* 작성 화면만 참여 조건을 확인하며 둘러보기는 그대로 열어둔다. */}
+              <ParticipationRouteGate>{children}</ParticipationRouteGate>
+            </div>
+          </MaintenanceGate>
+        </AppUpdateGate>
       </body>
     </html>
   );
