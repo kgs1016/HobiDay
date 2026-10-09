@@ -67,8 +67,8 @@ export default function MaintenanceGate({ children, navigation }: { children: Re
   }, [retry]);
 
   const publicPath = isMaintenancePublicPath(pathname);
-  // No key is the existing local mock preview. Production uses the server status.
-  if (!getSupabase() || status?.allowed) return <>{children}{navigation}</>;
+  // Only the local development preview may bypass a missing public client key.
+  if ((!getSupabase() && process.env.NODE_ENV === "development") || status?.allowed) return <>{children}{navigation}</>;
   if (publicPath) return <>{children}</>;
 
   return <main className="flex min-h-[80dvh] flex-col items-center justify-center px-7 py-16 text-center">
