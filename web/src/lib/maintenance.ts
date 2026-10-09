@@ -29,7 +29,7 @@ export function parseAppAccessStatus(value: unknown): AppAccessStatus {
     authenticated: status.authenticated as boolean,
     tester: status.tester as boolean,
     title: typeof status.title === "string" ? status.title : "리뉴얼 준비 중",
-    message: typeof status.message === "string" ? status.message : "새로운 하비데이를 준비하고 있어요. 잠시만 기다려주세요.",
+    message: typeof status.message === "string" ? status.message : "조금만 기다려주세요.",
   };
 }
 
