@@ -75,7 +75,7 @@ export default function MaintenanceGate({ children, navigation }: { children: Re
     <Image src="/brand/hobiday-logo.png" alt="하비데이" width={160} height={160} unoptimized />
     <h1 className="mt-8 text-[25px] font-bold tracking-tight">{status?.title ?? "리뉴얼 준비 중"}</h1>
     <p className="mt-3 whitespace-pre-line text-[14px] leading-relaxed text-muted" role="status">
-      {status?.message ?? (failed ? "연결을 확인하고 다시 시도해주세요." : "새로운 하비데이를 준비하고 있어요. 잠시만 기다려주세요.")}
+      {status?.message ?? (failed ? "연결을 확인하고 다시 시도해주세요." : "조금만 기다려주세요.")}
     </p>
     {failed && <button type="button" onClick={() => { setFailed(false); setRetry(n => n + 1); }} className="button-secondary mt-6 rounded-xl px-6 py-3 text-sm">다시 확인</button>}
     <div className="mt-9 flex items-center gap-5 text-[13px] text-muted">

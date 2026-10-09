@@ -51,7 +51,10 @@ const other = '33333333-3333-4333-8333-333333333333';
       insert into storage.objects(bucket_id,name) values('profile-photos','${member}/photo.jpg'),('profile-photos','${other}/photo.jpg');
     `);
     await db.exec(fs.readFileSync(path.join(root, 'migrations/20260821120000_launch_gate.sql'), 'utf8'));
+    await db.exec(fs.readFileSync(path.join(root, 'migrations/20260912120000_native_app_update_policy.sql'), 'utf8'));
     await db.exec(fs.readFileSync(path.join(root, 'migrations/20261009120000_renewal_maintenance.sql'), 'utf8'));
+    await db.exec(fs.readFileSync(path.join(root, 'migrations/20261009140000_maintenance_update_policy_access.sql'), 'utf8'));
+    await db.exec(fs.readFileSync(path.join(root, 'migrations/20261009150000_maintenance_tester_update_exemption.sql'), 'utf8'));
     await claims('anon');
     assert.equal((await status()).allowed,true, 'installation must keep the app open');
     await db.exec('select check_app_maintenance()');
@@ -60,6 +63,8 @@ const other = '33333333-3333-4333-8333-333333333333';
     await db.exec('reset role');
     await db.exec(fs.readFileSync(path.join(root, 'ops/renewal-close.sql'), 'utf8'));
     await db.exec(fs.readFileSync(path.join(root, 'ops/renewal-close.sql'), 'utf8'));
+    // Simulate a real future release in this isolated database only.
+    await db.exec("update app_config set ios_latest_version='1.1.3',android_latest_version='1.1.3',ios_minimum_version='1.1.3',android_minimum_version='1.1.3'");
     assert.equal((await db.query('select count(*)::integer as n from app_testers')).rows[0].n,1);
     assert.equal((await db.query("select active from cron.job where jobname='sessions-remind'")).rows[0].active,false);
 
@@ -72,6 +77,9 @@ const other = '33333333-3333-4333-8333-333333333333';
       assert.equal((await db.query('select app_flags() as f')).rows[0].f.sessions_open,false);
       await claims(role,id,'/rpc/app_access_status');
       await db.exec('select check_app_maintenance()');
+      await claims(role,id,'/rpc/app_update_policy');
+      await db.exec('select check_app_maintenance()');
+      assert.equal((await db.query('select app_update_policy() as p')).rows[0].p.android_minimum_version,'1.1.3');
       await assert.rejects(db.exec('select * from app_maintenance'),/permission denied/);
     }
     await claims('authenticated',member);
@@ -86,6 +94,7 @@ const other = '33333333-3333-4333-8333-333333333333';
     await claims('authenticated',tester);
     assert.equal((await status()).allowed,true);
     assert.equal((await status()).tester,true);
+    assert.equal((await db.query('select app_update_policy() as p')).rows[0].p.android_minimum_version,null,'tester can continue using an older supported UI during maintenance');
     await db.exec('select check_app_maintenance()');
     await db.exec("insert into messages(body) values('tester message')");
     assert.equal((await db.query('select count(*)::integer as n from messages')).rows[0].n,2);
@@ -107,6 +116,8 @@ const other = '33333333-3333-4333-8333-333333333333';
     assert.equal((await status()).allowed,true);
     await db.exec('select check_app_maintenance()');
     assert.equal((await db.query('select count(*)::integer as n from messages')).rows[0].n,2,'data survives closing and reopening');
+    await claims('authenticated',tester);
+    assert.equal((await db.query('select app_update_policy() as p')).rows[0].p.android_minimum_version,'1.1.3','tester minimum-version exemption ends when reopening');
     console.log('PASS: install open; close/retry; guest/member RPC + RLS block; tester access; own-media deletion; notifications; reopen + preserved data/jobs');
   } finally { await db.close(); }
 })().catch(e=>{ console.error(e);process.exitCode=1; });
