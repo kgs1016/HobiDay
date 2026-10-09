@@ -27,6 +27,24 @@ export function compareVersions(left: string, right: string): number | null {
   return 0;
 }
 
+/** Treat malformed/contradictory policy as a failed check, never as a new block. */
+export function parseAppUpdatePolicy(value: unknown): AppUpdatePolicy {
+  if (!value || typeof value !== "object") throw new Error("Invalid update policy");
+  const policy = value as Record<string, unknown>;
+  for (const platform of ["ios", "android"] as const) {
+    const latest = policy[`${platform}_latest_version`];
+    const minimum = policy[`${platform}_minimum_version`];
+    if (typeof latest !== "string" || !versionParts(latest) ||
+      (minimum !== null && (typeof minimum !== "string" || !versionParts(minimum) || compareVersions(minimum, latest) === 1))) {
+      throw new Error("Invalid update versions");
+    }
+  }
+  if (typeof policy.title !== "string" || !policy.title.trim() || typeof policy.message !== "string" || !policy.message.trim()) {
+    throw new Error("Invalid update message");
+  }
+  return policy as unknown as AppUpdatePolicy;
+}
+
 export function updateDecision(current: string, platform: NativeStore, policy: AppUpdatePolicy): UpdateDecision {
   const latest = platform === "ios" ? policy.ios_latest_version : policy.android_latest_version;
   const minimum = platform === "ios" ? policy.ios_minimum_version : policy.android_minimum_version;
@@ -43,5 +61,5 @@ export function updateSnoozeKey(platform: NativeStore, latest: string) {
 export function isUpdateSnoozed(value: string | null, now = Date.now()) {
   if (!value) return false;
   const savedAt = Number(value);
-  return Number.isFinite(savedAt) && savedAt > 0 && now - savedAt < SNOOZE_MS;
+  return Number.isFinite(savedAt) && savedAt > 0 && now >= savedAt && now - savedAt < SNOOZE_MS;
 }

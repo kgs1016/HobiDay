@@ -1,4 +1,4 @@
--- Run only when the user requests reopening. No rebuild is needed for the web gate.
+-- Run only when the user requests reopening. No rebuild is needed for web or native clients containing the maintenance gate (1.1.3+).
 begin;
 update public.app_maintenance set enabled=false,updated_at=now() where id=1;
 do $$

@@ -29,4 +29,11 @@ assert.equal(api.isUpdateSnoozed('1000', 1000 + 25 * 60 * 60 * 1000), false);
 assert.notEqual(api.updateSnoozeKey('ios', '1.2'), api.updateSnoozeKey('ios', '1.3'));
 assert.match(api.STORE_URLS.ios, /6803351277/);
 assert.match(api.STORE_URLS.android, /kr\.hobiday\.app/);
+assert.equal(api.parseAppUpdatePolicy(policy).title, policy.title);
+for (const invalid of [null, {}, { ...policy, ios_latest_version: 'broken' }, { ...policy, android_minimum_version: '2.0' }, { ...policy, title: '' }]) {
+  assert.throws(() => api.parseAppUpdatePolicy(invalid));
+}
+assert.equal(api.isUpdateSnoozed('5000', 1000), false, 'future device clock must not hide updates indefinitely');
+assert.equal(api.updateDecision('1.1.3', 'android', { ...policy, android_latest_version: '1.2.0', android_minimum_version: '1.2.0' }), 'required');
+assert.equal(api.updateDecision('1.1.3', 'android', { ...policy, android_latest_version: '1.2.0', android_minimum_version: null }), 'available');
 console.log('PASS app update: semantic versions, optional/required policy, version-specific snooze and store links');
